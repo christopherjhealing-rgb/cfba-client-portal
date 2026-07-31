@@ -13,6 +13,11 @@ export const env = {
   mondayBoardId: process.env.MONDAY_BOARD_ID || "7129862365",
   mondayNewGroup: process.env.MONDAY_NEW_GROUP || "topics",
 
+  // Lodgements go straight onto the board (default). Set to 0 to restore the
+  // review queue; either way the queue still catches anything that can't
+  // reach Monday at lodgement time.
+  autoAcceptLodgements: (process.env.AUTO_ACCEPT_LODGEMENTS ?? "1") !== "0",
+
   // Microsoft Graph (app-only). Site + drive were confirmed against the live
   // tenant; override per environment if the library ever moves.
   graphTenantId: process.env.GRAPH_TENANT_ID || "",

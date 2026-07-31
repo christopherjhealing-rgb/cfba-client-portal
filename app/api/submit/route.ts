@@ -2,9 +2,28 @@ import { NextResponse } from "next/server";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import { tidyAddress } from "@/lib/core.mjs";
+import { acceptSubmission } from "@/lib/accept";
+import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Auto-accept shuttles the PDFs onto the Monday card during this request.
+export const maxDuration = 300;
+
+/** Straight onto the board when auto-accept is on. Failure is never the
+ *  client's problem: the submission simply stays in the review queue. */
+async function maybeAutoAccept(id: string): Promise<boolean> {
+  if (!env.autoAcceptLodgements) return false;
+  try {
+    const sub = await repo.getSubmission(id);
+    if (!sub) return false;
+    await acceptSubmission(sub, "auto-accepted at lodgement");
+    return true;
+  } catch (e) {
+    console.error(`auto-accept failed for ${id} — left in the review queue:`, e);
+    return false;
+  }
+}
 
 const PDF_ONLY = (name: string, type: string) =>
   /\.pdf$/i.test(name) || type === "application/pdf";
@@ -120,7 +139,8 @@ async function handle(req: Request) {
     amendmentOf,
   }, id);
 
-  return NextResponse.json({ ok: true, id });
+  const accepted = await maybeAutoAccept(id);
+  return NextResponse.json({ ok: true, id, accepted });
 }
 
 /** Metadata-only lodgement referencing files the browser already PUT into the
@@ -218,5 +238,6 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     amendmentOf,
   }, id);
 
-  return NextResponse.json({ ok: true, id });
+  const accepted = await maybeAutoAccept(id);
+  return NextResponse.json({ ok: true, id, accepted });
 }

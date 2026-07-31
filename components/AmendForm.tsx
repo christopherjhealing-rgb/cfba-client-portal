@@ -20,6 +20,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [instant, setInstant] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const job = jobs.find((j) => j.ref === ref);
@@ -77,6 +78,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Something went wrong."); return; }
+    setInstant(!!d.accepted);
     setDone(true);
   }
 
@@ -89,9 +91,15 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         </div>
         <h2 className="font-display text-[21px] font-semibold">Amendment sent</h2>
         <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-ink/65">
-          The office will open it as a new job{ref ? ` linked to ${ref}` : ""}, and it
-          will appear in your job list once accepted. The original job stays exactly
-          as it is. We&apos;ll reply to the email address on your account.
+          {instant ? (
+            <>It&apos;s been opened as a new job{ref ? ` linked to ${ref}` : ""} and will
+            appear in your job list shortly. The original job stays exactly as it is.
+            We&apos;ll reply to the email address on your account.</>
+          ) : (
+            <>The office will open it as a new job{ref ? ` linked to ${ref}` : ""}, and it
+            will appear in your job list once accepted. The original job stays exactly
+            as it is. We&apos;ll reply to the email address on your account.</>
+          )}
         </p>
         <a href="/jobs" className="btn mt-6">Back to my jobs</a>
       </div>

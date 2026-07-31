@@ -30,6 +30,7 @@ export function SubmitForm() {
   const [files, setFiles] = useState<Record<string, File[]>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [instant, setInstant] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
 
@@ -84,6 +85,7 @@ export function SubmitForm() {
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Something went wrong."); return; }
+    setInstant(!!d.accepted);
     setDone(true);
   }
 
@@ -95,9 +97,14 @@ export function SubmitForm() {
         </div>
         <h2 className="font-display text-[21px] font-semibold">Job lodged</h2>
         <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-ink/65">
-          Thanks — it&apos;s with the CFBA office for checking. It will show in your
-          job list under <span className="font-medium">Waiting to be accepted</span>,
-          and once it&apos;s accepted you&apos;ll be able to follow its progress here.
+          {instant ? (
+            <>Thanks — it&apos;s gone straight through to the CFBA team and will
+            appear in your job list shortly.</>
+          ) : (
+            <>Thanks — it&apos;s with the CFBA office for checking. It will show in your
+            job list under <span className="font-medium">Waiting to be accepted</span>,
+            and once it&apos;s accepted you&apos;ll be able to follow its progress here.</>
+          )}
         </p>
         <a href="/jobs" className="btn mt-6">Back to my jobs</a>
       </div>

@@ -185,7 +185,11 @@ Now test against real data, but before any client has the URL.
 - [ ] As that test client: view a job timeline, download a package from a genuinely Issued job, open the zip and check the files are the right ones.
 - [ ] Post a message from the client side. Confirm it lands on the Monday card as a `CLIENT:` update **and** that the notification email arrives.
 - [ ] Reply from the Monday card. Confirm it reaches the client thread and emails out.
-- [ ] Lodge a test job → confirm it hits the review queue → accept it → confirm the Monday card is created in the right group. **Then delete that test card.**
+- [ ] Lodge a test job → the Monday card is created **immediately** (auto-accept
+      is on by default), with the PDFs in its Files column. The review queue
+      only holds lodgements when Monday couldn't be reached at the time — or
+      every lodgement, if `AUTO_ACCEPT_LODGEMENTS=0` is set in Vercel.
+      **Then delete that test card.**
 - [ ] Try to upload a non-PDF and something over 25 MB — both should be refused.
 - [ ] Get the login wrong four times — throttling should kick in.
 - [ ] Open the site on your phone. Half your clients will.

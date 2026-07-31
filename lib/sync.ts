@@ -32,14 +32,9 @@ export interface SyncResult {
 // Updates section safe to keep using normally.
 export const CLIENT_PREFIX = "CLIENT:";
 
-// Cards whose updates are worth reading. Scanning every active card's
-// conversation on every run would be hundreds of API calls for nothing; a
-// client conversation only happens around these statuses. Any card that
-// already has a thread is checked too, wherever it has since moved to.
-const MESSAGE_STATUSES = new Set([
-  "To FIR", "FIR", "FIR - ENG", "SCL", "New Info Received",
-  "On Hold", "Query", "Amendment",
-]);
+// Every active card's conversation is scanned, so a CLIENT: update reaches
+// the client whatever the card's status. listUpdates batches 25 cards per
+// query, so a few hundred active cards costs a dozen queries per sync.
 
 export async function runSync(): Promise<SyncResult> {
   const res: SyncResult = {
@@ -141,22 +136,12 @@ async function pullMessages(
   active: monday.MondayCard[],
   companies: { id: string; aliasKeys?: string[]; emails?: string[] }[]
 ): Promise<number> {
-  // One pass over existing threads rather than a query per card: with a few
-  // hundred active cards the naive version was a few hundred full reads.
-  const threadedRefs = new Set<string>();
-  for (const c of companies) {
-    for (const m of await repo.listMessagesForCompany(c.id)) threadedRefs.add(m.ref);
-  }
-
   const byItem = new Map<string, { ref: string; companyId: string }>();
   for (const card of active) {
     const companyId = matchCompany(
       { clientName: card.clientName, email: card.email }, companies);
     if (!companyId) continue;
-    const hasThread = threadedRefs.has(card.ref);
-    if (MESSAGE_STATUSES.has(card.status) || hasThread) {
-      byItem.set(card.itemId, { ref: card.ref, companyId });
-    }
+    byItem.set(card.itemId, { ref: card.ref, companyId });
   }
   if (byItem.size === 0) return 0;
 
