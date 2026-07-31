@@ -36,6 +36,11 @@ export const env = {
   // Mailbox notifications are sent from. Needs Mail.Send on the Graph app.
   mailFrom: process.env.MAIL_FROM || "",
   turnaroundDays: process.env.TURNAROUND_DAYS || "3-4",
+
+  // Unlocks the patio checker payload (lib/checker-payload.json). Same
+  // password the standalone GitHub Pages copy is encrypted under. Unset,
+  // the Tools page shows a "not switched on" notice instead.
+  checkerPassword: process.env.CHECKER_PASSWORD || "",
   retentionMonths: Number(process.env.RETENTION_MONTHS || "6"),
   resendApiKey: process.env.RESEND_API_KEY || "",
   fromEmail: process.env.FROM_EMAIL || "no-reply@cfbuildingapprovals.com.au",

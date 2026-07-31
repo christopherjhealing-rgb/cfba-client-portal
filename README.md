@@ -360,6 +360,33 @@ the body and a deep link to that job's thread. Needs `MAIL_FROM` plus the
 
 **Stages** — inspection statuses moved under Under assessment.
 
+## Patio engineering checker (July 2026)
+
+The span-table checker from the `engineeringchecker` repo is embedded at
+`/tools/checker`, listed in the sidebar under a separate **Tools** heading — a
+convenience for clients, deliberately kept apart from the job workflow.
+
+How it works: the checker's *encrypted* HTML payload is committed at
+`lib/checker-payload.json` (safe — it's the same ciphertext the public GitHub
+Pages copy serves). `/api/tools/checker` decrypts it server-side with
+`CHECKER_PASSWORD` after checking the portal session, so signed-in clients get
+the tool with no second password prompt and the password never reaches a
+browser. With the variable unset the page shows a "not switched on" notice —
+demo mode keeps working without it.
+
+To ship a new build of the checker: update `index.html` in `engineeringchecker`
+as usual, then
+
+```bash
+node scripts/import-checker.mjs ../engineeringchecker/index.html
+```
+
+and commit the changed JSON. If the checker was re-encrypted under a new
+password, update `CHECKER_PASSWORD` on Vercel at the same time.
+
+`tests/checker.test.mjs` round-trips the exact WebCrypto format, so `npm test`
+catches a format drift before a deploy does.
+
 **Turnaround** is now a range (`TURNAROUND_DAYS=3-4`).
 
 **Lodged-not-yet-accepted** jobs moved off the dashboard into My jobs as

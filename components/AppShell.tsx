@@ -23,6 +23,12 @@ const NAV: NavItem[] = [
   { href: "/help", label: "Help & support", icon: "help" },
 ];
 
+// Optional extras, kept apart from the job workflow above so they never read
+// as a step a client has to do.
+const TOOLS: NavItem[] = [
+  { href: "/tools/checker", label: "Patio checker", icon: "tool" },
+];
+
 export function AppShell({
   company,
   impersonated,
@@ -129,6 +135,32 @@ export function AppShell({
                     {n.badge}
                   </span>
                 ) : null}
+              </Link>
+            );
+          })}
+
+          <div className="mb-1 mt-5 px-3 font-display text-[9px] font-semibold uppercase tracking-[0.2em] text-white/30">
+            Tools
+          </div>
+          {TOOLS.map((n) => {
+            const active =
+              pathname === n.href || pathname.startsWith(n.href + "/");
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                onClick={() => setOpen(false)}
+                aria-current={active ? "page" : undefined}
+                className={`mb-0.5 flex items-center gap-3 rounded-md px-3 py-2.5 text-[14px] transition ${
+                  active
+                    ? "bg-white/[0.14] font-semibold text-white"
+                    : "text-white/70 hover:bg-white/[0.07] hover:text-white"
+                }`}
+              >
+                <span className="shrink-0 opacity-80">
+                  <Icon name={n.icon} size={16} />
+                </span>
+                <span className="flex-1">{n.label}</span>
               </Link>
             );
           })}
