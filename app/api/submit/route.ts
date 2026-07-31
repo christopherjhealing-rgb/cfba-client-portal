@@ -13,6 +13,20 @@ const PDF_ONLY = (name: string, type: string) =>
 const MAX_TOTAL = 40 * 1024 * 1024; // 40 MB per submission
 
 export async function POST(req: Request) {
+  try {
+    return await handle(req);
+  } catch (e) {
+    // Full detail to the server log; a safe message to the client. Internals
+    // (schema, storage paths) stay out of client-visible responses.
+    console.error("submit failed:", e);
+    return NextResponse.json(
+      { error: "We couldn't save that lodgement — nothing was recorded. Please try again, and contact the office if it happens twice." },
+      { status: 500 }
+    );
+  }
+}
+
+async function handle(req: Request) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   if (session.impersonated) {

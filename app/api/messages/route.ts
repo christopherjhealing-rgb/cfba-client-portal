@@ -17,6 +17,18 @@ const PDF_ONLY = (name: string, type: string) =>
  *  card, with any attachments uploaded to that same update — so the engineering
  *  lands where the office already works, not in a second inbox. */
 export async function POST(req: Request) {
+  try {
+    return await handle(req);
+  } catch (e) {
+    console.error("message post failed:", e);
+    return NextResponse.json(
+      { error: "We couldn't send that message — it wasn't saved. Please try again, and contact the office if it happens twice." },
+      { status: 500 }
+    );
+  }
+}
+
+async function handle(req: Request) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   if (session.impersonated) {

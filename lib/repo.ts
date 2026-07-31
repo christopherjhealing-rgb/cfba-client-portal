@@ -445,8 +445,9 @@ export async function writeFile(storagePath: string, bytes: Buffer, contentType:
     await demo.save(db);
     return;
   }
-  await sb().storage.from(env.supabaseBucket)
+  const { error } = await sb().storage.from(env.supabaseBucket)
     .upload(storagePath, bytes, { contentType, upsert: true });
+  if (error) throw new Error(`Storage upload failed for ${storagePath}: ${error.message}`);
 }
 
 // ---------------------------------------------------------------------------
