@@ -85,11 +85,14 @@ create table if not exists submissions (
   company_id      text not null references companies(id) on delete cascade,
   email           text not null default '',
   address         text not null default '',
+  job_class       text not null default '',
   description     text not null default '',
+  notes           text not null default '',
   files           jsonb not null default '[]'::jsonb,
   status          text not null default 'pending',
   monday_item_id  text,
   review_note     text,
+  amendment_of    text,
   created_at      timestamptz not null default now(),
   reviewed_at     timestamptz
 );
@@ -141,6 +144,7 @@ create table if not exists messages (
   from_side         text not null check (from_side in ('client','cfba')),
   body              text not null,
   monday_update_id  text,
+  files             jsonb not null default '[]'::jsonb,
   created_at        timestamptz not null default now()
 );
 create index if not exists messages_company_idx on messages (company_id, ref, created_at);

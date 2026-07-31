@@ -84,6 +84,14 @@ export function sb(): SupabaseClient {
   return _sb;
 }
 
+/** Throw when a write fails. Without this, a schema mismatch or outage makes
+ *  the portal report success while storing nothing — the worst failure mode
+ *  a lodgement system can have. */
+function must<T extends { error: { message: string } | null }>(res: T): T {
+  if (res.error) throw new Error(`Database write failed: ${res.error.message}`);
+  return res;
+}
+
 // ---------------------------------------------------------------------------
 // Companies
 // ---------------------------------------------------------------------------
@@ -202,10 +210,10 @@ export async function createLogin(l: {
     await demo.save(db);
     return;
   }
-  await sb().from("client_logins").insert({
+  must(await sb().from("client_logins").insert({
     username: u, company_id: l.companyId, password_hash: null, must_set_password: true,
     setup_code_hash: l.setupCodeHash, setup_expires_at: l.setupExpiresAt, disabled: false,
-  });
+  }));
 }
 
 export async function issueSetupCode(username: string, setupCodeHash: string, setupExpiresAt: string) {
@@ -222,10 +230,10 @@ export async function issueSetupCode(username: string, setupCodeHash: string, se
     }
     return;
   }
-  await sb().from("client_logins").update({
+  must(await sb().from("client_logins").update({
     setup_code_hash: setupCodeHash, setup_expires_at: setupExpiresAt,
     must_set_password: true, password_hash: null,
-  }).eq("username", u);
+  }).eq("username", u));
 }
 
 export async function setPassword(username: string, passwordHash: string) {
@@ -242,10 +250,10 @@ export async function setPassword(username: string, passwordHash: string) {
     }
     return;
   }
-  await sb().from("client_logins").update({
+  must(await sb().from("client_logins").update({
     password_hash: passwordHash, must_set_password: false,
     setup_code_hash: null, setup_expires_at: null,
-  }).eq("username", u);
+  }).eq("username", u));
 }
 
 export async function touchLogin(username: string) {
@@ -266,7 +274,7 @@ export async function setLoginDisabled(username: string, disabled: boolean) {
     if (db.logins[u]) { db.logins[u].disabled = disabled; await demo.save(db); }
     return;
   }
-  await sb().from("client_logins").update({ disabled }).eq("username", u);
+  must(await sb().from("client_logins").update({ disabled }).eq("username", u));
 }
 
 // ---------------------------------------------------------------------------
@@ -315,8 +323,10 @@ export async function markDownloaded(ref: string, at: string) {
     }
     return;
   }
-  await sb().from("jobs").update({ first_downloaded_at: at })
-    .eq("ref", ref).is("first_downloaded_at", null);
+  // The retention clock starts here; a silent failure would mean files never
+  // purge and the six-month promise to clients quietly stops being true.
+  must(await sb().from("jobs").update({ first_downloaded_at: at })
+    .eq("ref", ref).is("first_downloaded_at", null));
 }
 
 export async function upsertJob(job: Job, files: JobFile[]) {
@@ -330,18 +340,18 @@ export async function upsertJob(job: Job, files: JobFile[]) {
     await demo.save(db);
     return;
   }
-  await sb().from("jobs").upsert({
+  must(await sb().from("jobs").upsert({
     ref: job.ref, company_id: job.companyId, monday_item_id: job.mondayItemId,
     address: job.address, description: job.description, monday_status: job.mondayStatus,
     file_count: files.length, issued_at: job.issuedAt, last_synced_at: job.lastSyncedAt,
     storage_prefix: job.storagePrefix, source_folder: job.sourceFolder,
-  }, { onConflict: "ref" });
+  }, { onConflict: "ref" }));
   if (files.length) {
-    await sb().from("job_files").delete().eq("ref", job.ref);
-    await sb().from("job_files").insert(files.map((f) => ({
+    must(await sb().from("job_files").delete().eq("ref", job.ref));
+    must(await sb().from("job_files").insert(files.map((f) => ({
       ref: job.ref, filename: f.filename, size: f.size,
       storage_path: f.storagePath, content_type: f.contentType,
-    })));
+    }))));
   }
 }
 
@@ -361,11 +371,11 @@ export async function addSubmission(
     await demo.save(db);
     return id;
   }
-  await sb().from("submissions").insert({
+  must(await sb().from("submissions").insert({
     id, company_id: s.companyId, email: s.email, address: s.address,
     job_class: s.jobClass, description: s.description, notes: s.notes,
     files: s.files, status: "pending", amendment_of: s.amendmentOf ?? null,
-  });
+  }));
   return id;
 }
 
@@ -407,10 +417,10 @@ export async function setSubmission(
     if (s) { Object.assign(s, patch, { reviewedAt: new Date().toISOString() }); await demo.save(db); }
     return;
   }
-  await sb().from("submissions").update({
+  must(await sb().from("submissions").update({
     status: patch.status, monday_item_id: patch.mondayItemId,
     review_note: patch.reviewNote, reviewed_at: new Date().toISOString(),
-  }).eq("id", id);
+  }).eq("id", id));
 }
 
 // ---------------------------------------------------------------------------
@@ -517,11 +527,11 @@ export async function addMessage(m: Omit<Message, "id">, preId?: string): Promis
     await demo.save(db);
     return rec;
   }
-  await sb().from("messages").insert({
+  must(await sb().from("messages").insert({
     id: rec.id, ref: rec.ref, company_id: rec.companyId, from_side: rec.from,
     body: rec.body, created_at: rec.createdAt, monday_update_id: rec.mondayUpdateId ?? null,
     files: rec.files ?? [],
-  });
+  }));
   return rec;
 }
 
