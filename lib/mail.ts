@@ -1,0 +1,80 @@
+import { env } from "./env";
+import { token as graphToken } from "./graph";
+
+const MAIL_READY = Boolean(
+  env.graphTenantId && env.graphClientId && env.graphClientSecret && env.mailFrom
+);
+
+/** Send as the CFBA mailbox via Microsoft Graph. Requires the app registration
+ *  to hold the Mail.Send application permission and MAIL_FROM to be a real
+ *  mailbox in the tenant (admin@cfba.com.au). */
+export async function sendMail(
+  to: string[], subject: string, html: string
+): Promise<boolean> {
+  const recipients = to.filter(Boolean);
+  if (!MAIL_READY || recipients.length === 0) return false;
+
+  const token = await graphToken();
+  const r = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(env.mailFrom)}/sendMail`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: {
+          subject,
+          body: { contentType: "HTML", content: html },
+          toRecipients: recipients.map((address) => ({ emailAddress: { address } })),
+        },
+        saveToSentItems: true,
+      }),
+    }
+  );
+  if (!r.ok) throw new Error(`Graph sendMail ${r.status}: ${await r.text()}`);
+  return true;
+}
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** The notification a client gets when we post an update on their job. The
+ *  message itself is in the body: someone reading it on a phone on site should
+ *  not have to log in to find out what we've asked for. */
+export function updateEmail(opts: {
+  companyName: string;
+  ref: string;
+  address: string;
+  body: string;
+  needsAction: boolean;
+}): { subject: string; html: string } {
+  const { ref, address, body, needsAction } = opts;
+  const subject = needsAction
+    ? `Action required — job ${ref}, ${address}`
+    : `Update on job ${ref}, ${address}`;
+
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 16px">Hello,</p>
+  <p style="margin:0 0 16px">
+    ${needsAction
+      ? `We need something further before we can continue with job <strong>${esc(ref)}</strong> at ${esc(address)}.`
+      : `There's an update on job <strong>${esc(ref)}</strong> at ${esc(address)}.`}
+  </p>
+  <div style="border-left:3px solid #1E5B3C;background:#F4F8F4;padding:14px 18px;margin:0 0 18px;white-space:pre-line">${esc(body)}</div>
+  <p style="margin:0 0 18px">
+    You can reply and attach documents in the client portal — it goes straight onto
+    the job, so there's no need to email as well.
+  </p>
+  <p style="margin:0 0 22px">
+    <a href="${env.appUrl}/messages?ref=${encodeURIComponent(ref)}"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;display:inline-block;font-weight:600">
+      Open this job in the portal
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">
+    CF Building Approvals · 1300 029 074 · admin@cfba.com.au
+  </p>
+</div>`.trim();
+
+  return { subject, html };
+}

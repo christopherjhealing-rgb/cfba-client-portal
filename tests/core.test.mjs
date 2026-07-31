@@ -1,0 +1,169 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  aliasKey, matchCompany, parseRef, folderMatchesRef, clientStatusLabel,
+  addMonths, retention, jobBucket, groupJobs, isClientVisible,
+  stageIndex, stageStates, businessDaysSince,
+} from "../lib/core.mjs";
+
+test("aliasKey collapses the messy client variants onto one key", () => {
+  const k = aliasKey("GVF");
+  assert.equal(aliasKey("GVF (Joe Furfaro)"), k);
+  assert.equal(aliasKey("GVF Pty Ltd"), k);
+  assert.equal(aliasKey("  gvf  "), k);
+});
+
+test("aliasKey ignores trade suffixes and bracketed notes", () => {
+  assert.equal(
+    aliasKey("Advanced Patios (formerly K and M)"),
+    aliasKey("Advanced Patios"),
+  );
+  assert.equal(aliasKey("Perth Patios & Home Improvements"), "perth");
+});
+
+test("matchCompany prefers email, falls back to name", () => {
+  const companies = [
+    { id: "c1", aliasKeys: [aliasKey("Great Aussie Patios")], emails: ["jobs@gap.com.au"] },
+    { id: "c2", aliasKeys: [aliasKey("GVF")], emails: ["joe@gvf.com"] },
+  ];
+  // email match even when the typed name is a variant
+  assert.equal(matchCompany({ clientName: "GVF Pty Ltd", email: "JOE@gvf.com" }, companies), "c2");
+  // name fallback when no email
+  assert.equal(matchCompany({ clientName: "Great Aussie Patios", email: "" }, companies), "c1");
+  // no match
+  assert.equal(matchCompany({ clientName: "Someone Else", email: "x@y.z" }, companies), null);
+});
+
+test("parseRef pulls the ref from folder names and SharePoint urls", () => {
+  assert.equal(parseRef("32 Elvira St, Palmyra - 56411"), "56411");
+  assert.equal(parseRef(".../CFBA Client Files/One Stop Patio Shop/21 Creaton Street, EAST VIC PARK - 56576/Issued/CDC.docx"), "56576");
+  assert.equal(parseRef("2 McGellin Way, Morangup - B2026-102"), "B2026-102");
+  assert.equal(parseRef("YUNGNGORA Carports"), null);
+});
+
+test("folderMatchesRef matches only the trailing ref", () => {
+  assert.ok(folderMatchesRef("3 Larcom Road, Lakelands (3525) - 56544", "56544"));
+  assert.ok(!folderMatchesRef("3 Larcom Road - 56544", "3525"));
+});
+
+test("clientStatusLabel never leaks an internal label", () => {
+  assert.equal(clientStatusLabel("FIR - ENG"), "Waiting for documentation from the engineer");
+  assert.equal(clientStatusLabel("SCL"), "Waiting for documentation from the engineer");
+  assert.equal(clientStatusLabel("Chris CDC"), "Assessed — certificate being written up");
+  assert.equal(clientStatusLabel("To CDC"), "Assessed — certificate being written up");
+  assert.equal(clientStatusLabel("New Info Received"), "Requested information received — in for re-assessment");
+  assert.equal(clientStatusLabel("On Hold"), "The job is currently on hold");
+  assert.equal(clientStatusLabel("Issued"), "Issued — ready to download");
+  assert.equal(clientStatusLabel("Totally Unknown Label"), "In progress");
+});
+
+test("To FIR tells the client an email is coming", () => {
+  assert.match(clientStatusLabel("To FIR"), /email will be sent shortly/);
+});
+
+test("isClientVisible hides Query unless downloaded", () => {
+  assert.equal(isClientVisible({ mondayStatus: "Query", fileCount: 0 }), false);
+  assert.equal(isClientVisible({ mondayStatus: "To CDC", fileCount: 0 }), true);
+  assert.equal(isClientVisible({ mondayStatus: "Cancelled", fileCount: 0 }), true);
+  // once downloaded, always visible even if later moved to a hidden status
+  assert.equal(isClientVisible({ mondayStatus: "Query", fileCount: 1, firstDownloadedAt: "2026-07-01T00:00:00Z" }), true);
+});
+
+test("addMonths clamps end-of-month correctly", () => {
+  assert.equal(addMonths("2026-08-31T00:00:00.000Z", 6).slice(0, 10), "2027-02-28");
+  assert.equal(addMonths("2026-01-15T00:00:00.000Z", 6).slice(0, 10), "2026-07-15");
+});
+
+test("retention counts down six months from first download", () => {
+  const dl = "2026-01-01T00:00:00.000Z";
+  const r1 = retention(dl, new Date("2026-04-01T00:00:00.000Z"));
+  assert.equal(r1.expired, false);
+  assert.equal(r1.expiresAt.slice(0, 10), "2026-07-01");
+  const r2 = retention(dl, new Date("2026-08-01T00:00:00.000Z"));
+  assert.equal(r2.expired, true);
+  assert.equal(retention(null).expired, false); // never downloaded -> not expired
+});
+
+test("jobBucket routes jobs to the right section", () => {
+  const now = new Date("2026-07-25T00:00:00.000Z");
+  assert.equal(jobBucket({ mondayStatus: "To CDC", fileCount: 0 }, now), "in_progress");
+  assert.equal(jobBucket({ mondayStatus: "Issued", fileCount: 3 }, now), "ready");
+  // Issued but files not synced yet -> still in progress to the client
+  assert.equal(jobBucket({ mondayStatus: "Issued", fileCount: 0 }, now), "in_progress");
+  assert.equal(jobBucket({ mondayStatus: "Issued", fileCount: 3, firstDownloadedAt: "2026-07-20T00:00:00Z" }, now), "downloaded");
+  assert.equal(jobBucket({ mondayStatus: "Issued", fileCount: 3, firstDownloadedAt: "2025-01-01T00:00:00Z" }, now), "expired");
+});
+
+test("groupJobs partitions a mixed list", () => {
+  const now = new Date("2026-07-25T00:00:00.000Z");
+  const g = groupJobs([
+    { mondayStatus: "To CDC", fileCount: 0 },
+    { mondayStatus: "Issued", fileCount: 2 },
+    { mondayStatus: "Issued", fileCount: 2, firstDownloadedAt: "2026-07-10T00:00:00Z" },
+  ], now);
+  assert.equal(g.in_progress.length, 1);
+  assert.equal(g.ready.length, 1);
+  assert.equal(g.downloaded.length, 1);
+});
+
+// --- progress stages -------------------------------------------------------
+test("stages: an unrecognised status sits at Received rather than inventing progress", () => {
+  assert.equal(stageIndex({ mondayStatus: "Something New" }), 0);
+});
+
+test("stages: assessment statuses land on Under assessment", () => {
+  for (const s of ["To Assess", "New Info Received", "To Check", "Amendment"])
+    assert.equal(stageIndex({ mondayStatus: s }), 1, s);
+});
+
+test("stages: FIR statuses land on Further information", () => {
+  for (const s of ["To FIR", "FIR", "FIR - ENG", "SCL"])
+    assert.equal(stageIndex({ mondayStatus: s }), 2, s);
+});
+
+test("stages: certificate statuses land on Certificate being prepared", () => {
+  for (const s of ["To CDC", "Chris CDC", "Chris CDC 2", "To Issue", "To Lodge", "To Send"])
+    assert.equal(stageIndex({ mondayStatus: s }), 3, s);
+});
+
+test("stages: issued and beyond land on Issued", () => {
+  for (const s of ["Issued", "To Invoice", "Invoiced / Completed"])
+    assert.equal(stageIndex({ mondayStatus: s }), 4, s);
+});
+
+test("stages: only a client-actionable FIR shows as waiting on the client", () => {
+  assert.equal(stageStates({ mondayStatus: "FIR" })[2], "waiting");
+  assert.equal(stageStates({ mondayStatus: "FIR - ENG" })[2], "current");
+  assert.equal(stageStates({ mondayStatus: "SCL" })[2], "current");
+});
+
+test("stages: a job past FIR marks that step not-required, never complete", () => {
+  const st = stageStates({ mondayStatus: "To CDC" });
+  assert.deepEqual(st, ["done", "done", "skipped", "current", "pending"]);
+});
+
+test("stages: On Hold pauses rather than advancing", () => {
+  assert.equal(stageStates({ mondayStatus: "On Hold" })[0], "paused");
+});
+
+// --- business days ---------------------------------------------------------
+test("businessDaysSince: same day is zero", () => {
+  assert.equal(businessDaysSince("2026-07-27T09:00:00Z", new Date("2026-07-27T17:00:00Z")), 0);
+});
+
+test("businessDaysSince: Monday to Thursday is three", () => {
+  assert.equal(businessDaysSince("2026-07-27T09:00:00Z", new Date("2026-07-30T09:00:00Z")), 3);
+});
+
+test("businessDaysSince: a weekend does not count", () => {
+  // Fri 24 Jul 2026 -> Mon 27 Jul 2026 is one business day, not three
+  assert.equal(businessDaysSince("2026-07-24T09:00:00Z", new Date("2026-07-27T09:00:00Z")), 1);
+});
+
+test("businessDaysSince: a full week is five", () => {
+  assert.equal(businessDaysSince("2026-07-20T09:00:00Z", new Date("2026-07-27T09:00:00Z")), 5);
+});
+
+test("businessDaysSince: rubbish in returns null rather than a wrong number", () => {
+  assert.equal(businessDaysSince("not a date"), null);
+});

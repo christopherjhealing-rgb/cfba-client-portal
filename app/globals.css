@@ -1,0 +1,74 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+body {
+  background:
+    radial-gradient(1100px 500px at 90% -10%, rgba(30,91,60,0.06), transparent 60%),
+    radial-gradient(900px 500px at -10% 0%, rgba(30,91,60,0.05), transparent 55%),
+    theme(colors.paper);
+  color: theme(colors.ink);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-seal px-4 py-2.5
+      font-display text-[12px] font-semibold uppercase tracking-[0.09em] text-white
+      shadow-sm transition hover:bg-seal-deep disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-rule
+      bg-white px-4 py-2.5 font-display text-[12px] font-semibold uppercase
+      tracking-[0.09em] text-ink transition hover:bg-wash disabled:opacity-50;
+  }
+  .field {
+    @apply w-full rounded-md border border-rule bg-white px-3 py-2.5 text-[15px]
+      text-ink outline-none transition placeholder:text-ink/35
+      focus:border-seal focus:ring-2 focus:ring-seal/20;
+  }
+  .label {
+    @apply mb-1.5 block font-display text-[10px] font-semibold uppercase
+      tracking-[0.14em] text-ink/55;
+  }
+  .card {
+    @apply rounded-xl border border-rule bg-white shadow-[0_1px_2px_rgba(16,26,21,0.04),0_8px_24px_-16px_rgba(16,26,21,0.15)];
+  }
+  .chip {
+    @apply inline-block rounded-md bg-[#E7EDE7] px-2.5 py-1 font-display text-[10px]
+      font-semibold uppercase leading-none tracking-[0.05em] text-[#2B3A31];
+  }
+  .chip-seal  { @apply bg-[#E7F0EA] text-seal; }
+  .chip-brass { @apply bg-[#F6EEDA] text-[#8A5E10]; }
+  .chip-flag  { @apply bg-[#F7E6E6] text-flag; }
+  .stat {
+    @apply flex items-start gap-3.5 rounded-xl border border-rule bg-white px-4 py-4
+      shadow-[0_1px_2px_rgba(16,26,21,0.04)];
+  }
+  .stat-num {
+    @apply font-display text-[26px] font-semibold leading-none text-ink;
+  }
+  .sectionhead {
+    @apply mb-2.5 flex items-center gap-3 font-display text-[12px] font-semibold
+      uppercase tracking-[0.14em] text-ink/65;
+  }
+  .th {
+    @apply px-4 py-2.5 text-left font-display text-[10px] font-semibold uppercase
+      tracking-[0.13em] text-ink/45;
+  }
+  .td { @apply px-4 py-3.5 align-top text-[14px]; }
+  .panel-amber {
+    @apply rounded-xl border border-[#E4C98A] bg-[#FCF7EC];
+  }
+  .empty {
+    @apply rounded-xl border border-dashed border-rule bg-wash px-4 py-8 text-center
+      text-[13px] text-ink/50;
+  }
+  .eyebrow {
+    @apply font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-seal/70;
+  }
+}
+
+:focus-visible { outline: 2px solid theme(colors.seal.DEFAULT); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
