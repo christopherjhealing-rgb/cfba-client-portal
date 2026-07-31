@@ -27,12 +27,14 @@ export interface SyncResult {
   note?: string;
 }
 
-// A message reaches the client only when the update is written with this
-// prefix. Everything else on the card stays internal, which is what makes the
-// Updates section safe to keep using normally.
-export const CLIENT_PREFIX = "CLIENT:";
+// A message reaches the client only when the update starts with one of these
+// prefixes (case-insensitive). Everything else on the card stays internal,
+// which is what makes the Updates section safe to keep using normally.
+// NOTE: this means an internal note that happens to open with "FIR:" WILL be
+// delivered and emailed to the client — the prefix is the whole switch.
+export const CLIENT_PREFIXES = ["FIR:", "CLIENT:"];
 
-// Every active card's conversation is scanned, so a CLIENT: update reaches
+// Every active card's conversation is scanned, so a prefixed update reaches
 // the client whatever the card's status. listUpdates batches 25 cards per
 // query, so a few hundred active cards costs a dozen queries per sync.
 
@@ -151,10 +153,11 @@ async function pullMessages(
   for (const u of updates) {
     if (seen.has(u.id)) continue;
     const text = u.text.trim();
-    if (!text.toUpperCase().startsWith(CLIENT_PREFIX)) continue;
+    const prefix = CLIENT_PREFIXES.find((p) => text.toUpperCase().startsWith(p));
+    if (!prefix) continue;
     const target = byItem.get(u.itemId);
     if (!target) continue;
-    const body = text.slice(CLIENT_PREFIX.length).trim();
+    const body = text.slice(prefix.length).trim();
     await repo.addMessage({
       ref: target.ref, companyId: target.companyId, from: "cfba",
       body, createdAt: u.createdAt, mondayUpdateId: u.id, files: [],
