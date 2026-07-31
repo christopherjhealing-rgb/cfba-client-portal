@@ -162,3 +162,9 @@ create table if not exists login_attempts (
   count     int  not null default 0,
   last_at   timestamptz not null default now()
 );
+
+-- RLS for the tables added after the block above. Same posture: enabled, no
+-- policies — only the service-role key (server-side) can touch them.
+alter table messages       enable row level security;
+alter table message_reads  enable row level security;
+alter table login_attempts enable row level security;
