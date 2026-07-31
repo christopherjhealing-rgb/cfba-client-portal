@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { DEMO_MODE, env } from "./env";
-import { aliasKey } from "./core.mjs";
+import { aliasKey, normEmail } from "./core.mjs";
 import { normUsername } from "./auth";
 import * as demo from "./demo";
 import type { PortalJob } from "./core.mjs";
@@ -104,6 +104,49 @@ export async function listCompanies(): Promise<Company[]> {
 export async function companyById(id: string): Promise<Company | null> {
   const all = await listCompanies();
   return all.find((c) => c.id === id) || null;
+}
+
+/** Create a company in the portal's registry, with optional contact emails and
+ *  extra Monday-spelling aliases. Alias keys are normalised here so callers
+ *  can pass the raw spellings staff see on the board. */
+export async function createCompany(input: {
+  name: string; emails?: string[]; aliases?: string[]; isTest?: boolean;
+}): Promise<Company> {
+  if (DEMO_MODE) throw new Error("Demo mode — connect Supabase to add real clients.");
+
+  const id = crypto.randomUUID();
+  const { error } = await sb().from("companies").insert({
+    id, name: input.name, is_test: !!input.isTest,
+  });
+  if (error) throw new Error(error.message);
+
+  const emails = [...new Set((input.emails || []).map(normEmail).filter(Boolean))];
+  if (emails.length) {
+    const { error: e } = await sb().from("company_emails")
+      .insert(emails.map((email) => ({ company_id: id, email })));
+    if (e) {
+      await sb().from("companies").delete().eq("id", id);
+      throw new Error(
+        e.code === "23505"
+          ? "One of those emails is already attached to another client."
+          : e.message
+      );
+    }
+  }
+
+  const aliasKeys = [...new Set((input.aliases || []).map(aliasKey).filter(Boolean))]
+    .filter((k) => k !== aliasKey(input.name)); // the name itself always matches
+  if (aliasKeys.length) {
+    const { error: e } = await sb().from("company_aliases")
+      .insert(aliasKeys.map((alias_key) => ({ company_id: id, alias_key })));
+    if (e) {
+      await sb().from("company_emails").delete().eq("company_id", id);
+      await sb().from("companies").delete().eq("id", id);
+      throw new Error(e.message);
+    }
+  }
+
+  return { id, name: input.name, emails, isTest: !!input.isTest };
 }
 
 export async function companiesForMatch(): Promise<CompanyMatch[]> {

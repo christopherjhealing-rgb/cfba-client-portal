@@ -4,6 +4,7 @@ import { isStaff } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import { StaffShell } from "@/components/StaffShell";
 import { LoginManager } from "@/components/LoginManager";
+import { AddClient } from "@/components/AddClient";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,15 @@ export default async function ClientsPage() {
           code — they choose their own password. Open a client to check the jobs
           and files their portal is showing.
         </p>
+
+        <AddClient />
+
+        {companies.length === 0 && (
+          <p className="max-w-2xl text-[14px] leading-relaxed text-ink/65">
+            No clients yet. Sync only attaches Monday jobs to clients listed
+            here — add your first client above, then run a sync.
+          </p>
+        )}
 
         <div className="space-y-3">
           {companies.map((c) => {

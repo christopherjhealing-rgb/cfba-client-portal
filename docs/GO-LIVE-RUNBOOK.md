@@ -172,8 +172,14 @@ Plus any Graph mail variables in your v11 `.env.example` that aren't listed here
 Now test against real data, but before any client has the URL.
 
 - [ ] Go to `/admin`, sign in with `STAFF_PASSCODE`.
-- [ ] **Clients & logins** — the client list should have populated from Monday.
-- [ ] Trigger a sync manually and confirm jobs appear with correct statuses.
+- [ ] **Clients & logins** — the registry starts empty by design: sync only
+      attaches Monday jobs to clients that exist here, it never auto-creates
+      them from the board's free-text Client column. Click **Add a client**
+      for each client you want in the portal (name as it appears on Monday;
+      other spellings as aliases; their email if the board carries it).
+- [ ] Trigger a sync manually and confirm jobs appear with correct statuses
+      under the clients you added. "N unmatched" in the sync result = cards
+      whose Client spelling didn't match anyone — add aliases and re-run.
 - [ ] Pick one real client → **Check folders** → confirm it resolves their SharePoint Issued folder. *This is the step most likely to fail* — if the folder path doesn't match, the Graph permissions or `GRAPH_CLIENT_FILES_ROOT` need a look.
 - [ ] **Issue a login to yourself** using a personal email as if you were a client. Walk the whole first-time flow: setup code → set password → dashboard.
 - [ ] As that test client: view a job timeline, download a package from a genuinely Issued job, open the zip and check the files are the right ones.
