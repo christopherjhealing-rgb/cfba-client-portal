@@ -13,7 +13,7 @@ export type DirectUpload =
   | { error: string };
 
 export async function uploadDirect(
-  purpose: "submission" | "message",
+  purpose: "submission" | "message" | "infosheet",
   files: File[],
   onProgress?: (done: number, total: number) => void
 ): Promise<DirectUpload> {

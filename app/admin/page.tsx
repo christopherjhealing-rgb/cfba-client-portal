@@ -8,16 +8,19 @@ import { SyncButton } from "@/components/SyncButton";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { PageToggles } from "@/components/PageToggles";
 import { TOGGLEABLE_PAGES } from "@/lib/pages";
+import { InfoSheetManager } from "@/components/InfoSheetManager";
+import { PUBLISHED_SHEETS } from "@/lib/info-sheets";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [pending, companies, disabled] = await Promise.all([
+  const [pending, companies, disabled, sheetOverrides] = await Promise.all([
     repo.listSubmissions("pending"),
     repo.listCompanies(),
     repo.disabledPages(),
+    repo.listFiles("info-sheets").catch(() => []),
   ]);
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
@@ -45,6 +48,11 @@ export default async function AdminHome() {
         <PageToggles
           pages={TOGGLEABLE_PAGES.map((p) => ({ key: p.key, label: p.label }))}
           initialDisabled={[...disabled]}
+        />
+
+        <InfoSheetManager
+          sheets={PUBLISHED_SHEETS.map((s) => ({ file: s.file, title: s.title }))}
+          overridden={sheetOverrides.map((f) => f.name)}
         />
 
         <section>

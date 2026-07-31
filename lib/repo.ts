@@ -450,6 +450,31 @@ export async function writeFile(storagePath: string, bytes: Buffer, contentType:
   if (error) throw new Error(`Storage upload failed for ${storagePath}: ${error.message}`);
 }
 
+/** Stream a stored file, or null if absent. Streaming keeps large files
+ *  clear of the serverless response-size cap. */
+export async function readFileStream(storagePath: string): Promise<ReadableStream | null> {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    const b64 = db.files[storagePath];
+    if (b64 === undefined) return null;
+    return new Blob([Buffer.from(b64 as string, "base64")]).stream();
+  }
+  const { data, error } = await sb().storage.from(env.supabaseBucket).download(storagePath);
+  if (error || !data) return null;
+  return data.stream();
+}
+
+export async function deleteFile(storagePath: string) {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    delete db.files[storagePath];
+    await demo.save(db);
+    return;
+  }
+  const { error } = await sb().storage.from(env.supabaseBucket).remove([storagePath]);
+  if (error) throw new Error(`Storage delete failed for ${storagePath}: ${error.message}`);
+}
+
 export interface StoredListing { name: string; size: number; }
 
 /** Files sitting directly under a storage prefix, with sizes as the server
