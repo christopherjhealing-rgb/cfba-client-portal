@@ -11,6 +11,7 @@ const COL = {
   email: "email_mkspqm6m",
   ref: "text__1",
   description: "text0__1",
+  files: "file_mksmhvsk", // "Files" column — lodged documents land here
 };
 
 async function gql<T = Record<string, unknown>>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -139,6 +140,30 @@ export async function postUpdate(itemId: string, body: string): Promise<string |
 /** Attach a file to an update, so a client's engineering PDF lands on the card
  *  itself rather than only in the portal. Uses Monday's multipart file
  *  endpoint, which is separate from the GraphQL endpoint above. */
+/** Attach a file to the card's Files column — where the office expects the
+ *  lodged documents, alongside everything else filed against the job. */
+export async function addFileToColumn(
+  itemId: string, filename: string, bytes: Buffer, contentType: string
+): Promise<void> {
+  if (!MONDAY_READY) return;
+  const form = new FormData();
+  form.set("query",
+    `mutation ($item: ID!, $col: String!, $file: File!) {
+       add_file_to_column(item_id: $item, column_id: $col, file: $file) { id }
+     }`);
+  form.set("variables", JSON.stringify({ item: itemId, col: COL.files, file: null }));
+  form.set("map", JSON.stringify({ image: "variables.file" }));
+  form.set("image", new Blob([new Uint8Array(bytes)], { type: contentType }), filename);
+
+  const r = await fetch("https://api.monday.com/v2/file", {
+    method: "POST",
+    headers: { Authorization: env.mondayToken, "API-Version": "2024-10" },
+    body: form,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (j.errors) throw new Error("Monday file->column upload: " + JSON.stringify(j.errors));
+}
+
 export async function addFileToUpdate(
   updateId: string, filename: string, bytes: Buffer, contentType: string
 ): Promise<void> {

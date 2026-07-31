@@ -84,33 +84,30 @@ async function handle(req: Request) {
       // Non-fatal — the card still gets created even if the note fails to post.
     }
   }
-  // Attach the lodged documents to the card, so the office has them where it
-  // already works. The portal store keeps its copy either way.
+  // The lodged documents go to the card's Files column — where the office
+  // files everything else — plus a text record in the conversation listing
+  // what arrived. The portal store keeps its copy either way.
   const failed: string[] = [];
   if (sub.files.length) {
-    let updateId: string | null = null;
     try {
-      updateId = await monday.postUpdate(
+      await monday.postUpdate(
         itemId,
         `Documents lodged via the client portal` +
           (sub.email ? ` (job contact: ${sub.email})` : "") + `:\n\n` +
-          sub.files.map((f) => `• ${f.name}${f.category ? ` — ${f.category}` : ""}`).join("\n")
+          sub.files.map((f) => `• ${f.name}${f.category ? ` — ${f.category}` : ""}`).join("\n") +
+          `\n\nThe files are in this card's Files column.`
       );
     } catch (e) {
       console.error("decision: could not post the documents update:", e);
     }
-    if (updateId) {
-      for (const f of sub.files) {
-        try {
-          const bytes = await repo.readFile(`submissions/${sub.id}/${f.name}`);
-          await monday.addFileToUpdate(updateId, f.name, bytes, "application/pdf");
-        } catch (e) {
-          console.error(`decision: attaching ${f.name} failed:`, e);
-          failed.push(f.name);
-        }
+    for (const f of sub.files) {
+      try {
+        const bytes = await repo.readFile(`submissions/${sub.id}/${f.name}`);
+        await monday.addFileToColumn(itemId, f.name, bytes, "application/pdf");
+      } catch (e) {
+        console.error(`decision: attaching ${f.name} failed:`, e);
+        failed.push(f.name);
       }
-    } else {
-      failed.push(...sub.files.map((f) => f.name));
     }
   }
 
