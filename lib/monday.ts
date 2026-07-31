@@ -60,7 +60,7 @@ const CARD_FIELDS = `id name column_values(ids:["${COL.status}","${COL.client}",
 export async function listByStatus(label: string): Promise<MondayCard[]> {
   if (!MONDAY_READY) return [];
   const q = `
-    query ($board: ID!, $col: String!, $vals: [String]) {
+    query ($board: ID!, $col: String!, $vals: [String]!) {
       items_page_by_column_values(limit: 500, board_id: $board,
         columns: [{ column_id: $col, column_values: $vals }]) {
         items { ${CARD_FIELDS} }
