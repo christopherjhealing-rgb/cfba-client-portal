@@ -16,6 +16,13 @@ export function DecisionButtons({ id }: { id: string }) {
     const d = await r.json().catch(() => ({}));
     setBusy(null);
     if (!r.ok) { setMsg(d.error || "Failed."); return; }
+    if (d.warning) {
+      // Card exists but not everything attached — give staff time to read
+      // the warning before the queue refreshes.
+      setMsg(d.warning);
+      setTimeout(() => window.location.reload(), 8000);
+      return;
+    }
     window.location.reload();
   }
 

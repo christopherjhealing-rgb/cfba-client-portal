@@ -5,6 +5,9 @@ import * as monday from "@/lib/monday";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Accepting shuttles the lodged PDFs from storage onto the Monday card;
+// a full 40 MB drawing set needs more than the default window.
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   try {
@@ -81,8 +84,44 @@ async function handle(req: Request) {
       // Non-fatal — the card still gets created even if the note fails to post.
     }
   }
+  // Attach the lodged documents to the card, so the office has them where it
+  // already works. The portal store keeps its copy either way.
+  const failed: string[] = [];
+  if (sub.files.length) {
+    let updateId: string | null = null;
+    try {
+      updateId = await monday.postUpdate(
+        itemId,
+        `Documents lodged via the client portal` +
+          (sub.email ? ` (job contact: ${sub.email})` : "") + `:\n\n` +
+          sub.files.map((f) => `• ${f.name}${f.category ? ` — ${f.category}` : ""}`).join("\n")
+      );
+    } catch (e) {
+      console.error("decision: could not post the documents update:", e);
+    }
+    if (updateId) {
+      for (const f of sub.files) {
+        try {
+          const bytes = await repo.readFile(`submissions/${sub.id}/${f.name}`);
+          await monday.addFileToUpdate(updateId, f.name, bytes, "application/pdf");
+        } catch (e) {
+          console.error(`decision: attaching ${f.name} failed:`, e);
+          failed.push(f.name);
+        }
+      }
+    } else {
+      failed.push(...sub.files.map((f) => f.name));
+    }
+  }
+
   await repo.setSubmission(sub.id, {
     status: "accepted", mondayItemId: itemId, reviewNote: String(note || ""),
   });
-  return NextResponse.json({ ok: true, mondayItemId: itemId });
+  return NextResponse.json({
+    ok: true,
+    mondayItemId: itemId,
+    warning: failed.length
+      ? `Card created, but ${failed.length === 1 ? "one file" : `${failed.length} files`} couldn't be attached on Monday (${failed.join(", ")}). The portal still holds ${failed.length === 1 ? "it" : "them"} in storage under submissions/${sub.id}.`
+      : undefined,
+  });
 }
