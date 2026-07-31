@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { uploadDirect } from "@/lib/upload-client";
 
 export interface AmendableJob {
   ref: string;
@@ -40,15 +41,39 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg(null);
-    const fd = new FormData();
-    fd.set("amendmentOf", ref);
-    fd.set("address", job?.address || query.trim());
-    if (!ref) fd.set("originalJobText", query.trim());
-    fd.set("jobClass", "Amendment");
-    fd.set("description", description);
-    fd.set("notes", notes);
-    for (const f of files) fd.append("files", f);
-    const r = await fetch("/api/submit", { method: "POST", body: fd });
+
+    // Revised drawings go straight to storage via signed URLs when they exist;
+    // the multipart path stays for demo mode and file-less amendments.
+    let up: Awaited<ReturnType<typeof uploadDirect>> = { mode: "inline" };
+    if (files.length) up = await uploadDirect("submission", files);
+    if ("error" in up) { setBusy(false); setMsg(up.error); return; }
+
+    let r: Response;
+    if (files.length && up.mode === "direct") {
+      r = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amendmentOf: ref,
+          address: job?.address || query.trim(),
+          jobClass: "Amendment",
+          description,
+          notes,
+          draftId: up.draftId,
+          files: up.names.map((name) => ({ name })),
+        }),
+      });
+    } else {
+      const fd = new FormData();
+      fd.set("amendmentOf", ref);
+      fd.set("address", job?.address || query.trim());
+      if (!ref) fd.set("originalJobText", query.trim());
+      fd.set("jobClass", "Amendment");
+      fd.set("description", description);
+      fd.set("notes", notes);
+      for (const f of files) fd.append("files", f);
+      r = await fetch("/api/submit", { method: "POST", body: fd });
+    }
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Something went wrong."); return; }

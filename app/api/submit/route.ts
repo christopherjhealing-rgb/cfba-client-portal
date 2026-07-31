@@ -26,6 +26,8 @@ export async function POST(req: Request) {
   }
 }
 
+type Session = NonNullable<Awaited<ReturnType<typeof getClientSession>>>;
+
 async function handle(req: Request) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
@@ -33,6 +35,13 @@ async function handle(req: Request) {
     return NextResponse.json(
       { error: "You're viewing this portal as staff — lodging is disabled." }, { status: 403 }
     );
+  }
+
+  // Direct-upload path: the files are already in storage (PUT by the browser
+  // via signed URLs — Vercel caps multipart bodies at ~4.5 MB, far below a
+  // real drawing set) and this request carries only metadata.
+  if ((req.headers.get("content-type") || "").includes("application/json")) {
+    return handleDirect(session, await req.json().catch(() => ({})));
   }
 
   const form = await req.formData();
@@ -107,6 +116,104 @@ async function handle(req: Request) {
     description,
     notes,
     files: stored,
+    createdAt: new Date().toISOString(),
+    amendmentOf,
+  }, id);
+
+  return NextResponse.json({ ok: true, id });
+}
+
+/** Metadata-only lodgement referencing files the browser already PUT into the
+ *  company's own draft area. Everything is re-verified against what actually
+ *  landed in storage — names, PDF rule, and sizes the server can see — before
+ *  the files move to their permanent home. */
+async function handleDirect(session: Session, body: Record<string, unknown>) {
+  const address = tidyAddress(String(body.address || ""));
+  const jobClass = tidyAddress(String(body.jobClass || ""));
+  const description = tidyAddress(String(body.description || ""));
+  const notes = String(body.notes || "").trim().slice(0, 4000);
+  const contact = String(body.contact || "").trim().toLowerCase();
+  const amendmentOf = tidyAddress(String(body.amendmentOf || "")) || null;
+
+  if (!address || !description || !jobClass) {
+    return NextResponse.json({ error: "Site address, class and description are required." }, { status: 400 });
+  }
+
+  if (amendmentOf) {
+    const own = await repo.listJobsForCompany(session.companyId);
+    if (!own.some((j) => j.ref === amendmentOf)) {
+      return NextResponse.json({ error: "That job isn't on your account." }, { status: 404 });
+    }
+  }
+
+  const claimed: { name: string; category?: string }[] = Array.isArray(body.files)
+    ? (body.files as { name?: unknown; category?: unknown }[])
+        .map((f) => ({
+          name: String(f?.name || ""),
+          category: f?.category ? String(f.category) : undefined,
+        }))
+        .filter((f) => f.name)
+    : [];
+
+  if (!amendmentOf) {
+    const have = new Set(claimed.map((f) => f.category));
+    const missing = ["drawings", "engineering"].filter((c) => !have.has(c));
+    if (missing.length) {
+      return NextResponse.json(
+        { error: `Attach ${missing.join(" and ")} before lodging — an assessment can't start without them.` },
+        { status: 400 }
+      );
+    }
+  }
+
+  const draftId = String(body.draftId || "");
+  if (!/^up_[0-9a-f-]{20,}$/i.test(draftId) || !claimed.length) {
+    return NextResponse.json(
+      { error: "Those uploads can't be found — please try lodging again." }, { status: 400 }
+    );
+  }
+
+  const rejected = claimed.filter((f) => !PDF_ONLY(f.name, "application/pdf")).map((f) => f.name);
+  if (rejected.length) {
+    return NextResponse.json(
+      { error: `PDFs only. Convert or remove: ${rejected.slice(0, 4).join(", ")}` },
+      { status: 415 }
+    );
+  }
+
+  // The prefix is rebuilt from the session's own company id — a client can
+  // only ever reference their own draft area, whatever the request claims.
+  const prefix = `uploads/${session.companyId}/${draftId}`;
+  const landed = new Map((await repo.listFiles(prefix)).map((f) => [f.name, f.size]));
+
+  if (claimed.some((f) => !landed.has(f.name))) {
+    return NextResponse.json(
+      { error: "Some files didn't finish uploading — please try lodging again." }, { status: 400 }
+    );
+  }
+
+  // Sizes from storage, not from the browser's claims.
+  const total = claimed.reduce((n, f) => n + (landed.get(f.name) || 0), 0);
+  if (total > MAX_TOTAL) {
+    return NextResponse.json(
+      { error: "Those files come to more than 40 MB. Send the largest ones to the office by email." },
+      { status: 413 }
+    );
+  }
+
+  const id = "sub_" + Math.random().toString(36).slice(2, 10);
+  for (const f of claimed) {
+    await repo.moveFile(`${prefix}/${f.name}`, `submissions/${id}/${f.name}`);
+  }
+
+  await repo.addSubmission({
+    companyId: session.companyId,
+    email: contact,
+    address,
+    jobClass,
+    description,
+    notes,
+    files: claimed,
     createdAt: new Date().toISOString(),
     amendmentOf,
   }, id);

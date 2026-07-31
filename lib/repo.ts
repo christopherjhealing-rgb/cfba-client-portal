@@ -450,6 +450,57 @@ export async function writeFile(storagePath: string, bytes: Buffer, contentType:
   if (error) throw new Error(`Storage upload failed for ${storagePath}: ${error.message}`);
 }
 
+export interface StoredListing { name: string; size: number; }
+
+/** Files sitting directly under a storage prefix, with sizes as the server
+ *  sees them — the source of truth when verifying a direct upload. */
+export async function listFiles(prefix: string): Promise<StoredListing[]> {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    return Object.entries(db.files)
+      .filter(([p]) => p.startsWith(prefix + "/"))
+      .map(([p, b64]) => ({
+        name: p.slice(prefix.length + 1),
+        size: Buffer.from(b64 as string, "base64").length,
+      }))
+      .filter((f) => !f.name.includes("/"));
+  }
+  const { data, error } = await sb().storage.from(env.supabaseBucket)
+    .list(prefix, { limit: 100 });
+  if (error) throw new Error(`Storage list failed for ${prefix}: ${error.message}`);
+  return (data || [])
+    .filter((o) => o.name && (o as { id?: string | null }).id) // folders list with a null id
+    .map((o) => ({
+      name: o.name,
+      size: Number((o.metadata as { size?: number } | null)?.size || 0),
+    }));
+}
+
+export async function moveFile(from: string, to: string) {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    if (db.files[from] === undefined) throw new Error(`No stored file at ${from}`);
+    db.files[to] = db.files[from];
+    delete db.files[from];
+    await demo.save(db);
+    return;
+  }
+  const { error } = await sb().storage.from(env.supabaseBucket).move(from, to);
+  if (error) throw new Error(`Storage move ${from} -> ${to} failed: ${error.message}`);
+}
+
+/** Short-lived signed URL permitting one browser PUT to one exact path.
+ *  Grants no read access; the bucket stays private. */
+export async function signUploadUrl(path: string): Promise<string> {
+  if (DEMO_MODE) throw new Error("Direct uploads are not available in demo mode.");
+  const { data, error } = await sb().storage.from(env.supabaseBucket)
+    .createSignedUploadUrl(path);
+  if (error || !data?.signedUrl) {
+    throw new Error(`Could not sign upload for ${path}: ${error?.message || "no URL returned"}`);
+  }
+  return data.signedUrl;
+}
+
 // ---------------------------------------------------------------------------
 function stripFiles(j: demo.DemoJob): Job {
   const { files, ...rest } = j;

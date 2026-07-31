@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { Icon } from "./Icon";
+import { uploadDirect } from "@/lib/upload-client";
 
 const MAX_MB = 25;
 
@@ -32,11 +33,28 @@ export function ReplyBox({ refNo }: { refNo: string }) {
     e.preventDefault();
     if (!canSend) return;
     setBusy(true); setMsg(null);
-    const fd = new FormData();
-    fd.set("ref", refNo);
-    fd.set("body", body);
-    for (const f of files) fd.append("files", f);
-    const r = await fetch("/api/messages", { method: "POST", body: fd });
+
+    // Attachments go straight to storage via signed URLs; the multipart path
+    // stays for demo mode and text-only replies.
+    let r: Response | null = null;
+    if (files.length) {
+      const up = await uploadDirect("message", files);
+      if ("error" in up) { setBusy(false); setMsg(up.error); return; }
+      if (up.mode === "direct") {
+        r = await fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ref: refNo, body, draftId: up.draftId, files: up.names }),
+        });
+      }
+    }
+    if (!r) {
+      const fd = new FormData();
+      fd.set("ref", refNo);
+      fd.set("body", body);
+      for (const f of files) fd.append("files", f);
+      r = await fetch("/api/messages", { method: "POST", body: fd });
+    }
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Something went wrong."); return; }

@@ -5,6 +5,9 @@ import * as monday from "@/lib/monday";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Attachments shuttle from storage onto the Monday card; a full 25 MB message
+// needs more than the default window.
+export const maxDuration = 300;
 
 const MAX_TEXT = 4000;
 const MAX_TOTAL = 25 * 1024 * 1024; // 25 MB per message
@@ -28,6 +31,8 @@ export async function POST(req: Request) {
   }
 }
 
+type Session = NonNullable<Awaited<ReturnType<typeof getClientSession>>>;
+
 async function handle(req: Request) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
@@ -36,6 +41,12 @@ async function handle(req: Request) {
       { error: "You're viewing this portal as staff — replying is disabled." },
       { status: 403 }
     );
+  }
+
+  // Direct-upload path — attachments already sit in the company's draft area
+  // of storage; this request is metadata only. See /api/uploads/sign.
+  if ((req.headers.get("content-type") || "").includes("application/json")) {
+    return handleDirect(session, await req.json().catch(() => ({})));
   }
 
   const form = await req.formData();
@@ -105,6 +116,105 @@ async function handle(req: Request) {
       // Non-fatal: the message and its files are saved in the portal either way,
       // and the office can still see them. Better a message that lands without
       // its attachment than a client told the send failed.
+    }
+  }
+
+  await repo.addMessage({
+    ref: jobRef,
+    companyId: session.companyId,
+    from: "client",
+    body: text,
+    createdAt: new Date().toISOString(),
+    mondayUpdateId: updateId,
+    files: stored,
+  }, msgId);
+
+  await repo.markThreadRead(session.companyId, jobRef);
+  return NextResponse.json({ ok: true });
+}
+
+/** Metadata-only message whose attachments the browser already PUT into the
+ *  company's draft area. Verified against storage, moved to the message's
+ *  permanent home, then mirrored onto the Monday card as before. */
+async function handleDirect(session: Session, body: Record<string, unknown>) {
+  const jobRef = String(body.ref || "").trim();
+  const text = String(body.body || "").trim().slice(0, MAX_TEXT);
+  const names: string[] = Array.isArray(body.files)
+    ? (body.files as unknown[]).map((n) => String(n || "")).filter(Boolean)
+    : [];
+
+  if (!jobRef) return NextResponse.json({ error: "Missing job reference." }, { status: 400 });
+  if (!text && names.length === 0) {
+    return NextResponse.json(
+      { error: "Write a message or attach a file before sending." }, { status: 400 }
+    );
+  }
+
+  const jobs = await repo.listJobsForCompany(session.companyId);
+  const job = jobs.find((j) => j.ref === jobRef);
+  if (!job) return NextResponse.json({ error: "Job not found." }, { status: 404 });
+
+  const msgId = "msg_" + Math.random().toString(36).slice(2, 10);
+  const stored: repo.MessageFile[] = [];
+
+  if (names.length) {
+    const draftId = String(body.draftId || "");
+    if (!/^up_[0-9a-f-]{20,}$/i.test(draftId)) {
+      return NextResponse.json(
+        { error: "Those uploads can't be found — please try again." }, { status: 400 }
+      );
+    }
+    const rejected = names.filter((n) => !PDF_ONLY(n, "application/pdf"));
+    if (rejected.length) {
+      return NextResponse.json(
+        { error: `PDFs only. Convert or remove: ${rejected.slice(0, 4).join(", ")}` },
+        { status: 415 }
+      );
+    }
+
+    const prefix = `uploads/${session.companyId}/${draftId}`;
+    const landed = new Map((await repo.listFiles(prefix)).map((f) => [f.name, f.size]));
+    if (names.some((n) => !landed.has(n))) {
+      return NextResponse.json(
+        { error: "Some files didn't finish uploading — please try again." }, { status: 400 }
+      );
+    }
+    const total = names.reduce((n, x) => n + (landed.get(x) || 0), 0);
+    if (total > MAX_TOTAL) {
+      return NextResponse.json(
+        { error: "Those files come to more than 25 MB. Send the largest ones to the office by email." },
+        { status: 413 }
+      );
+    }
+
+    for (const n of names) {
+      const storagePath = `messages/${jobRef}/${msgId}/${n}`;
+      await repo.moveFile(`${prefix}/${n}`, storagePath);
+      stored.push({
+        name: n, size: landed.get(n) || 0, storagePath, contentType: "application/pdf",
+      });
+    }
+  }
+
+  let updateId: string | null = null;
+  if (job.mondayItemId) {
+    try {
+      const listed = stored.length
+        ? `\n\nAttached: ${stored.map((f) => f.name).join(", ")}`
+        : "";
+      updateId = await monday.postUpdate(
+        job.mondayItemId,
+        `Message from ${session.companyName} (via the client portal):\n\n` +
+          (text || "(no message — files only)") + listed
+      );
+      if (updateId) {
+        for (const f of stored) {
+          const bytes = await repo.readFile(f.storagePath);
+          await monday.addFileToUpdate(updateId, f.name, bytes, f.contentType);
+        }
+      }
+    } catch {
+      // Non-fatal: the message and its files are saved in the portal either way.
     }
   }
 

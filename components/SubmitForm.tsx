@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FileBucket, type Bucket } from "./FileBucket";
+import { uploadDirect } from "@/lib/upload-client";
 
 // Drawings and engineering are both required: an assessment cannot start
 // without them, and a job lodged short of them only comes straight back.
@@ -30,6 +31,7 @@ export function SubmitForm() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,19 +41,46 @@ export function SubmitForm() {
       return;
     }
     setBusy(true); setMsg(null);
-    const fd = new FormData();
-    fd.set("address", address);
-    fd.set("jobClass", jobClass);
-    fd.set("description", description);
-    fd.set("notes", notes);
-    fd.set("contact", contact);
-    for (const b of BUCKETS) {
-      for (const f of files[b.key] || []) {
-        fd.append("files", f);
-        fd.append("fileCategories", b.key);
+
+    // Files go straight to storage via signed URLs (see lib/upload-client) —
+    // a full drawing set doesn't fit through a serverless request body.
+    const entries = BUCKETS.flatMap((b) =>
+      (files[b.key] || []).map((f) => ({ file: f, category: b.key }))
+    );
+    const up = await uploadDirect(
+      "submission",
+      entries.map((x) => x.file),
+      (doneCount, total) =>
+        setProgress(doneCount < total ? `Uploading file ${doneCount + 1} of ${total}…` : "Finishing…")
+    );
+    setProgress(null);
+    if ("error" in up) { setBusy(false); setMsg(up.error); return; }
+
+    let r: Response;
+    if (up.mode === "direct") {
+      r = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address, jobClass, description, notes, contact,
+          draftId: up.draftId,
+          files: entries.map((x, i) => ({ name: up.names[i], category: x.category })),
+        }),
+      });
+    } else {
+      // Demo/local fallback: the original inline path.
+      const fd = new FormData();
+      fd.set("address", address);
+      fd.set("jobClass", jobClass);
+      fd.set("description", description);
+      fd.set("notes", notes);
+      fd.set("contact", contact);
+      for (const x of entries) {
+        fd.append("files", x.file);
+        fd.append("fileCategories", x.category);
       }
+      r = await fetch("/api/submit", { method: "POST", body: fd });
     }
-    const r = await fetch("/api/submit", { method: "POST", body: fd });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Something went wrong."); return; }
@@ -139,7 +168,7 @@ export function SubmitForm() {
         placeholder="site.supervisor@yourcompany.com.au" />
 
       <button className="btn mt-6 w-full" disabled={busy || !ready}>
-        {busy ? "Lodging…" : "Lodge this job"}
+        {busy ? (progress || "Lodging…") : "Lodge this job"}
       </button>
       {!ready && (
         <p className="mt-2 text-center text-[12px] text-ink/50">
