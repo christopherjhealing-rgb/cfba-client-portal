@@ -1,7 +1,7 @@
 type Name =
   | "plus" | "folder" | "check" | "download" | "clock" | "arrowRight"
   | "grid" | "list" | "edit" | "mail" | "user" | "help" | "signOut"
-  | "book" | "menu" | "close" | "eye" | "eyeOff" | "alert" | "inbox";
+  | "book" | "menu" | "close" | "eye" | "eyeOff" | "alert" | "inbox" | "tool";
 
 const paths: Record<Name, React.ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
@@ -24,6 +24,7 @@ const paths: Record<Name, React.ReactNode> = {
   eyeOff: <><path d="M10.6 6.2A9.8 9.8 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 6.8A17 17 0 0 0 2 12s3.5 7 10 7a9.6 9.6 0 0 0 4.2-.9" /><path d="m2 2 20 20" /></>,
   alert: <><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>,
   inbox: <><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z" /></>,
+  tool: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
 };
 
 export function Icon({ name, size = 15 }: { name: Name; size?: number }) {
