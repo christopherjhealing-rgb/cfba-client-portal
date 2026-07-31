@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
+import { pageDisabled } from "@/lib/pages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,13 @@ async function handle(req: Request) {
     return NextResponse.json(
       { error: "You're viewing this portal as staff — replying is disabled." },
       { status: 403 }
+    );
+  }
+
+  if (await pageDisabled("messages")) {
+    return NextResponse.json(
+      { error: "Messaging is temporarily offline while we make updates — please try again shortly." },
+      { status: 503 }
     );
   }
 

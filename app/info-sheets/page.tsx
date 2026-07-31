@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
+import { disabledPages, hiddenHrefs } from "@/lib/pages";
+import { PageOffline } from "@/components/PageOffline";
 import { Icon } from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
@@ -80,8 +82,18 @@ export default async function InfoSheets() {
 
   const published = GROUPS.flatMap((g) => g.sheets).filter((s) => s.file).length;
 
+  const hidden = await disabledPages();
+
+  if (hidden.has("infoSheets")) {
+    return (
+      <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
+        <PageOffline section="Info sheets" />
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         title="Info sheets"
         sub="Short guidance notes on what we need and why jobs come back. Written from the requests we actually send."

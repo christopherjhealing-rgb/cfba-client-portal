@@ -489,6 +489,34 @@ export async function moveFile(from: string, to: string) {
   if (error) throw new Error(`Storage move ${from} -> ${to} failed: ${error.message}`);
 }
 
+// ---------------------------------------------------------------------------
+// Portal settings — staff-controlled switches (e.g. hiding a page for updates)
+// ---------------------------------------------------------------------------
+const demoDisabledPages = new Set<string>();
+
+export async function disabledPages(): Promise<Set<string>> {
+  if (DEMO_MODE) return new Set(demoDisabledPages);
+  const { data } = await sb().from("portal_settings")
+    .select("value").eq("key", "disabled_pages").maybeSingle();
+  const list = Array.isArray(data?.value) ? (data.value as unknown[]) : [];
+  return new Set(list.map(String));
+}
+
+export async function setPageDisabled(key: string, disabled: boolean) {
+  if (DEMO_MODE) {
+    if (disabled) demoDisabledPages.add(key);
+    else demoDisabledPages.delete(key);
+    return;
+  }
+  const current = await disabledPages();
+  if (disabled) current.add(key);
+  else current.delete(key);
+  must(await sb().from("portal_settings").upsert(
+    { key: "disabled_pages", value: [...current], updated_at: new Date().toISOString() },
+    { onConflict: "key" }
+  ));
+}
+
 /** Short-lived signed URL permitting one browser PUT to one exact path.
  *  Grants no read access; the bucket stays private. */
 export async function signUploadUrl(path: string): Promise<string> {

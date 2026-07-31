@@ -4,6 +4,11 @@ import * as repo from "@/lib/repo";
 import { tidyAddress } from "@/lib/core.mjs";
 import { acceptSubmission } from "@/lib/accept";
 import { env } from "@/lib/env";
+import { pageDisabled } from "@/lib/pages";
+
+const OFFLINE = {
+  error: "This section is temporarily offline while we make updates — please try again shortly.",
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +75,9 @@ async function handle(req: Request) {
   const notes = String(form.get("notes") || "").trim().slice(0, 4000);
   const contact = String(form.get("contact") || "").trim().toLowerCase();
   const amendmentOf = tidyAddress(String(form.get("amendmentOf") || "")) || null;
+  if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
+    return NextResponse.json(OFFLINE, { status: 503 });
+  }
 
   if (!address || !description || !jobClass) {
     return NextResponse.json({ error: "Site address, class and description are required." }, { status: 400 });
@@ -154,6 +162,9 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const notes = String(body.notes || "").trim().slice(0, 4000);
   const contact = String(body.contact || "").trim().toLowerCase();
   const amendmentOf = tidyAddress(String(body.amendmentOf || "")) || null;
+  if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
+    return NextResponse.json(OFFLINE, { status: 503 });
+  }
 
   if (!address || !description || !jobClass) {
     return NextResponse.json({ error: "Site address, class and description are required." }, { status: 400 });

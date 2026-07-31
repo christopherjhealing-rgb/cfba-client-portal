@@ -5,6 +5,8 @@ import * as repo from "@/lib/repo";
 import { groupJobs, retention, isClientVisible } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
+import { disabledPages, hiddenHrefs } from "@/lib/pages";
+import { PageOffline } from "@/components/PageOffline";
 import { DownloadButton } from "@/components/DownloadButton";
 import { SectionHead, ReadyRow, EmptyState, fmtDate } from "@/components/JobBits";
 
@@ -19,8 +21,18 @@ export default async function Downloads() {
     .map(repo.toPortalJob).filter(isClientVisible);
   const g = groupJobs(all, new Date(), env.retentionMonths);
 
+  const hidden = await disabledPages();
+
+  if (hidden.has("downloads")) {
+    return (
+      <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
+        <PageOffline section="Downloads" />
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         title="Downloads"
         sub={`Issued jobs stay available for ${env.retentionMonths} months from the day you first download them.`}

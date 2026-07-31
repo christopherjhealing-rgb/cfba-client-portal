@@ -9,6 +9,7 @@ import {
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell } from "@/components/AppShell";
+import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { DownloadButton } from "@/components/DownloadButton";
 import { JobArt } from "@/components/JobArt";
 import { JobTimeline } from "@/components/JobTimeline";
@@ -59,8 +60,10 @@ export default async function Dashboard() {
   const nothing =
     g.ready.length + g.in_progress.length + g.downloaded.length + pending.length === 0;
 
+  const hidden = await disabledPages();
+
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       {/* Header. The photograph bleeds off the right and sits under a scrim so
           the greeting stays readable whatever image is dropped in. */}
       <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-8 pt-9 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-11">

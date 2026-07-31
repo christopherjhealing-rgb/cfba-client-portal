@@ -3,6 +3,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
+import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { Icon } from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +16,10 @@ export default async function Details() {
   const company = await repo.companyById(session.companyId);
   const jobCount = (await repo.listJobsForCompany(session.companyId)).length;
 
+  const hidden = await disabledPages();
+
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead title="My details" sub="How your company is recorded with us." />
 
       <div className="card mb-6 divide-y divide-rule overflow-hidden">

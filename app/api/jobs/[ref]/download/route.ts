@@ -12,6 +12,13 @@ export async function GET(
   const session = await getClientSession();
   if (!session) return new Response("Not signed in", { status: 401 });
 
+  if ((await repo.disabledPages()).has("downloads")) {
+    return new Response(
+      "Downloads are temporarily offline while we make updates — please try again shortly.",
+      { status: 503 }
+    );
+  }
+
   const ref = decodeURIComponent((await params).ref);
   const job = await repo.getJob(ref);
   // Never leak another company's job — same 404 whether missing or not theirs.

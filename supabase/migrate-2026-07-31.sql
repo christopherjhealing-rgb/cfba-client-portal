@@ -17,3 +17,11 @@ alter table messages    add column if not exists files        jsonb not null def
 alter table messages       enable row level security;
 alter table message_reads  enable row level security;
 alter table login_attempts enable row level security;
+
+-- Page-visibility switches (added later the same day).
+create table if not exists portal_settings (
+  key         text primary key,
+  value       jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+alter table portal_settings enable row level security;

@@ -27,17 +27,20 @@ export function AppShell({
   company,
   impersonated,
   unread = 0,
+  hidden = [],
   children,
 }: {
   company: string;
   impersonated?: boolean;
   unread?: number;
+  /** hrefs switched off from /admin — filtered out of the sidebar */
+  hidden?: string[];
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const nav = NAV.map((n) =>
+  const nav = NAV.filter((n) => !hidden.includes(n.href)).map((n) =>
     n.href === "/messages" && unread > 0 ? { ...n, badge: unread } : n
   );
 

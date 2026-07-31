@@ -5,6 +5,8 @@ import * as repo from "@/lib/repo";
 import { isClientVisible, needsClientInfo } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
+import { disabledPages, hiddenHrefs } from "@/lib/pages";
+import { PageOffline } from "@/components/PageOffline";
 import { ReplyBox } from "@/components/ReplyBox";
 import { Icon } from "@/components/Icon";
 import { EmptyState } from "@/components/JobBits";
@@ -51,8 +53,18 @@ export default async function Messages({
     return !!latest && (!reads[ref] || reads[ref] < latest);
   };
 
+  const hidden = await disabledPages();
+
+  if (hidden.has("messages")) {
+    return (
+      <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
+        <PageOffline section="Messages" />
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead title="Messages" sub="Everything we've sent you about a job, and your replies." />
 
       {refs.length === 0 ? (

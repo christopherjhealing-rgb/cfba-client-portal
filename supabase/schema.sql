@@ -168,3 +168,11 @@ create table if not exists login_attempts (
 alter table messages       enable row level security;
 alter table message_reads  enable row level security;
 alter table login_attempts enable row level security;
+
+-- Staff-controlled switches, e.g. hiding a portal section while it's updated.
+create table if not exists portal_settings (
+  key         text primary key,
+  value       jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+alter table portal_settings enable row level security;

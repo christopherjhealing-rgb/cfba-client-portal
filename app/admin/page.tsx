@@ -6,15 +6,18 @@ import * as repo from "@/lib/repo";
 import { StaffShell } from "@/components/StaffShell";
 import { SyncButton } from "@/components/SyncButton";
 import { DecisionButtons } from "@/components/DecisionButtons";
+import { PageToggles } from "@/components/PageToggles";
+import { TOGGLEABLE_PAGES } from "@/lib/pages";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [pending, companies] = await Promise.all([
+  const [pending, companies, disabled] = await Promise.all([
     repo.listSubmissions("pending"),
     repo.listCompanies(),
+    repo.disabledPages(),
   ]);
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
@@ -38,6 +41,11 @@ export default async function AdminHome() {
           <Row label="SharePoint (Graph)" value={GRAPH_READY ? "Connected" : "No Graph credentials set"} warn={!GRAPH_READY} />
           <Row label="Retention" value={`${env.retentionMonths} months from first download`} />
         </div>
+
+        <PageToggles
+          pages={TOGGLEABLE_PAGES.map((p) => ({ key: p.key, label: p.label }))}
+          initialDisabled={[...disabled]}
+        />
 
         <section>
           <div className="mb-2.5 flex items-center gap-3">

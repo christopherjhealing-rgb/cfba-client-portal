@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getClientSession } from "@/lib/session";
 import { DEMO_MODE } from "@/lib/env";
 import * as repo from "@/lib/repo";
+import { disabledPages } from "@/lib/pages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,16 @@ export async function POST(req: Request) {
       body.purpose === "submission" ? "submission" : null;
     if (!purpose) return NextResponse.json({ error: "Unknown upload purpose." }, { status: 400 });
     const limits = LIMITS[purpose];
+
+    // Respect the /admin page switches: messages gate message uploads;
+    // submission uploads stay possible while either lodging or amending is on.
+    const off = await disabledPages();
+    if (purpose === "message" ? off.has("messages") : off.has("submit") && off.has("amend")) {
+      return NextResponse.json(
+        { error: "This section is temporarily offline while we make updates — please try again shortly." },
+        { status: 503 }
+      );
+    }
 
     const wanted: { name: string; size: number }[] = Array.isArray(body.files)
       ? body.files.map((f: { name?: unknown; size?: unknown }) => ({

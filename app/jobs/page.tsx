@@ -6,6 +6,7 @@ import * as repo from "@/lib/repo";
 import { groupJobs, clientStatusLabel, isClientVisible, needsClientInfo } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
+import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { DownloadButton } from "@/components/DownloadButton";
 import { Icon } from "@/components/Icon";
 import { EmptyState, fmtDate } from "@/components/JobBits";
@@ -62,8 +63,10 @@ export default async function MyJobs({
       : k === "past" ? g.downloaded.length
       : all.filter(needsClientInfo).length;
 
+  const hidden = await disabledPages();
+
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         title="My jobs"
         sub="Every job you have with CF Building Approvals."

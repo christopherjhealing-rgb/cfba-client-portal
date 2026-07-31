@@ -4,6 +4,8 @@ import * as repo from "@/lib/repo";
 import { isClientVisible, READY_STATUS } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
+import { disabledPages, hiddenHrefs } from "@/lib/pages";
+import { PageOffline } from "@/components/PageOffline";
 import { AmendForm, type AmendableJob } from "@/components/AmendForm";
 
 export const dynamic = "force-dynamic";
@@ -31,8 +33,18 @@ export default async function Amend({
       issued: j.mondayStatus === READY_STATUS || !!j.firstDownloadedAt,
     }));
 
+  const hidden = await disabledPages();
+
+  if (hidden.has("amend")) {
+    return (
+      <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
+        <PageOffline section="Amending a job" />
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         title="Amend a job"
         sub="Tell us what's changed on a job you already have with us."
