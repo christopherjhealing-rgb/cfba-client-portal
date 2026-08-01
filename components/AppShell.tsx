@@ -189,13 +189,13 @@ export function PageHead({
         <div aria-hidden="true" className="absolute inset-0 -z-20 bg-cover bg-center saturate-[0.75]"
           style={{ backgroundImage: `url(${hero})` }} />
         <div aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A]/90 via-[#0D211A]/70 to-[#0D211A]/35" />
+          className="absolute inset-0 -z-10 bg-gradient-to-r from-wash/95 via-wash/75 to-wash/25" />
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-[28px] font-semibold leading-tight text-white">
+            <h1 className="font-display text-[28px] font-semibold leading-tight text-ink">
               {title}
             </h1>
-            {sub && <p className="mt-1 max-w-2xl text-[14px] text-white/75">{sub}</p>}
+            {sub && <p className="mt-1 max-w-2xl text-[14px] text-ink/65">{sub}</p>}
           </div>
           {action}
         </div>
