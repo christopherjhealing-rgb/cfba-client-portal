@@ -1,7 +1,9 @@
-// Small line drawings for job cards. The type is inferred from the description
-// first (which is what people actually write) and the class second. Anything
-// unrecognised falls back to a neutral mark rather than guessing wrong — a
-// carport drawn on a pool barrier job looks worse than no picture at all.
+// Line-art job icons in soft circles — drawn to match the CFBA icon set
+// (single-weight strokes, rounded joins). The type is inferred from the
+// description first (which is what people actually write) and the class
+// second. Anything unrecognised falls back to the neutral folder rather than
+// guessing wrong — a carport drawn on a pool barrier job looks worse than no
+// picture at all.
 
 type ArtKey =
   | "patio" | "shed" | "carport" | "pergola" | "deck" | "pool"
@@ -29,17 +31,51 @@ export function classifyJob(description?: string, jobClass?: string) {
 }
 
 const ART: Record<ArtKey, React.ReactNode> = {
-  patio: <><path d="M6 20h44" /><path d="M10 20 32 10l22 10" /><path d="M12 20v16M52 20v16" /><path d="M20 36h24v-8H20z" /></>,
-  pergola: <><path d="M6 16h48M6 22h48" /><path d="M12 16v22M52 16v22" /><path d="M20 16v6M32 16v6M44 16v6" /></>,
-  carport: <><path d="M6 18h48" /><path d="M10 18 32 8l22 10" /><path d="M12 18v20M52 18v20" /><path d="M20 38v-6h20v6" /><circle cx="24" cy="38" r="2.5" /><circle cx="38" cy="38" r="2.5" /></>,
-  shed: <><path d="M8 22 32 10l24 12" /><path d="M12 22v18h40V22" /><path d="M26 40V28h12v12" /></>,
-  deck: <><path d="M6 24h48v6H6z" /><path d="M10 30v10M54 30v10" /><path d="M6 36h20" /><path d="M18 24V14M30 24v-6" /></>,
-  pool: <><rect x="8" y="18" width="44" height="20" rx="3" /><path d="M12 28c4-3 8 3 12 0s8 3 12 0 8 3 12 0" /><path d="M18 12v6M42 12v6" /></>,
-  retaining: <><path d="M6 36h48" /><path d="M22 36V16h10v20" /><path d="M32 22h20M32 29h20" /><path d="M6 30h16" /></>,
-  fence: <><path d="M8 18v22M20 18v22M32 18v22M44 18v22M56 18v22" /><path d="M6 24h52M6 32h52" /></>,
-  dwelling: <><path d="M6 24 32 8l26 16" /><path d="M12 24v16h40V24" /><path d="M28 40V30h8v10" /><path d="M18 28h6v6h-6zM40 28h6v6h-6z" /></>,
-  alterations: <><path d="M6 26 26 12l20 14" /><path d="M10 26v14h32V26" /><path d="M42 20h12v20H42z" strokeDasharray="4 3" /><path d="M20 40v-8h8v8" /></>,
-  generic: <><rect x="10" y="14" width="40" height="26" rx="2" /><path d="M18 40V26h10v14" /><path d="M36 22h8M36 30h8" /></>,
+  patio: <>
+    <path d="M7 17 24 9l17 8" /><path d="M11 17v20M37 17v20" /><path d="M8 37h32" />
+    <path d="M20 28h8M24 28v9M21 37h6" />
+    <path d="M16 26v11M16 31h4v6" /><path d="M32 26v11M32 31h-4v6" />
+  </>,
+  shed: <>
+    <path d="M6 18 24 8l18 10" /><path d="M9 18v19M39 18v19" /><path d="M6 37h36" />
+    <path d="M15 37V20h18v17" /><path d="M15 24h18M15 28h18M15 32h18" />
+  </>,
+  generic: <path d="M7 34V15a2 2 0 0 1 2-2h9l3 3h17a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z" />,
+  pool: <>
+    <path d="M10 27c-2-6 3-12 10-12 5 0 6 3 11 3 6 0 10 3 9 8-1 6-7 9-13 8-4-.7-7 1-10 0-4-1-6-3-7-7z" />
+    <path d="M33.5 12v9M38 12v9M33.5 14.5h4.5M33.5 18h4.5" />
+    <path d="M16 25c2-2 4 2 6 0M19 30c2-2 4 2 6 0" />
+  </>,
+  retaining: <>
+    <path d="M8 36V20h32v16z" /><path d="M8 25.3h32M8 30.7h32" />
+    <path d="M19 20v5.3M30 20v5.3" /><path d="M14 25.3v5.4M25 25.3v5.4M35 25.3v5.4" />
+    <path d="M19 30.7v5.3M30 30.7v5.3" /><path d="M5 36h38" />
+  </>,
+  carport: <>
+    <path d="M7 14h34v4H7z" /><path d="M10 18v19M38 18v19" /><path d="M7 37h34" />
+    <path d="M15 35v-4c0-1.2.8-2 2-2h1.5l3-4h5l3 4H31c1.2 0 2 .8 2 2v4" />
+    <path d="M15 35h18" /><circle cx="19.5" cy="35.2" r="2" /><circle cx="28.5" cy="35.2" r="2" />
+  </>,
+  pergola: <>
+    <path d="M7 15h34M7 20h34" /><path d="M11 20v17M37 20v17" />
+    <path d="M16 15v5M22 15v5M28 15v5M34 15v5" /><path d="M8 37h32" />
+  </>,
+  deck: <>
+    <path d="M8 26h32v5H8z" /><path d="M14 26v5M20 26v5M26 26v5M32 26v5" />
+    <path d="M11 31v6M24 31v6M37 31v6" /><path d="M8 37h32" />
+  </>,
+  fence: <>
+    <path d="M10 18v16M17 18v16M24 18v16M31 18v16M38 18v16" />
+    <path d="M7 22h34M7 30h34" />
+  </>,
+  dwelling: <>
+    <path d="M6 22 24 9l18 13" /><path d="M10 22v15h28V22" /><path d="M6 37h36" />
+    <path d="M21 37v-9h6v9" /><path d="M14 26h4v4h-4zM30 26h4v4h-4z" />
+  </>,
+  alterations: <>
+    <path d="M6 24 20 13l14 11" /><path d="M9 24v13h22V24" /><path d="M6 37h38" />
+    <path d="M31 19h11v18H31" strokeDasharray="3.5 3" /><path d="M16 37v-7h6v7" />
+  </>,
 };
 
 export function JobArt({
@@ -51,18 +87,20 @@ export function JobArt({
 }) {
   const { key, label } = classifyJob(description, jobClass);
   return (
-    <div
-      className={`flex w-[86px] shrink-0 flex-col items-center gap-1 rounded-lg border px-2 py-2.5 ${
-        tone === "amber"
-          ? "border-[#E9D7AC] bg-[#FBF6EA] text-brass"
-          : "border-rule bg-wash text-seal"
-      }`}
-    >
-      <svg viewBox="0 0 60 48" className="h-[34px] w-full" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-        strokeLinejoin="round" aria-hidden="true">
-        {ART[key]}
-      </svg>
+    <div className="flex w-[86px] shrink-0 flex-col items-center gap-1.5">
+      <div
+        className={`grid h-[60px] w-[60px] place-items-center rounded-full border ${
+          tone === "amber"
+            ? "border-[#E9D7AC] bg-[#FBF6EA] text-brass"
+            : "border-rule bg-wash text-seal"
+        }`}
+      >
+        <svg viewBox="0 0 48 48" className="h-[38px] w-[38px]" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+          strokeLinejoin="round" aria-hidden="true">
+          {ART[key]}
+        </svg>
+      </div>
       <span className="w-full truncate text-center font-display text-[8px] font-semibold uppercase tracking-[0.1em] text-ink/45">
         {label}
       </span>
