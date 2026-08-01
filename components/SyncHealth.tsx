@@ -6,7 +6,7 @@ interface LastSync {
   issuedSeen?: number; filesCopied?: number; jobsUpserted?: number;
   messagesPulled?: number; filesPurged?: number;
   unmatched?: { ref: string; client: string }[];
-  issuedNoFiles?: string[]; emailsSent?: number; emailFails?: string[];
+  issuedNoFiles?: string[]; stillSyncing?: string[]; emailsSent?: number; emailFails?: string[];
 }
 
 function ago(iso?: string): string {
@@ -72,6 +72,16 @@ export function SyncHealth({
             {(last?.filesPurged ?? 0) > 0 ? `, ${last?.filesPurged} purged` : ""}</>
         )}
       </div>
+
+      {(last?.stillSyncing?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-seal/30 bg-[#EDF3EE] px-4 py-3 text-[13px] text-seal">
+          <strong>OneDrive still syncing</strong> — the Issued folder for{" "}
+          <span className="font-mono">{last?.stillSyncing?.join(", ")}</span>{" "}
+          changed in the last few minutes, so the portal is waiting for it to
+          finish rather than deliver a half-synced package. It pulls the files
+          and sends the email automatically once the folder goes quiet.
+        </div>
+      )}
 
       {(last?.issuedNoFiles?.length ?? 0) > 0 && (
         <div className="mt-3 rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-[13px] text-brass">

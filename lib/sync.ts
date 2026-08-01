@@ -28,6 +28,9 @@ export interface SyncResult {
       certificate isn't downloadable and no email has gone. Flip visible in
       /admin so "I set it to Issued, did it work?" answers itself. */
   issuedNoFiles: string[];
+  /** Issued cards whose folder changed in the last few minutes — OneDrive
+      still syncing; pulled automatically once the folder goes quiet. */
+  stillSyncing: string[];
   emailsSent: number;
   emailFails: string[];
   note?: string;
@@ -48,7 +51,7 @@ export async function runSync(): Promise<SyncResult> {
   const res: SyncResult = {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
-    issuedNoFiles: [], emailsSent: 0, emailFails: [],
+    issuedNoFiles: [], stillSyncing: [], emailsSent: 0, emailFails: [],
   };
 
   if (!MONDAY_READY) {
@@ -82,20 +85,32 @@ export async function runSync(): Promise<SyncResult> {
     };
 
     let files: repo.JobFile[] = await repo.jobFiles(card.ref);
+    let settling = false;
     // Pull from SharePoint only if we don't already have the files cached.
     if (files.length === 0 && GRAPH_READY) {
       const remote = await graph.findIssuedFiles(card.ref);
-      if (remote.length > 0 && remote[0].folderPath) job.sourceFolder = remote[0].folderPath;
-      files = [];
-      for (const rf of remote) {
-        const bytes = await graph.downloadFile(rf);
-        const storagePath = `${job.storagePrefix}/${rf.name}`;
-        await repo.writeFile(storagePath, bytes, rf.contentType);
-        files.push({ filename: rf.name, size: rf.size || bytes.length, storagePath, contentType: rf.contentType });
-        res.filesCopied++;
+      // OneDrive uploads a folder file-by-file, so a listing taken mid-sync
+      // can be incomplete. If anything in the folder changed within the last
+      // few minutes, wait a cycle rather than deliver (and email) half a
+      // certificate package. Old, untouched folders pull immediately.
+      const SETTLE_MS = 5 * 60 * 1000;
+      settling = remote.some((rf) =>
+        rf.lastModified && Date.now() - new Date(rf.lastModified).getTime() < SETTLE_MS);
+      if (settling) {
+        res.stillSyncing.push(card.ref);
+      } else {
+        if (remote.length > 0 && remote[0].folderPath) job.sourceFolder = remote[0].folderPath;
+        files = [];
+        for (const rf of remote) {
+          const bytes = await graph.downloadFile(rf);
+          const storagePath = `${job.storagePrefix}/${rf.name}`;
+          await repo.writeFile(storagePath, bytes, rf.contentType);
+          files.push({ filename: rf.name, size: rf.size || bytes.length, storagePath, contentType: rf.contentType });
+          res.filesCopied++;
+        }
       }
     }
-    if (files.length === 0) res.issuedNoFiles.push(card.ref);
+    if (files.length === 0 && !settling) res.issuedNoFiles.push(card.ref);
     if (files.length > 0 && !job.issuedAt) job.issuedAt = now;
     await repo.upsertJob(job, files);
     res.jobsUpserted++;
@@ -159,8 +174,8 @@ export async function runSync(): Promise<SyncResult> {
       issuedSeen: res.issuedSeen, filesCopied: res.filesCopied,
       jobsUpserted: res.jobsUpserted, messagesPulled: res.messagesPulled,
       filesPurged: res.filesPurged, unmatched: res.unmatched,
-      issuedNoFiles: res.issuedNoFiles, emailsSent: res.emailsSent,
-      emailFails: res.emailFails,
+      issuedNoFiles: res.issuedNoFiles, stillSyncing: res.stillSyncing,
+      emailsSent: res.emailsSent, emailFails: res.emailFails,
     });
   } catch (e) {
     console.warn("sync: could not persist health record:", (e as Error).message);

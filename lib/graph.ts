@@ -48,7 +48,13 @@ export interface RemoteFile {
   itemId: string;
   /** Folder path relative to the client-files root, for staff folder checks. */
   folderPath: string | null;
+  /** SharePoint last-modified — used to wait out an in-flight OneDrive sync. */
+  lastModified: string | null;
 }
+
+// Staff working files that must never reach a client: Word-family templates
+// and the ~$/.tmp lock files OneDrive leaves while a folder is mid-sync.
+const EXCLUDED_FILE = /^~\$|\.(docx?|docm|dotx?|dotm|tmp)$/i;
 
 function parentEndsWithIssued(pathStr: string, ref: string): boolean {
   // parentReference.path looks like "/drive/root:/CF Building Approvals/CFBA
@@ -65,7 +71,7 @@ export async function findIssuedFiles(ref: string): Promise<RemoteFile[]> {
   const q = encodeURIComponent(`'${ref}'`);
   const url =
     `/drives/${env.graphDriveId}/root/search(q=${q})` +
-    `?$top=200&$select=id,name,size,file,parentReference,@microsoft.graph.downloadUrl`;
+    `?$top=200&$select=id,name,size,file,parentReference,lastModifiedDateTime,@microsoft.graph.downloadUrl`;
   const out: RemoteFile[] = [];
   let next: string | null = url;
   while (next) {
@@ -73,6 +79,7 @@ export async function findIssuedFiles(ref: string): Promise<RemoteFile[]> {
     for (const it of (page.value as Record<string, unknown>[]) || []) {
       const file = it.file as { mimeType?: string } | undefined;
       if (!file) continue; // folders
+      if (EXCLUDED_FILE.test((it.name as string) || "")) continue; // templates / temp files
       const parent = (it.parentReference as { path?: string })?.path || "";
       if (!parentEndsWithIssued(parent, ref)) continue;
       const dl = it["@microsoft.graph.downloadUrl"] as string | undefined;
@@ -86,6 +93,7 @@ export async function findIssuedFiles(ref: string): Promise<RemoteFile[]> {
         downloadUrl: dl,
         itemId: it.id as string,
         folderPath: rel || null,
+        lastModified: (it.lastModifiedDateTime as string) || null,
       });
     }
     const nl = page["@odata.nextLink"] as string | undefined;
