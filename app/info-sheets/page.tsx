@@ -12,11 +12,12 @@ interface Sheet {
   no: string;
   title: string;
   blurb: string;
-  file?: string;
+  file: string;
 }
 
-// Published notes have a file. The rest are drafted but not written yet — they
-// are listed so clients can see what's coming and ask for one early.
+// Every note listed here is published. Masters live in
+// docs/collateral/site-notes; render with render-site-notes.mjs, or supersede
+// any note from /admin without a deploy.
 const GROUPS: { group: string; sheets: Sheet[] }[] = [
   {
     group: "Getting a job through first time",
@@ -38,36 +39,43 @@ const GROUPS: { group: string; sheets: Sheet[] }[] = [
   {
     group: "Where the rules bite",
     sheets: [
+      { no: "14", title: "Planning approval and Class 10",
+        blurb: "Why a certified job can still stall at the council, and how to know early.",
+        file: "/api/notes/CFBA-note-14-planning-class10.pdf" },
       { no: "03", title: "BAL ratings — when you need one",
         blurb: "Bushfire attack level assessments for Class 10a work.",
         file: "/api/notes/CFBA-note-bal.pdf" },
       { no: "04", title: "Retaining walls — what to send",
         blurb: "The four things these come back for, nearly every time.",
         file: "/api/notes/CFBA-note-retaining.pdf" },
-      { no: "06", title: "Fire separation and boundary setbacks",
-        blurb: "Class 10a close to a boundary, and the 900 mm and 6 m rules." },
-      { no: "07", title: "Swimming pool barriers",
-        blurb: "Barrier heights, gates, climbable zones and what the plans must show." },
-      { no: "08", title: "Wind region and site classification",
-        blurb: "What determines them, and why the engineering depends on both." },
+      { no: "08", title: "Building on or near a boundary",
+        blurb: "Sheds, carports and boundary walls — the 900 mm rule and what to show.",
+        file: "/api/notes/CFBA-note-08-boundaries.pdf" },
+      { no: "09", title: "Swimming pool and spa barriers",
+        blurb: "Barrier heights, gates, climbable zones and what the plans must show.",
+        file: "/api/notes/CFBA-note-09-pool-barriers.pdf" },
+      { no: "10", title: "Wind class and site classification",
+        blurb: "What determines them, and why the engineering depends on both.",
+        file: "/api/notes/CFBA-note-10-wind-site.pdf" },
     ],
   },
   {
     group: "Site and services",
     sheets: [
-      { no: "09", title: "Stormwater and soak wells",
-        blurb: "Sizing, placement, and how discharge is shown on the plan." },
-      { no: "10", title: "Easements, sewer and drainage",
-        blurb: "Building over or near them, and who needs to agree first." },
-      { no: "11", title: "Sheds and carports on a boundary",
-        blurb: "Where they can sit, and what changes when they do." },
+      { no: "11", title: "Stormwater and soak wells",
+        blurb: "Placement, clearances, and how discharge is shown on the plan.",
+        file: "/api/notes/CFBA-note-11-stormwater.pdf" },
+      { no: "12", title: "Easements, sewer and drainage",
+        blurb: "Building over or near them, and who needs to agree first.",
+        file: "/api/notes/CFBA-note-12-easements-sewer.pdf" },
     ],
   },
   {
     group: "After the certificate",
     sheets: [
-      { no: "12", title: "What happens after your permit is issued",
-        blurb: "Inspections, notices, and keeping the approval valid." },
+      { no: "13", title: "After your permit is issued",
+        blurb: "Amendments, the completion notice, and keeping the approval valid.",
+        file: "/api/notes/CFBA-note-13-after-permit.pdf" },
       { no: "06", title: "Amending a job that's already with us",
         blurb: "When a change needs a fresh certificate, and what to send.",
         file: "/api/notes/CFBA-note-06-amendments.pdf" },
@@ -80,7 +88,7 @@ export default async function InfoSheets() {
   if (!session) redirect("/");
   const unread = await unreadCount(session.companyId);
 
-  const published = GROUPS.flatMap((g) => g.sheets).filter((s) => s.file).length;
+  const published = GROUPS.flatMap((g) => g.sheets).length;
 
   const hidden = await disabledPages();
 
@@ -114,46 +122,29 @@ export default async function InfoSheets() {
       ))}
 
       <p className="mt-2 text-[12px] text-ink/45">
-        {published} notes available now. The rest are on the way — if one would help
-        on a job you have with us, ask and we&apos;ll send what we have.
+        All {published} notes are available now. If a topic would help that isn&apos;t
+        covered here, ask and we&apos;ll write it.
       </p>
     </AppShell>
   );
 }
 
 function SheetCard({ sheet }: { sheet: Sheet }) {
-  const body = (
-    <>
+  return (
+    <a href={sheet.file} target="_blank" rel="noopener noreferrer"
+      className="card px-4 py-3.5 transition hover:border-seal/40 hover:bg-wash/40">
       <div className="flex items-start gap-3.5">
-        <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg font-mono text-[12px] font-semibold ${
-          sheet.file ? "bg-seal text-white" : "bg-wash text-ink/35"}`}>
+        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-seal font-mono text-[12px] font-semibold text-white">
           {sheet.no}
         </span>
         <div className="min-w-0 flex-1">
-          <p className={`font-display text-[14px] font-semibold leading-snug ${
-            sheet.file ? "text-ink" : "text-ink/55"}`}>
+          <p className="font-display text-[14px] font-semibold leading-snug text-ink">
             {sheet.title}
           </p>
           <p className="mt-1 text-[13px] leading-snug text-ink/55">{sheet.blurb}</p>
         </div>
-        {sheet.file ? (
-          <span className="mt-0.5 shrink-0 text-seal"><Icon name="download" size={16} /></span>
-        ) : (
-          <span className="mt-0.5 shrink-0 font-display text-[9px] font-semibold uppercase tracking-[0.12em] text-ink/35">
-            Soon
-          </span>
-        )}
+        <span className="mt-0.5 shrink-0 text-seal"><Icon name="download" size={16} /></span>
       </div>
-    </>
-  );
-
-  if (!sheet.file) {
-    return <div className="card px-4 py-3.5 opacity-70">{body}</div>;
-  }
-  return (
-    <a href={sheet.file} target="_blank" rel="noopener noreferrer"
-      className="card px-4 py-3.5 transition hover:border-seal/40 hover:bg-wash/40">
-      {body}
     </a>
   );
 }

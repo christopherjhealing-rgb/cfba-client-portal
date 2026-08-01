@@ -32,13 +32,17 @@ and is laid out as an A4 page; the rendered PDFs live in `pdf/`.
 | # | Document | Status |
 |---|----------|--------|
 | 12 | Privacy notice | Wording review, then link from the portal sign-in page |
-| 13 | Planning & Class 10 | Verify + fill [bracketed] exemption limits |
-| 14 | Pool & spa barriers | Verify every figure against current AS 1926.1 / WA regs |
-| 15 | Boundary structures | Verify clause refs + [R-Codes limits] |
-| 16 | Wind & site classification | Verify wording |
 
-Each draft carries a "DRAFT — NOT PUBLISHED" banner on the page; delete that
-block (and this table row's warning) only after verification.
+Print drafts 13–16 have graduated: their content now lives (brackets resolved,
+figures to verify) as portal guidance notes 14 / 09 / 08 / 10 — see below.
+
+## Site guidance notes (`site-notes/`)
+
+Masters for the portal's info-sheet PDFs (notes 08–14, served from
+`/public/notes` alongside the original 01–07). Edit a master, run
+`node site-notes/render-site-notes.mjs`, commit both. Any note can also be
+superseded from /admin without a deploy. Registry: `lib/info-sheets.ts`;
+cards: `app/info-sheets/page.tsx`.
 
 ## Re-rendering
 
