@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
     }
     await repo.createLogin({ username: u, companyId: company.id, setupCodeHash, setupExpiresAt });
+    await repo.logAudit("login.create", u, company.name);
     return NextResponse.json({ ok: true, username: u, setupCode });
   }
 
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
     const login = await repo.getLogin(u);
     if (!login) return NextResponse.json({ error: "Unknown username." }, { status: 404 });
     await repo.issueSetupCode(u, setupCodeHash, setupExpiresAt);
+    await repo.logAudit("login.reset", u);
     return NextResponse.json({ ok: true, username: u, setupCode });
   }
 

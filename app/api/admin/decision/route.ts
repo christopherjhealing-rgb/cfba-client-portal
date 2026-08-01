@@ -31,6 +31,7 @@ async function handle(req: Request) {
 
   if (decision === "reject") {
     await repo.setSubmission(sub.id, { status: "rejected", reviewNote: String(note || "") });
+    await repo.logAudit("submission.reject", sub.address || sub.id, String(note || ""));
     return NextResponse.json({ ok: true });
   }
 
@@ -39,6 +40,7 @@ async function handle(req: Request) {
   }
 
   const { mondayItemId, failedFiles } = await acceptSubmission(sub, String(note || ""));
+  await repo.logAudit("submission.accept", sub.address || sub.id, `Monday ${mondayItemId}`);
   return NextResponse.json({
     ok: true,
     mondayItemId,

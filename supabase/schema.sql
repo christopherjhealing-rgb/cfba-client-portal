@@ -176,3 +176,16 @@ create table if not exists portal_settings (
   updated_at  timestamptz not null default now()
 );
 alter table portal_settings enable row level security;
+
+-- Append-only audit trail: who did what, when. The record a complaint,
+-- insurance claim or Building Services Board query asks for.
+create table if not exists audit_log (
+  id      bigserial primary key,
+  at      timestamptz not null default now(),
+  actor   text not null default 'staff',
+  action  text not null,
+  target  text,
+  detail  text
+);
+create index if not exists audit_log_at on audit_log (at desc);
+alter table audit_log enable row level security;

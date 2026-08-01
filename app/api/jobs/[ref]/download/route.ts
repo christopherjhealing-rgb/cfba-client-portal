@@ -46,6 +46,7 @@ export async function GET(
   const firstDownload = !job.firstDownloadedAt;
   const now = new Date();
   await repo.markDownloaded(ref, now.toISOString());
+  await repo.logAudit("certificate.download", ref, session.companyName, session.username || "client");
 
   // Download receipt on the Monday card, once, so the office can see the client
   // has the certificate — kills the "did you get it?" call. Also starts the

@@ -546,6 +546,31 @@ export async function setPageDisabled(key: string, disabled: boolean) {
   ));
 }
 
+/** Append-only audit trail. Never throws — a logging failure must not break
+ *  the action being logged. */
+export async function logAudit(action: string, target?: string, detail?: string, actor = "staff") {
+  if (DEMO_MODE) return;
+  try {
+    await sb().from("audit_log").insert({
+      action, target: target || null, detail: detail || null, actor,
+    });
+  } catch (e) {
+    console.warn("audit log failed:", (e as Error).message);
+  }
+}
+
+export interface AuditEntry {
+  id: number; at: string; actor: string; action: string;
+  target: string | null; detail: string | null;
+}
+
+export async function listAudit(limit = 200): Promise<AuditEntry[]> {
+  if (DEMO_MODE) return [];
+  const { data } = await sb().from("audit_log")
+    .select("*").order("at", { ascending: false }).limit(limit);
+  return (data || []) as AuditEntry[];
+}
+
 /** Generic portal_settings read/write (JSON value). */
 export async function getSetting<T = unknown>(key: string): Promise<T | null> {
   if (DEMO_MODE) return (demoSettings[key] as T) ?? null;

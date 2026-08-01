@@ -40,6 +40,7 @@ export default async function AdminHome() {
             <h1 className="mt-1 font-display text-[26px] font-semibold">Portal admin</h1>
           </div>
           <div className="flex gap-2">
+            <Link href="/admin/audit" className="btn-ghost">Activity log</Link>
             <Link href="/admin/clients" className="btn-ghost">Clients &amp; logins</Link>
             <SyncButton />
           </div>

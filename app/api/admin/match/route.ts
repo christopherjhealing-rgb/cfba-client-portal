@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       const company = await repo.companyById(String(body.companyId));
       if (!company) return NextResponse.json({ error: "Unknown company." }, { status: 404 });
       await repo.addAlias(company.id, spelling);
+      await repo.logAudit("client.alias", company.name, spelling);
       return NextResponse.json({ ok: true, companyId: company.id });
     }
 
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "A client with that name already exists." }, { status: 409 });
       }
       const company = await repo.createCompany({ name: spelling });
+      await repo.logAudit("client.create", company.name);
       return NextResponse.json({ ok: true, companyId: company.id });
     }
 

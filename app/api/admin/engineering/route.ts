@@ -15,6 +15,7 @@ export async function POST(req: Request) {
       enabled: !!body.enabled,
       url: String(body.url || "").trim(),
     });
+    await repo.logAudit("engineering.settings", body.enabled ? "enabled" : "disabled");
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("engineering settings failed:", e);
