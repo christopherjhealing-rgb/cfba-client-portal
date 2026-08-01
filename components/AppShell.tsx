@@ -186,7 +186,7 @@ export function PageHead({
   if (hero) {
     return (
       <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-7 pt-10 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-12">
-        <div aria-hidden="true" className="absolute inset-0 -z-20 bg-cover bg-center"
+        <div aria-hidden="true" className="absolute inset-0 -z-20 bg-cover bg-center saturate-[0.75]"
           style={{ backgroundImage: `url(${hero})` }} />
         <div aria-hidden="true"
           className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A]/90 via-[#0D211A]/70 to-[#0D211A]/35" />
