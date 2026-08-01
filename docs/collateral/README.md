@@ -16,6 +16,8 @@ and is laid out as an A4 page; the rendered PDFs live in `pdf/`.
 | 04 | Responding to a request | What an "Awaiting info" email means and what to do |
 | 05 | Lodging card | Per-job-type checklists to get a lodgement right first time |
 | 06 | Launch email (.html + .txt) | Announcement email — replace [USERNAME] / [SETUP CODE] |
+| 17 | Login email (.html + .txt) | Standalone credentials email for any new login |
+| 18 | First-job email (.html + .txt) | Certificate ready + first login in one — the wave-one onboarding send |
 | 07 | Services one-pager | Cross-sell: CDC, amendments, BAL, energy, engineering |
 | 08 | Certificate — next steps | Goes out with an issued certificate: lodging BA1 to council |
 

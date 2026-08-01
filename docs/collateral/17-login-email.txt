@@ -1,0 +1,28 @@
+Subject: Your CFBA client portal login
+
+Hi [CONTACT NAME],
+
+Here's your login for the CFBA client portal — every job you have with
+us, its live status, our requests and your certificates, all in one
+place.
+
+Your login:
+  Portal:      https://cfba-client-portal-theta.vercel.app
+  Username:    [USERNAME]
+  Setup code:  [SETUP CODE]
+
+First sign-in — about five minutes:
+  1. Open the portal and choose "First time here"
+  2. Enter your username and the one-time setup code above
+  3. Choose your own password — we never see it
+
+Nothing changes about how you can reach us — email and phone always
+work, and the same people answer. The portal just means no more
+wondering where a job is up to.
+
+Want a walkthrough? Ring 1300 029 074 and we'll do your first sign-in
+with you on the phone — takes a couple of minutes.
+
+Regards,
+The CF Building Approvals team
+1300 029 074 · admin@cfba.com.au · Perth, Western Australia

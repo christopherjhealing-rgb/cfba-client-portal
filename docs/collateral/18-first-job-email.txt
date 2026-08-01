@@ -1,0 +1,33 @@
+Subject: Your certificate for [SITE ADDRESS] is ready — grab it here
+
+Hi [CONTACT NAME],
+
+Good news — the certificate for [SITE ADDRESS] (job [JOB REF]) has been
+issued.
+
+It's waiting in our client portal, and we've set you up a login so you
+can grab it now — along with the live status of every other job you have
+with us.
+
+Your login:
+  Portal:      https://cfba-client-portal-theta.vercel.app
+  Username:    [USERNAME]
+  Setup code:  [SETUP CODE]
+
+To download it — about five minutes, once ever:
+  1. Open the portal and choose "First time here"
+  2. Enter your username and the one-time setup code above
+  3. Choose your own password — we never see it
+  4. Open Downloads — your certificate package is one click
+
+From here on, every job lives there: lodge new ones straight onto our
+board, answer our requests with the documents attached to the job, and
+download each certificate the moment it's issued.
+
+Rather do this one by email as usual? No problem — reply and we'll send
+it through. And if you'd like a hand with the portal, ring 1300 029 074
+and we'll walk through it with you.
+
+Regards,
+The CF Building Approvals team
+1300 029 074 · admin@cfba.com.au · Perth, Western Australia
