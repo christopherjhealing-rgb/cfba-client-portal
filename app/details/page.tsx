@@ -5,6 +5,8 @@ import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { Icon } from "@/components/Icon";
+import { LibraryManager } from "@/components/LibraryManager";
+import { listLibrary } from "@/lib/library";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export default async function Details() {
 
   const company = await repo.companyById(session.companyId);
   const jobCount = (await repo.listJobsForCompany(session.companyId)).length;
+  const docs = await listLibrary(session.companyId);
 
   const hidden = await disabledPages();
 
@@ -29,6 +32,8 @@ export default async function Details() {
           value={company?.emails?.length ? company.emails.join("\n") : "None recorded"} />
         <Field label="Jobs on your account" value={String(jobCount)} />
       </div>
+
+      <LibraryManager initial={docs} />
 
       {/* Read-only on purpose: Monday is the master record, and a client
           editing their own email here would silently break job matching. */}

@@ -5,6 +5,7 @@ import { tidyAddress } from "@/lib/core.mjs";
 import { acceptSubmission } from "@/lib/accept";
 import { env } from "@/lib/env";
 import { pageDisabled } from "@/lib/pages";
+import { listLibrary, libraryPath, type LibraryDoc } from "@/lib/library";
 
 const OFFLINE = {
   error: "This section is temporarily offline while we make updates — please try again shortly.",
@@ -35,6 +36,45 @@ const PDF_ONLY = (name: string, type: string) =>
 
 
 const MAX_TOTAL = 40 * 1024 * 1024; // 40 MB per submission
+
+/** Ticked "My documents" entries, resolved against the caller's OWN library —
+ *  an id that isn't in their index simply doesn't exist here, whatever the
+ *  request claims. Bytes come back in memory so the documents lodge exactly
+ *  like fresh uploads: same storage home, same acceptance path, same Monday
+ *  files column, same 40 MB total. */
+async function loadLibraryDocs(
+  companyId: string, ids: string[]
+): Promise<{ doc: LibraryDoc; bytes: Buffer }[] | { error: string }> {
+  if (!ids.length) return [];
+  const index = await listLibrary(companyId);
+  const out: { doc: LibraryDoc; bytes: Buffer }[] = [];
+  for (const id of [...new Set(ids)]) {
+    const doc = index.find((d) => d.id === id);
+    const stream = doc ? await repo.readFileStream(libraryPath(companyId, doc)) : null;
+    if (!doc || !stream) {
+      return { error: "One of your saved documents couldn't be found — untick it and try again, or re-save it from My details." };
+    }
+    out.push({ doc, bytes: Buffer.from(await new Response(stream).arrayBuffer()) });
+  }
+  return out;
+}
+
+/** Write the library copies into the submission's own folder and add them to
+ *  its files list under "engineering", deduping against the fresh uploads so
+ *  nothing silently overwrites. */
+async function storeLibraryDocs(
+  id: string,
+  docs: { doc: LibraryDoc; bytes: Buffer }[],
+  files: { name: string; category?: string }[]
+) {
+  for (const { doc, bytes } of docs) {
+    let name = doc.file;
+    let n = 2;
+    while (files.some((f) => f.name === name)) name = name.replace(/(\.pdf)$/i, `-${n++}$1`);
+    await repo.writeFile(`submissions/${id}/${name}`, bytes, "application/pdf");
+    files.push({ name, category: "engineering" });
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -94,6 +134,7 @@ async function handle(req: Request) {
 
   const uploads = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
   const categories = form.getAll("fileCategories").map(String);
+  const libraryIds = form.getAll("libraryIds").map(String).filter(Boolean);
 
   // PDFs only. The client-side filter can be bypassed, and the person who
   // opens these is a member of staff, not a browser.
@@ -105,11 +146,15 @@ async function handle(req: Request) {
     );
   }
 
+  const libDocs = await loadLibraryDocs(session.companyId, libraryIds);
+  if ("error" in libDocs) return NextResponse.json(libDocs, { status: 400 });
+
   // The client-side check can be bypassed, so the rule lives here too. An
   // amendment is exempt: the revised drawings are the point, and the
-  // engineering may not have changed.
+  // engineering may not have changed. A ticked saved document IS engineering.
   if (!amendmentOf) {
     const have = new Set(categories);
+    if (libDocs.length) have.add("engineering");
     const missing = ["drawings", "engineering"].filter((c) => !have.has(c));
     if (missing.length) {
       return NextResponse.json(
@@ -118,7 +163,8 @@ async function handle(req: Request) {
       );
     }
   }
-  const total = uploads.reduce((n, f) => n + f.size, 0);
+  const total = uploads.reduce((n, f) => n + f.size, 0)
+    + libDocs.reduce((n, d) => n + d.bytes.length, 0);
   if (total > MAX_TOTAL) {
     return NextResponse.json(
       { error: "Those files come to more than 40 MB all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you." },
@@ -135,6 +181,7 @@ async function handle(req: Request) {
     await repo.writeFile(`submissions/${id}/${safe}`, bytes, f.type || "application/octet-stream");
     stored.push({ name: safe, category: categories[i] || undefined });
   }
+  await storeLibraryDocs(id, libDocs, stored);
 
   await repo.addSubmission({
     clientRef: clientRef || null,
@@ -188,9 +235,16 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
         }))
         .filter((f) => f.name)
     : [];
+  const libraryIds = Array.isArray(body.libraryIds)
+    ? (body.libraryIds as unknown[]).map((x) => String(x || "")).filter(Boolean)
+    : [];
+
+  const libDocs = await loadLibraryDocs(session.companyId, libraryIds);
+  if ("error" in libDocs) return NextResponse.json(libDocs, { status: 400 });
 
   if (!amendmentOf) {
     const have = new Set(claimed.map((f) => f.category));
+    if (libDocs.length) have.add("engineering");
     const missing = ["drawings", "engineering"].filter((c) => !have.has(c));
     if (missing.length) {
       return NextResponse.json(
@@ -227,7 +281,8 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   }
 
   // Sizes from storage, not from the browser's claims.
-  const total = claimed.reduce((n, f) => n + (landed.get(f.name) || 0), 0);
+  const total = claimed.reduce((n, f) => n + (landed.get(f.name) || 0), 0)
+    + libDocs.reduce((n, d) => n + d.bytes.length, 0);
   if (total > MAX_TOTAL) {
     return NextResponse.json(
       { error: "Those files come to more than 40 MB all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you." },
@@ -239,6 +294,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   for (const f of claimed) {
     await repo.moveFile(`${prefix}/${f.name}`, `submissions/${id}/${f.name}`);
   }
+  await storeLibraryDocs(id, libDocs, claimed);
 
   await repo.addSubmission({
     clientRef: clientRef || null,

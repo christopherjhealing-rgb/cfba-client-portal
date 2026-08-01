@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileBucket, type Bucket } from "./FileBucket";
 import { uploadDirect } from "@/lib/upload-client";
+import type { LibraryDoc } from "@/lib/library";
 
 // Drawings and engineering are both required: an assessment cannot start
 // without them, and a job lodged short of them only comes straight back.
@@ -34,10 +35,35 @@ export function SubmitForm() {
   const [instant, setInstant] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  const [library, setLibrary] = useState<LibraryDoc[]>([]);
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const [saveEng, setSaveEng] = useState(false);
+  const [saveLabel, setSaveLabel] = useState("");
+
+  // The company's saved documents (see My details). A failed fetch just means
+  // no tick-list — the form works exactly as before.
+  useEffect(() => {
+    fetch("/api/library")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (Array.isArray(d?.docs)) setLibrary(d.docs); })
+      .catch(() => {});
+  }, []);
+
+  const tickedDocs = library.filter((d) => ticked.has(d.id));
+
+  function toggleDoc(id: string) {
+    setTicked((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id); else s.add(id);
+      return s;
+    });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const short = BUCKETS.filter((b) => b.required && !(files[b.key] || []).length);
+    // A ticked saved document counts as engineering — that's the point of it.
+    const short = BUCKETS.filter((b) => b.required && !(files[b.key] || []).length
+      && !(b.key === "engineering" && tickedDocs.length));
     if (short.length) {
       setMsg(`Please attach ${short.map((b) => b.label.toLowerCase()).join(" and ")} before lodging.`);
       return;
@@ -67,6 +93,7 @@ export function SubmitForm() {
           address, jobClass, description, notes, contact, clientRef,
           draftId: up.draftId,
           files: entries.map((x, i) => ({ name: up.names[i], category: x.category })),
+          libraryIds: tickedDocs.map((d) => d.id),
         }),
       });
     } else {
@@ -82,11 +109,23 @@ export function SubmitForm() {
         fd.append("files", x.file);
         fd.append("fileCategories", x.category);
       }
+      for (const d of tickedDocs) fd.append("libraryIds", d.id);
       r = await fetch("/api/submit", { method: "POST", body: fd });
     }
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Something went wrong at our end — please try again, or ring 1300 029 074 and we'll sort it."); return; }
+
+    // Fire-and-forget: the job is lodged, so a failed save to My documents
+    // must never disturb the success screen.
+    const firstEng = (files.engineering || [])[0];
+    if (saveEng && firstEng) {
+      const fd = new FormData();
+      fd.set("file", firstEng);
+      fd.set("label", saveLabel);
+      void fetch("/api/library", { method: "POST", body: fd }).catch(() => {});
+    }
+
     setInstant(!!d.accepted);
     setDone(true);
   }
@@ -114,8 +153,11 @@ export function SubmitForm() {
   }
 
   const all = BUCKETS.flatMap((b) => files[b.key] || []);
-  const totalMb = all.reduce((n, f) => n + f.size, 0) / 1_048_576;
-  const ready = BUCKETS.every((b) => !b.required || (files[b.key] || []).length > 0);
+  const count = all.length + tickedDocs.length;
+  const totalMb = (all.reduce((n, f) => n + f.size, 0)
+    + tickedDocs.reduce((n, d) => n + d.size, 0)) / 1_048_576;
+  const ready = BUCKETS.every((b) => !b.required || (files[b.key] || []).length > 0
+    || (b.key === "engineering" && tickedDocs.length > 0));
 
   return (
     <form onSubmit={submit} className="card p-6 sm:p-7">
@@ -152,13 +194,60 @@ export function SubmitForm() {
         </p>
         <div className="space-y-3">
           {BUCKETS.map((b) => (
-            <FileBucket key={b.key} bucket={b} files={files[b.key] || []}
-              onChange={(f) => setFiles((prev) => ({ ...prev, [b.key]: f }))} />
+            <div key={b.key}>
+              <FileBucket bucket={b} files={files[b.key] || []}
+                onChange={(f) => setFiles((prev) => ({ ...prev, [b.key]: f }))} />
+
+              {/* The company's saved documents ride along under Engineering:
+                  tick to attach, no re-upload. Saved on the My details page. */}
+              {b.key === "engineering" && library.length > 0 && (
+                <div className="mt-2 rounded-lg border border-rule bg-white px-4 py-3">
+                  <p className="font-display text-[13px] font-semibold text-ink">
+                    From your documents
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-snug text-ink/55">
+                    Engineering you&apos;ve saved with us — tick to attach it to this job.
+                  </p>
+                  <ul className="mt-2 space-y-0.5">
+                    {library.map((d) => (
+                      <li key={d.id}>
+                        <label className="flex cursor-pointer items-center gap-2.5 py-1 text-[13px] text-ink/80">
+                          <input type="checkbox" checked={ticked.has(d.id)}
+                            onChange={() => toggleDoc(d.id)}
+                            className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
+                          <span className="min-w-0 flex-1 truncate">{d.label}</span>
+                          <span className="shrink-0 font-mono text-[11px] text-ink/40">
+                            {(d.size / 1048576).toFixed(1)} MB
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {b.key === "engineering" && (files.engineering || []).length > 0 && (
+                <div className="mt-2 px-1">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-[13px] text-ink/70">
+                    <input type="checkbox" checked={saveEng}
+                      onChange={(e) => setSaveEng(e.target.checked)}
+                      className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
+                    <span>Save this engineering to My documents for next time</span>
+                  </label>
+                  {saveEng && (
+                    <input value={saveLabel} maxLength={80}
+                      onChange={(e) => setSaveLabel(e.target.value)}
+                      className="field mt-2 py-2 text-[14px]"
+                      placeholder="Name it — e.g. Standard patio engineering" />
+                  )}
+                </div>
+              )}
+            </div>
           ))}
         </div>
         <p className="mt-2 text-[12px] text-ink/50">
           {totalMb > 0
-            ? `${all.length} file${all.length === 1 ? "" : "s"}, ${totalMb.toFixed(1)} MB of 40 MB.`
+            ? `${count} file${count === 1 ? "" : "s"}, ${totalMb.toFixed(1)} MB of 40 MB.`
             : "Up to 40 MB in total. Email anything larger to the office."}
         </p>
       </div>
