@@ -151,10 +151,7 @@ export default async function Dashboard() {
                     <div className="flex flex-wrap items-start gap-4">
                       <JobArt description={j.description as string} tone="amber" />
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-2">
-                          <span className="font-mono text-[12px] text-brass">{j.ref}</span>
-                          <span className="font-medium text-ink">{j.address}</span>
-                        </div>
+                        <JobLink refNo={j.ref as string} address={j.address as string} tone="amber" />
                         <div className="mt-0.5 text-[13px] text-ink/55">{j.description}</div>
                         {(() => {
                           const at = askedAt(j.ref as string);
@@ -207,10 +204,7 @@ export default async function Dashboard() {
                     <div className="flex flex-wrap items-center gap-4">
                       <JobArt description={j.description as string} />
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-2">
-                          <span className="font-mono text-[12px] text-ink/45">{j.ref}</span>
-                          <span className="font-medium text-ink">{j.address}</span>
-                        </div>
+                        <JobLink refNo={j.ref as string} address={j.address as string} />
                         <div className="mt-0.5 text-[13px] text-ink/55">{j.description}</div>
                         <span className="chip mt-1.5 inline-block">
                           {clientStatusLabel(j.mondayStatus as string)}
@@ -245,10 +239,7 @@ export default async function Dashboard() {
                     <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-3.5">
                       <JobArt description={j.description as string} />
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-2">
-                          <span className="font-mono text-[12px] text-ink/45">{j.ref}</span>
-                          <span className="truncate text-ink/80">{j.address}</span>
-                        </div>
+                        <JobLink refNo={j.ref as string} address={j.address as string} muted />
                         <div className="mt-0.5 text-[13px] text-ink/50">
                           {j.description} · available {r.daysLeft} more day{r.daysLeft === 1 ? "" : "s"}
                         </div>
@@ -281,6 +272,25 @@ export default async function Dashboard() {
         </>
       )}
     </AppShell>
+  );
+}
+
+/** Ref + address as a link into the job's own page, styled to sit exactly
+ *  where the plain text used to. */
+function JobLink({ refNo, address, tone = "plain", muted = false }: {
+  refNo: string; address: string; tone?: "plain" | "amber"; muted?: boolean;
+}) {
+  return (
+    <Link href={`/jobs/${encodeURIComponent(refNo)}`}
+      className="group flex min-w-0 flex-wrap items-baseline gap-2">
+      <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass" : "text-ink/45"}`}>
+        {refNo}
+      </span>
+      <span className={`truncate underline-offset-2 group-hover:text-seal group-hover:underline ${
+        muted ? "text-ink/80" : "font-medium text-ink"}`}>
+        {address}
+      </span>
+    </Link>
   );
 }
 

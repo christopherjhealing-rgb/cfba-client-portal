@@ -36,15 +36,22 @@ export default async function JobDetail({
   const job = repo.toPortalJob(raw);
   if (!isClientVisible(job)) notFound();
 
-  const [unread, hidden, allMsgs, files] = await Promise.all([
+  const [unread, hidden, allMsgs, files, allSubs] = await Promise.all([
     unreadCount(session.companyId),
     disabledPages(),
     repo.listMessagesForCompany(session.companyId),
     repo.jobFiles(ref),
+    repo.listSubmissionsForCompany(session.companyId),
   ]);
   await repo.markThreadRead(session.companyId, ref);
 
   const thread = allMsgs.filter((m) => m.ref === ref);
+  // The lodgements behind this job: the original (matched via the Monday card
+  // it created) and any amendments lodged against this ref.
+  const lodgements = allSubs
+    .filter((s) => s.status === "accepted" &&
+      ((raw.mondayItemId && s.mondayItemId === raw.mondayItemId) || s.amendmentOf === ref))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const bucket = jobBucket(job, new Date(), env.retentionMonths);
   const downloadable = bucket === "ready" || bucket === "downloaded";
   const messagesOff = hidden.has("messages");
@@ -81,6 +88,46 @@ export default async function JobDetail({
           <p className="mt-4 text-[12.5px] text-ink/50">Issued {fmtDate(job.issuedAt as string)}.</p>
         ) : null}
       </div>
+
+      {lodgements.length > 0 && (
+        <div className="card mb-6 p-4">
+          <h2 className="mb-2 font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+            What you&apos;ve sent us
+          </h2>
+          <div className="divide-y divide-rule">
+            {lodgements.map((s) => (
+              <div key={s.id} className="py-2.5 first:pt-0 last:pb-0">
+                <p className="mb-1 text-[12.5px] text-ink/55">
+                  <span className="font-medium text-ink/75">
+                    {s.amendmentOf ? "Amendment" : "Original lodgement"}
+                  </span>
+                  {" "}· {fmtDate(s.createdAt)}
+                  {s.files.length > 0 &&
+                    ` · ${s.files.length} file${s.files.length === 1 ? "" : "s"}`}
+                </p>
+                {s.files.length > 0 && (
+                  <ul className="text-[13.5px] text-ink/70">
+                    {s.files.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 py-0.5">
+                        <span className="text-seal"><Icon name="folder" size={13} /></span>
+                        <span className="truncate">{f.name}</span>
+                        {f.category && (
+                          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/40">
+                            {f.category}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[12px] text-ink/45">
+            Files sent with messages appear in the thread below.
+          </p>
+        </div>
+      )}
 
       {files.length > 0 && downloadable && (
         <div className="card mb-6 p-4">
