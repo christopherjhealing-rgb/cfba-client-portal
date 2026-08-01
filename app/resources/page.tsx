@@ -34,7 +34,7 @@ export default async function Resources() {
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead title="Resources" sub="Forms, maps and the links you need to lodge with your local government." />
+      <PageHead hero="/heroes/retaining.jpg" title="Resources" sub="Forms, maps and the links you need to lodge with your local government." />
 
       <div className="mb-6"><BushfireCheck /></div>
 

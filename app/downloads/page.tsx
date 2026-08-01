@@ -34,6 +34,7 @@ export default async function Downloads() {
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
+        hero="/heroes/pool.jpg"
         title="Downloads"
         sub={`Issued jobs stay available for ${env.retentionMonths} months from the day you first download them.`}
       />

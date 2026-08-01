@@ -68,7 +68,7 @@ export default async function Dashboard() {
           the greeting stays readable whatever image is dropped in. */}
       <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-8 pt-9 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-11">
         <div aria-hidden="true"
-          className="absolute inset-0 -z-20 bg-[url('/header.jpg')] bg-cover bg-center saturate-[0.5]" />
+          className="absolute inset-0 -z-20 bg-[url('/heroes/patio.jpg')] bg-cover bg-center saturate-[0.5]" />
         <div aria-hidden="true"
           className="absolute inset-0 -z-10 bg-gradient-to-r from-wash via-wash/95 to-wash/45" />
         <div className="flex flex-wrap items-start justify-between gap-4">

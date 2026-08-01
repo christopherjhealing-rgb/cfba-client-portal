@@ -75,6 +75,7 @@ export default async function MyJobs({
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
+        hero="/heroes/carport.jpg"
         title="My jobs"
         sub="Every job you have with CF Building Approvals."
         action={<Link href="/submit" className="btn"><Icon name="plus" /> Lodge a job</Link>}

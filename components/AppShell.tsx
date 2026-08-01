@@ -174,11 +174,34 @@ export function PageHead({
   title,
   sub,
   action,
+  hero,
 }: {
   title: string;
   sub?: string;
   action?: React.ReactNode;
+  /** Path to a photo (e.g. /heroes/pool.jpg) — renders the head as a photo
+      band with a deep-green scrim, matching the guidance-note covers. */
+  hero?: string;
 }) {
+  if (hero) {
+    return (
+      <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-7 pt-10 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-12">
+        <div aria-hidden="true" className="absolute inset-0 -z-20 bg-cover bg-center"
+          style={{ backgroundImage: `url(${hero})` }} />
+        <div aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A]/90 via-[#0D211A]/70 to-[#0D211A]/35" />
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-[28px] font-semibold leading-tight text-white">
+              {title}
+            </h1>
+            {sub && <p className="mt-1 max-w-2xl text-[14px] text-white/75">{sub}</p>}
+          </div>
+          {action}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
       <div>

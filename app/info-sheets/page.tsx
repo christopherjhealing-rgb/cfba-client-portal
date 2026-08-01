@@ -107,6 +107,7 @@ export default async function InfoSheets() {
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
+        hero="/heroes/patio.jpg"
         title="Info sheets"
         sub="Short guidance notes on what we need and why jobs come back. Written from the requests we actually send."
       />

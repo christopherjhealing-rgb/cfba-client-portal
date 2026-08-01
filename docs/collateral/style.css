@@ -219,3 +219,11 @@ tr:last-child td { border-bottom: 0; }
   font-family: Consolas, monospace; font-weight: 700; padding: 0 2mm;
   text-align: center; color: var(--green);
 }
+
+/* Photo hero band — image behind the standard band content. */
+.band.photo { position: relative; background: #12332A; }
+.band.photo .bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.band.photo .scrim { position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(13,33,26,.93) 0%, rgba(13,33,26,.72) 55%, rgba(13,33,26,.42) 100%); }
+.band.photo > * { position: relative; }
+.band.photo .band-logo { position: absolute; }
