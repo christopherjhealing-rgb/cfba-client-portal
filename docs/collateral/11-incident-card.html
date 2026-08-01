@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>If the portal misbehaves — quick card</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <h1>If the portal misbehaves</h1>
+    <div class="goldrule"></div>
+    <div class="sub">Symptom → check → fix. In this order, before ringing anyone.</div>
+  </div>
+
+  <div class="content">
+    <table class="small">
+      <tr>
+        <th style="width:44mm">Symptom</th>
+        <th>Check, then fix</th>
+      </tr>
+      <tr>
+        <td><strong>Admin banner red or "stale"</strong></td>
+        <td>The banner prints the error. <em>Monday API error</em> → the Monday token (regenerate
+        in Monday → Developers, update <span class="mono">MONDAY_TOKEN</span> in Vercel,
+        redeploy). <em>Graph/401/secret</em> → the Microsoft secret has expired: new secret in
+        Entra → <span class="mono">GRAPH_CLIENT_SECRET</span> in Vercel → redeploy. No error but
+        stale → Vercel → Settings → Cron Jobs: is <span class="mono">/api/sync</span> listed and
+        firing in the Logs?</td>
+      </tr>
+      <tr>
+        <td><strong>Client says "no email arrived"</strong></td>
+        <td>1. Their spam folder. 2. Does the client record hold the right email address?
+        3. Was the update actually prefixed <span class="mono">FIR:</span>/<span class="mono">CLIENT:</span>?
+        4. Remember: an already-sent update never re-emails — post a fresh one. 5. Vercel →
+        Logs → look for "could not email" and read the reason.</td>
+      </tr>
+      <tr>
+        <td><strong>Lodgement shows "couldn't save" or waits in the queue</strong></td>
+        <td>Nothing is lost — that message means nothing was recorded, and the queue means Monday
+        was unreachable. Client retries, or Accept it from the queue once Monday's back. Cause in
+        Vercel Logs under "submit failed:".</td>
+      </tr>
+      <tr>
+        <td><strong>Live site shows a demo banner</strong></td>
+        <td><span class="mono">SUPABASE_URL</span> didn't take — Vercel → Settings → Environment
+        Variables, fix it, <strong>redeploy</strong>. Env changes never apply without a
+        redeploy.</td>
+      </tr>
+      <tr>
+        <td><strong>Client locked out / forgot password</strong></td>
+        <td>They can self-serve with <em>Forgot password?</em> (code goes to the email we hold).
+        Or /admin → Clients → click their username → reset. Their old password keeps working
+        until the new code is used, so a reset never locks anyone out.</td>
+      </tr>
+      <tr>
+        <td><strong>Issued job, but client sees no files</strong></td>
+        <td>1. Does the card have a <strong>reference number</strong>? 2. Does the SharePoint
+        folder name end with <span class="mono">- &lt;ref&gt;</span>? 3. Client &amp; spelling
+        matched on /admin (not in the Unmatched list)? Fix, then Run sync.</td>
+      </tr>
+      <tr>
+        <td><strong>Client messaged but nobody saw it</strong></td>
+        <td>The office reply email goes to <span class="mono">OFFICE_EMAIL</span> — is that a
+        watched inbox? The message is also on the Monday card and in the portal thread; nothing
+        is lost.</td>
+      </tr>
+      <tr>
+        <td><strong>Something's badly broken after a change</strong></td>
+        <td><strong>Rollback is instant and safe:</strong> Vercel → Deployments → pick the last
+        good one → ⋯ → <strong>Promote to Production</strong>. You are never stuck.</td>
+      </tr>
+    </table>
+
+    <div class="callout" style="margin-top:5mm">
+      <strong>Escalation:</strong> anything not on this card — grab the exact error text (banner,
+      or Vercel → Logs) and take it to Chris. The error text is the fix nine times out of ten.
+    </div>
+
+    <div class="callout warn" style="margin-top:3mm">
+      <strong>Never do these:</strong> don't paste the service-role key, Monday token or Graph
+      secret into chat, email or a Monday card — they go straight into Vercel only. Don't make
+      the Supabase <span class="mono">issued</span> bucket public. Don't edit DNS records other
+      than adding new ones.
+    </div>
+  </div>
+
+  <div class="foot-light">
+    <span>Keep by the front desk</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+</body>
+</html>

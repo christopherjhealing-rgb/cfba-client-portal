@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Running the portal — office admin guide</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <h1>Running the portal</h1>
+    <div class="goldrule"></div>
+    <div class="sub">CF Building Approvals — office admin guide (/admin)</div>
+    <div class="meta">Sign in at the portal address + /admin with the staff passcode · Updated August 2026</div>
+  </div>
+
+  <div class="content">
+    <div class="sec">The admin front page, top to bottom</div>
+    <ol class="steps">
+      <li><span class="step-n">1</span><div style="flex:1">
+        <h3>Sync health banner</h3>
+        <p><strong>Green</strong> = last sync ran inside the hour, all good.
+        <strong>Amber "stale"</strong> = no sync for over an hour — check the incident card.
+        <strong>Red "failed"</strong> = the error is printed in the banner. Below it, any
+        <strong>unmatched Monday clients</strong> are listed: those cards' jobs and messages reach
+        nobody until matched. Fix each with the dropdown ("add as alias to…") or
+        <em>New client</em> — one click, done on the next sync.</p>
+      </div></li>
+      <li><span class="step-n">2</span><div style="flex:1">
+        <h3>Portal pages (the on/off switches)</h3>
+        <p>Turn a client section off while you update it — the link vanishes, the page shows
+        "temporarily unavailable", and the matching actions pause. Flip it back when done. No
+        deploy needed; takes effect on next page load.</p>
+      </div></li>
+      <li><span class="step-n">3</span><div style="flex:1">
+        <h3>Info sheets &amp; Council forms</h3>
+        <p>Upload a PDF to <strong>supersede a guidance note</strong> (clients get the new
+        version instantly; Revert restores the original), or to host the current
+        <strong>BA1/BA2/BA5/BA13/BA19/BA22</strong> under Resources. When the Building Commission
+        revises a form, replacing it here takes ten seconds.</p>
+      </div></li>
+      <li><span class="step-n">4</span><div style="flex:1">
+        <h3>Submission queue (usually empty)</h3>
+        <p>Lodgements go straight onto the board. A lodgement only waits here if Monday couldn't
+        be reached when it was submitted — Accept sends it on. If the queue keeps filling,
+        Monday or its token is the problem.</p>
+      </div></li>
+      <li><span class="step-n">5</span><div style="flex:1">
+        <h3>Run sync</h3>
+        <p>Forces the 5-minute cycle to run now — useful when a client's on the phone. The
+        result line shows jobs, files, messages and anything unmatched.</p>
+      </div></li>
+    </ol>
+
+    <div class="sec">Clients &amp; logins</div>
+    <ul class="check">
+      <li><strong>Add a client</strong> — name as it appears in Monday's Client column (suffixes
+        and brackets are ignored automatically); their email if the board carries it — an email
+        match attaches jobs regardless of spelling; other spellings as aliases.</li>
+      <li><strong>Issue a login</strong> — username plus an optional <strong>person's name</strong>
+        (their messages then show "Joe, Ventura Homes"). The one-time setup code appears once —
+        pass it on straight away; it expires in 30 days.</li>
+      <li><strong>"I can't log in"</strong> — click their username to <strong>reset</strong>: a
+        new setup code is issued and their old password keeps working until they use it. Clients
+        can also self-serve with <em>Forgot password?</em> — a code goes to the email we hold.</li>
+      <li><strong>Check folders</strong> — per client, confirms the portal can resolve their
+        SharePoint Issued folders.</li>
+    </ul>
+  </div>
+
+  <div class="foot-light">
+    <span>Page 1 of 2 — the admin page</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+  <div class="content" style="padding-top:12mm">
+    <div class="sec">Reports and the activity log</div>
+    <ul class="check">
+      <li><strong>Reports</strong> — issued counts, the <em>actual</em> median turnaround in
+        business days against the 3–4 we publish, and busiest clients. If the median creeps above
+        the published figure, either the process or the promise needs adjusting — the page flags
+        it.</li>
+      <li><strong>Activity log</strong> — the append-only record: accepts, rejects, logins
+        issued/reset, client matches, certificate downloads (with who). This is what a complaint,
+        insurer or Building Services Board query asks for — it fills itself.</li>
+    </ul>
+
+    <div class="sec">The messages rules — worth knowing cold</div>
+    <ul class="check">
+      <li>An update starting <span class="mono">FIR:</span> or <span class="mono">CLIENT:</span>
+        goes to the client — portal thread <em>and</em> email. <strong>Anything else stays
+        internal.</strong> Never start an internal note with either prefix.</li>
+      <li>Works on a card in any active status; completed/cancelled cards aren't scanned.</li>
+      <li>When a client replies, the office gets an email — you never need to watch the board
+        for replies.</li>
+      <li>Files you attach to a Monday update do <em>not</em> reach the client — put requests in
+        words. (Sending documents to clients is a future feature.)</li>
+    </ul>
+
+    <div class="sec">Switches that live in Vercel (not /admin)</div>
+    <table class="small">
+      <tr><td style="width:52mm"><span class="mono">AUTO_ACCEPT_LODGEMENTS</span></td>
+        <td>Default on. Set <span class="mono">0</span> to make every lodgement wait in the
+        review queue for a human Accept.</td></tr>
+      <tr><td><span class="mono">DIGEST_ENABLED</span></td>
+        <td>Default off. Set <span class="mono">1</span> to send every builder a Monday-morning
+        summary of their active jobs, with a "waiting on you" section that chases FIRs
+        automatically.</td></tr>
+      <tr><td><span class="mono">RETENTION_MONTHS</span></td>
+        <td>How long downloaded packages stay before the files purge. Currently
+        <strong>3</strong>.</td></tr>
+      <tr><td><span class="mono">OFFICE_EMAIL</span></td>
+        <td>Where client-reply notifications land. Keep it a watched inbox.</td></tr>
+    </table>
+    <p class="small muted" style="margin-top:2mm">Changing a Vercel variable does nothing until
+    the project is <strong>redeployed</strong> — Deployments → ⋯ → Redeploy.</p>
+
+    <div class="sec">Weekly two-minute sweep</div>
+    <ul class="check dots">
+      <li>Sync banner green?</li>
+      <li>Unmatched list empty — or matched with one click?</li>
+      <li>Submission queue empty?</li>
+      <li>Reports: median turnaround still inside the published 3–4 days?</li>
+      <li>Any new Monday status labels created this week? Tell Chris so the portal's wording map
+        stays complete.</li>
+    </ul>
+
+    <div class="callout" style="margin-top:4mm">
+      <strong>The two calendar reminders that matter:</strong> the Microsoft Graph client secret
+      (expires ~July 2028 — six weeks' warning is set; an expired secret silently stops files,
+      folders and email) and the Monday API token if its owner's account ever changes.
+    </div>
+  </div>
+
+  <div class="foot-light">
+    <span>Page 2 of 2 — reports, rules, switches</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+</body>
+</html>

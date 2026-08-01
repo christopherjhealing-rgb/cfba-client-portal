@@ -1,0 +1,31 @@
+Subject: Your jobs with CFBA, online — your portal login is inside
+
+Hello,
+
+We've launched a client portal — a secure site where every job you have
+with CF Building Approvals lives in one place. From today you can:
+
+  - See every job's live status, in plain English
+  - Lodge new jobs and amendments, plans attached, straight onto our board
+  - Answer our information requests in one click — documents land on the
+    job, not an inbox
+  - Download certificates the moment they're issued (we email you when
+    they're ready)
+
+It's free, nothing to install, and one login covers your whole office.
+
+Your login:
+  Portal:      https://cfba-client-portal-theta.vercel.app
+  Username:    [USERNAME]
+  Setup code:  [SETUP CODE]
+
+Open the portal, choose "First time", enter these, and pick your own
+password — we never see it. Five minutes, start to finish.
+
+Nothing about how we work together changes unless you want it to — email
+and phone still work. The portal just means no more wondering where a job
+is up to.
+
+Regards,
+The CF Building Approvals team
+1300 029 074 · admin@cfba.com.au · Perth, Western Australia

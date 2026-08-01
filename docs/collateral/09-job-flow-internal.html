@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>How a job flows, start to finish — internal</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <h1>How a job flows, start to finish</h1>
+    <div class="goldrule"></div>
+    <div class="sub">CF Building Approvals — internal reference</div>
+    <div class="meta">Updated August 2026 · Inspections not covered · Monday board · SharePoint · CDC autogen · client portal</div>
+  </div>
+
+  <div class="content">
+    <div class="sec">Who does what</div>
+    <table>
+      <tr><td style="width:26mm"><span class="pill-role r-kacie">Kacie</span></td>
+        <td>Intake, references, folders, assigning, finalising, issuing, and all of Rebecca's admin</td></tr>
+      <tr><td><span class="pill-role r-chris">Chris</span></td>
+        <td>Assesses his own jobs, requests information, finalises and issues</td></tr>
+      <tr><td><span class="pill-role r-rebecca">Rebecca</span></td>
+        <td>Assessment only — her signature is already on the template</td></tr>
+      <tr><td><span class="pill-role r-fiona">Fiona</span></td>
+        <td>Invoicing</td></tr>
+      <tr><td><span class="pill-role r-client">Client</span></td>
+        <td>Lodges jobs, sends information, downloads</td></tr>
+      <tr><td><span class="pill-role r-auto">Automatic</span></td>
+        <td>Card creation, autogen, portal sync (every 5 minutes), emails, filing, receipts, purge</td></tr>
+    </table>
+
+    <div class="sec">The stages</div>
+    <ol class="steps">
+      <li><span class="step-n">1</span><div style="flex:1">
+        <h3>Job comes in — straight onto the board
+          <span class="pill-role r-client" style="float:right">Client</span>
+          <span class="pill-role r-auto" style="float:right;margin-right:2mm">Automatic</span></h3>
+        <p>Client lodges through the portal with address, class, description and plans. The Monday
+        card is created <strong>instantly</strong> in New Jobs — client name, email, class and
+        description filled, the PDFs in the card's <strong>Files column</strong>, and the client's
+        note posted to Updates. The review queue only holds a lodgement if Monday couldn't be
+        reached at that moment (the portal admin page shows a count). Jobs still arriving by email
+        are entered by hand as they are now.</p>
+      </div></li>
+      <li><span class="step-n">2</span><div style="flex:1">
+        <h3>Reference number &amp; folder
+          <span class="pill-role r-kacie" style="float:right">Kacie</span></h3>
+        <p>Reference goes on the card and the SharePoint folder is created as
+        <span class="mono">&lt;address&gt; - &lt;ref&gt;</span>.
+        <strong>Until the reference exists the portal cannot find the folder</strong>, so nothing
+        can be issued to the client.</p>
+      </div></li>
+      <li><span class="step-n">3</span><div style="flex:1">
+        <h3>Assigned to a surveyor
+          <span class="pill-role r-kacie" style="float:right">Kacie</span></h3>
+        <p>Put into the assessing surveyor's queue. Chris assesses his own jobs; Rebecca assesses
+        hers.</p>
+      </div></li>
+      <li><span class="step-n">4</span><div style="flex:1">
+        <h3>Assessment
+          <span class="pill-role r-rebecca" style="float:right">Rebecca</span>
+          <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
+        <p>Plans and engineering assessed against NCC 2022 Volume Two and the ABCB Housing
+        Provisions, and the checklist completed. This is where the work happens — the job stays
+        here until the surveyor is satisfied.</p>
+      </div></li>
+      <li><span class="step-n">5</span><div style="flex:1">
+        <h3>Further information needed → see the loop overleaf
+          <span class="pill-role r-rebecca" style="float:right">Rebecca</span>
+          <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
+        <p>Only when something is needed <strong>from the client</strong>. Status set to
+        <strong>FIR</strong> and the request written on the card's Updates tab starting with
+        <span class="mono">FIR:</span> (or <span class="mono">CLIENT:</span> — both work).
+        Everything else on that card stays internal.</p>
+      </div></li>
+      <li><span class="step-n">5b</span><div style="flex:1">
+        <h3>Waiting on the engineer (FIR - ENG)
+          <span class="pill-role r-rebecca" style="float:right">Rebecca</span>
+          <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
+        <p>Arranged <strong>in house</strong> — the client is shown the status so they know where
+        the job is up to, but is never asked to supply anything or chased for it.</p>
+      </div></li>
+      <li><span class="step-n">6</span><div style="flex:1">
+        <h3>Assessment complete — hand off to the autogen
+          <span class="pill-role r-rebecca" style="float:right">Rebecca</span>
+          <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
+        <p>The surveyor sets <strong>Chris CDC</strong> (Chris's jobs) or <strong>To CDC</strong>
+        (Rebecca's) once the assessment is finished. <strong>Rebecca's part ends here</strong> —
+        her signature is already on the template.</p>
+      </div></li>
+      <li><span class="step-n">7</span><div style="flex:1">
+        <h3>CDC generated automatically
+          <span class="pill-role r-auto" style="float:right">Automatic</span></h3>
+        <p>Setting the CDC status starts the script. It writes the certificate and watermarked
+        PDFs into the job's <strong>Issued</strong> folder and moves the card to To Issue. Nobody
+        types the certificate.</p>
+      </div></li>
+      <li><span class="step-n">8</span><div style="flex:1">
+        <h3>Reviewed and finalised
+          <span class="pill-role r-kacie" style="float:right">Kacie</span>
+          <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
+        <p>Every document checked against the CDC: correct references, watermark, address, and
+        that <strong>all documents are included</strong>. Edits made here are what the client
+        receives — the portal only takes files once the job is marked Issued.</p>
+      </div></li>
+      <li><span class="step-n">9</span><div style="flex:1">
+        <h3>Issued to the client
+          <span class="pill-role r-auto" style="float:right">Automatic</span>
+          <span class="pill-role r-kacie" style="float:right;margin-right:2mm">Kacie</span>
+          <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
+        <p>Sync copies the Issued folder into the portal, the job moves to <strong>Ready to
+        download</strong>, and <strong>the portal emails the client that it's ready</strong>.
+        When they download it, the card gets a receipt note automatically.</p>
+      </div></li>
+      <li><span class="step-n">10</span><div style="flex:1">
+        <h3>Invoiced
+          <span class="pill-role r-auto" style="float:right">Automatic</span>
+          <span class="pill-role r-fiona" style="float:right;margin-right:2mm">Fiona</span></h3>
+        <p>Job closed out. Downloaded jobs stay available to the client for <strong>three
+        months</strong>, then the stored files are purged automatically.</p>
+      </div></li>
+    </ol>
+
+    <div class="callout warn" style="margin-top:4mm">
+      <strong>Three things that stop a job dead.</strong> A card with <strong>no reference
+      number</strong> cannot be matched to its SharePoint folder, so nothing reaches the client.
+      A card whose <strong>Client spelling matches no portal client</strong> is invisible — its
+      jobs and messages reach nobody; the admin page lists these under <em>Unmatched</em> with a
+      one-click fix. And a job set to <strong>FIR without a</strong>
+      <span class="mono">FIR:</span>/<span class="mono">CLIENT:</span> <strong>update</strong>
+      shows the client "further information required" with no detail and sends no email.
+      <strong>FIR - ENG is not part of that loop</strong> — the client is informed, not asked.
+    </div>
+  </div>
+
+  <div class="foot-light">
+    <span>Page 1 of 2 — the stages</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+  <div class="content" style="padding-top:12mm">
+    <div class="sec">When we need more information from the client</div>
+    <ol class="steps">
+      <li><span class="step-n">1</span><div style="flex:1">
+        <h3>Surveyor <span class="pill-role r-chris" style="float:right">Chris</span></h3>
+        <p>Sets status to <strong>FIR</strong> and posts the request on the card's Updates tab
+        beginning <span class="mono">FIR:</span> (or <span class="mono">CLIENT:</span>). This
+        loop is for information needed <strong>from the client only</strong>. The prefix works on
+        a card in <em>any</em> active status — FIR is what flags "action needed".</p>
+      </div></li>
+      <li><span class="step-n">2</span><div style="flex:1">
+        <h3>Portal <span class="pill-role r-auto" style="float:right">Automatic</span></h3>
+        <p>Next sync (≤5 minutes) imports the update, shows the job under <strong>Further
+        information required</strong>, then emails the client the request with a link straight to
+        the job. The email is sent by the portal, not Monday, so it can never arrive before the
+        detail is visible.</p>
+      </div></li>
+      <li><span class="step-n">3</span><div style="flex:1">
+        <h3>Client <span class="pill-role r-client" style="float:right">Client</span></h3>
+        <p>Signs in, sees exactly what is needed, and uploads it against the job. No email
+        chain.</p>
+      </div></li>
+      <li><span class="step-n">4</span><div style="flex:1">
+        <h3>Portal <span class="pill-role r-auto" style="float:right">Automatic</span></h3>
+        <p>Posts the reply and files onto the card, <strong>and emails the office</strong> that a
+        reply has arrived — Monday doesn't notify us of updates made with our own token, the
+        email does. Files land on the card with the message.</p>
+      </div></li>
+      <li><span class="step-n">5</span><div style="flex:1">
+        <h3>Surveyor <span class="pill-role r-chris" style="float:right">Chris</span></h3>
+        <p>Picks the job back up and carries on.</p>
+      </div></li>
+    </ol>
+
+    <div class="sec">What happens on its own, and what does not</div>
+    <div class="cols">
+      <div>
+        <div class="card" style="background:var(--wash);border:0">
+          <h3>Automatic</h3>
+          <ul class="check small">
+            <li>Monday card created at lodgement, files attached</li>
+            <li>CDC and stamped PDFs generated</li>
+            <li>Issued files copied to the portal</li>
+            <li>"Certificate ready" email to the client</li>
+            <li>Further-information email to the client</li>
+            <li>Office email when a client replies</li>
+            <li>Download receipt noted on the card</li>
+            <li>Sync health + unmatched list on /admin</li>
+            <li>Files purged three months after first download</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="border:.35mm solid var(--rule)">
+          <h3>Still done by us</h3>
+          <ul class="check dots small">
+            <li>Reference number and folder</li>
+            <li>Assigning the surveyor</li>
+            <li>The assessment itself</li>
+            <li>Writing the <span class="mono">FIR:</span> request</li>
+            <li>Reviewing and finalising the pack</li>
+            <li>Clicking Issued</li>
+            <li>Invoicing</li>
+            <li>Matching new client spellings (one click, /admin)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">A job from start to finish — worked example</div>
+    <table class="small">
+      <tr><td style="width:20mm"><strong>Mon 6 Jul</strong></td>
+        <td>Complete Approvals lodge <strong>89 Bannister-Marradong Road</strong> — Class 10a
+        steel shed — through the portal. Card created instantly, plans in the Files column.</td>
+        <td style="width:22mm;text-align:right"><span class="pill-role r-client">Client</span></td></tr>
+      <tr><td><strong>Mon 6 Jul</strong></td>
+        <td>Reference <strong>56597</strong> added; folder
+        <span class="mono">89 Bannister-Marradong Road - 56597</span> created; assigned to Chris.</td>
+        <td style="text-align:right"><span class="pill-role r-kacie">Kacie</span></td></tr>
+      <tr><td><strong>Wed 8 Jul</strong></td>
+        <td>Assessed. Raft slab engineering missing — request posted as
+        <span class="mono">FIR:</span>; portal emails the client within five minutes.</td>
+        <td style="text-align:right"><span class="pill-role r-chris">Chris</span></td></tr>
+      <tr><td><strong>Fri 10 Jul</strong></td>
+        <td>Client uploads the engineering; it lands on the card, office gets the reply email,
+        card moves to New Info Received.</td>
+        <td style="text-align:right"><span class="pill-role r-client">Client</span></td></tr>
+      <tr><td><strong>Mon 13 Jul</strong></td>
+        <td>Assessment completed → <strong>Chris CDC</strong>; autogen writes the CDC and stamped
+        PDFs into Issued.</td>
+        <td style="text-align:right"><span class="pill-role r-auto">Automatic</span></td></tr>
+      <tr><td><strong>Tue 14 Jul</strong></td>
+        <td>Pack reviewed and finalised; marked <strong>Issued</strong>. Portal syncs the files,
+        emails the client it's ready; they download the same afternoon and the card notes it.</td>
+        <td style="text-align:right"><span class="pill-role r-chris">Chris</span></td></tr>
+      <tr><td><strong>Wed 15 Jul</strong></td>
+        <td>Invoiced and closed.</td>
+        <td style="text-align:right"><span class="pill-role r-fiona">Fiona</span></td></tr>
+    </table>
+  </div>
+
+  <div class="foot-light">
+    <span>Page 2 of 2 — the loop and a worked example</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+</body>
+</html>
