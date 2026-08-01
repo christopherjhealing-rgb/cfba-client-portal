@@ -52,7 +52,7 @@ export default async function MyJobs({
       : "progress";
 
   const matchesQ = (j: typeof all[number]) => !q ||
-    `${j.ref} ${j.address} ${j.description}`.toLowerCase().includes(q);
+    `${j.ref} ${j.address} ${j.description} ${j.clientRef || ""}`.toLowerCase().includes(q);
 
   const rows = all.filter((j) => {
     if (!matchesQ(j)) return false;
