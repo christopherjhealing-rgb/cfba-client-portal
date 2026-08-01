@@ -132,3 +132,13 @@ NGL, clearance under beam, pitch stated as a figure, post positions, ground
 line and FFL. Parametric preset structures only — never traced dwellings or
 complex designs. Same applicant-authored footer; measures, never judges.
 ~1-2 sessions.
+
+**Underlay v2 upgrade — load the site by address (agreed).** Rather than
+screenshots: geocode the entered address, then pull the underlay from mapping
+services directly. Preferred source: Landgate/SLIP public services — the
+cadastral lot boundary (auto-draws the true lot shape at scale, including
+corner and irregular lots, replacing manual lot entry and calibration) with
+SLIP aerial imagery as an optional reference layer beneath. Google satellite
+only as fallback (licence-grey for tracing); Nearmap as premium underlay if
+CFBA holds a subscription (ask owner). Underlay layers remain browser-only and
+excluded from the printed sheet.
