@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { href: "/downloads", label: "Downloads", icon: "download" },
   { href: "/info-sheets", label: "Info sheets", icon: "book" },
   { href: "/resources", label: "Resources", icon: "folder" },
+  { href: "/site-plan", label: "Site plan tool", icon: "edit" },
   { href: "/engineering", label: "Engineering", icon: "check" },
   { href: "/messages", label: "Messages", icon: "mail" },
   { href: "/details", label: "My details", icon: "user" },

@@ -9,6 +9,7 @@ export const TOGGLEABLE_PAGES = [
   { key: "downloads", href: "/downloads", label: "Downloads" },
   { key: "infoSheets", href: "/info-sheets", label: "Info sheets" },
   { key: "resources", href: "/resources", label: "Resources" },
+  { key: "sitePlan", href: "/site-plan", label: "Site plan tool" },
   { key: "messages", href: "/messages", label: "Messages" },
   { key: "help", href: "/help", label: "Help & support" },
 ] as const;
