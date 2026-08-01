@@ -114,3 +114,13 @@ body {
   /* Stat tiles' numbers ease-pop as the page lands. */
   .card .font-display { transform-origin: left bottom; }
 }
+
+/* Motion layer 3 — every pressable presses. */
+@media (prefers-reduced-motion: no-preference) {
+  .field { transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+  .field:focus { transform: translateY(-1px); }
+  a:active { opacity: 0.75; }
+  input[type="file"]:active, label:active { transform: scale(0.99); }
+  .chip { transition: transform 0.15s ease; }
+  a:hover .chip, a:active .chip { transform: translateY(-1px); }
+}
