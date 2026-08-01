@@ -13,6 +13,7 @@ const LIMITS = {
   submission: { totalBytes: 40 * 1024 * 1024, maxFiles: 30, label: "40 MB" },
   message: { totalBytes: 25 * 1024 * 1024, maxFiles: 15, label: "25 MB" },
   infosheet: { totalBytes: 20 * 1024 * 1024, maxFiles: 1, label: "20 MB" },
+  form: { totalBytes: 20 * 1024 * 1024, maxFiles: 1, label: "20 MB" },
 } as const;
 
 const sanitize = (name: string) => name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120);
@@ -26,12 +27,14 @@ export async function POST(req: Request) {
     const purpose =
       body.purpose === "message" ? "message" :
       body.purpose === "submission" ? "submission" :
-      body.purpose === "infosheet" ? "infosheet" : null;
+      body.purpose === "infosheet" ? "infosheet" :
+      body.purpose === "form" ? "form" : null;
     if (!purpose) return NextResponse.json({ error: "Unknown upload purpose." }, { status: 400 });
 
-    // Info-sheet replacements are a staff action; everything else needs a real
-    // (non-impersonated) client session.
-    if (purpose === "infosheet") {
+    // Info-sheet and council-form uploads are staff actions; everything else
+    // needs a real (non-impersonated) client session.
+    const staffUpload = purpose === "infosheet" || purpose === "form";
+    if (staffUpload) {
       if (!staff) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
     } else {
       if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
@@ -46,8 +49,8 @@ export async function POST(req: Request) {
 
     // Respect the /admin page switches: messages gate message uploads;
     // submission uploads stay possible while either lodging or amending is on.
-    // Staff info-sheet uploads are never gated.
-    if (purpose !== "infosheet") {
+    // Staff uploads are never gated.
+    if (!staffUpload) {
       const off = await disabledPages();
       if (purpose === "message" ? off.has("messages") : off.has("submit") && off.has("amend")) {
         return NextResponse.json(
@@ -93,7 +96,7 @@ export async function POST(req: Request) {
     // ever write into — and later reference — their own draft area. Staff
     // info-sheet uploads get their own area instead.
     const draftId = "up_" + crypto.randomUUID();
-    const prefix = purpose === "infosheet"
+    const prefix = staffUpload
       ? `uploads/staff/${draftId}`
       : `uploads/${session!.companyId}/${draftId}`;
     const used = new Set<string>();

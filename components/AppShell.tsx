@@ -18,6 +18,7 @@ const NAV: NavItem[] = [
   { href: "/amend", label: "Amend a job", icon: "edit" },
   { href: "/downloads", label: "Downloads", icon: "download" },
   { href: "/info-sheets", label: "Info sheets", icon: "book" },
+  { href: "/resources", label: "Resources", icon: "folder" },
   { href: "/messages", label: "Messages", icon: "mail" },
   { href: "/details", label: "My details", icon: "user" },
   { href: "/help", label: "Help & support", icon: "help" },

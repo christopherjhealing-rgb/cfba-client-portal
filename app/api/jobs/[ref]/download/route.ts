@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
+import * as monday from "@/lib/monday";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +43,24 @@ export async function GET(
   }
   const buf = await zip.generateAsync({ type: "nodebuffer" });
 
-  await repo.markDownloaded(ref, new Date().toISOString());
+  const firstDownload = !job.firstDownloadedAt;
+  const now = new Date();
+  await repo.markDownloaded(ref, now.toISOString());
+
+  // Download receipt on the Monday card, once, so the office can see the client
+  // has the certificate — kills the "did you get it?" call. Also starts the
+  // retention clock (markDownloaded), which is why it fires on first download.
+  if (firstDownload && job.mondayItemId) {
+    try {
+      await monday.postUpdate(
+        job.mondayItemId,
+        `The client downloaded the certificate package via the portal on ` +
+        `${now.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}.`
+      );
+    } catch (e) {
+      console.warn(`download: could not post receipt for ${ref}:`, (e as Error).message);
+    }
+  }
 
   const safe = (job.address || ref).replace(/[^A-Za-z0-9 .-]/g, "").slice(0, 60).trim();
   const filename = `CFBA ${ref} - ${safe}.zip`;

@@ -11,6 +11,8 @@ import { TOGGLEABLE_PAGES } from "@/lib/pages";
 import { InfoSheetManager } from "@/components/InfoSheetManager";
 import { PUBLISHED_SHEETS } from "@/lib/info-sheets";
 import { SyncHealth } from "@/components/SyncHealth";
+import { FormManager } from "@/components/FormManager";
+import { PORTAL_FORMS } from "@/lib/resources";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,7 @@ export default async function AdminHome() {
     repo.listFiles("info-sheets").catch(() => []),
     repo.getSetting<Record<string, unknown>>("last_sync").catch(() => null),
   ]);
+  const uploadedForms = await repo.listFiles("forms").catch(() => []);
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
 
@@ -60,6 +63,11 @@ export default async function AdminHome() {
         <InfoSheetManager
           sheets={PUBLISHED_SHEETS.map((s) => ({ file: s.file, title: s.title }))}
           overridden={sheetOverrides.map((f) => f.name)}
+        />
+
+        <FormManager
+          forms={PORTAL_FORMS.map((f) => ({ key: f.key, code: f.code, title: f.title }))}
+          uploaded={uploadedForms.map((f) => f.name)}
         />
 
         <section>
