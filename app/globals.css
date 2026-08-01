@@ -93,3 +93,24 @@ body {
   /* Sidebar items and stat tiles ease rather than snap. */
   nav a, .grid > a { transition: background-color 0.15s ease, transform 0.15s ease; }
 }
+
+/* Motion layer 2 — cascade + touch. */
+@media (prefers-reduced-motion: no-preference) {
+  /* Sections cascade in one after another rather than arriving as a block. */
+  main > * { animation: pagein 0.45s ease both; }
+  main > :nth-child(2) { animation-delay: 0.06s; }
+  main > :nth-child(3) { animation-delay: 0.12s; }
+  main > :nth-child(4) { animation-delay: 0.18s; }
+  main > :nth-child(5) { animation-delay: 0.24s; }
+  main > :nth-child(n+6) { animation-delay: 0.3s; }
+
+  /* Touch feedback — phones don't hover, so taps compress instead. */
+  a.card:active, .card a:active, .btn:active, nav a:active { transform: scale(0.98); }
+
+  /* Nav icons nudge when you hover their row. */
+  nav a > span:first-child { transition: transform 0.15s ease; }
+  nav a:hover > span:first-child { transform: scale(1.18); }
+
+  /* Stat tiles' numbers ease-pop as the page lands. */
+  .card .font-display { transform-origin: left bottom; }
+}
