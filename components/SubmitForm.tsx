@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { FileBucket, type Bucket } from "./FileBucket";
+import { PhotoBucket } from "./PhotoBucket";
 import { uploadDirect } from "@/lib/upload-client";
 import type { LibraryDoc } from "@/lib/library";
 
@@ -71,10 +72,14 @@ export function SubmitForm() {
     setBusy(true); setMsg(null);
 
     // Files go straight to storage via signed URLs (see lib/upload-client) —
-    // a full drawing set doesn't fit through a serverless request body.
-    const entries = BUCKETS.flatMap((b) =>
-      (files[b.key] || []).map((f) => ({ file: f, category: b.key }))
-    );
+    // a full drawing set doesn't fit through a serverless request body. Site
+    // photos are already one compiled PDF by now (see PhotoBucket).
+    const entries = [
+      ...BUCKETS.flatMap((b) =>
+        (files[b.key] || []).map((f) => ({ file: f, category: b.key }))
+      ),
+      ...(files.photos || []).map((f) => ({ file: f, category: "photos" })),
+    ];
     const up = await uploadDirect(
       "submission",
       entries.map((x) => x.file),
@@ -152,7 +157,7 @@ export function SubmitForm() {
     );
   }
 
-  const all = BUCKETS.flatMap((b) => files[b.key] || []);
+  const all = [...BUCKETS.flatMap((b) => files[b.key] || []), ...(files.photos || [])];
   const count = all.length + tickedDocs.length;
   const totalMb = (all.reduce((n, f) => n + f.size, 0)
     + tickedDocs.reduce((n, d) => n + d.size, 0)) / 1_048_576;
@@ -244,6 +249,8 @@ export function SubmitForm() {
               )}
             </div>
           ))}
+          <PhotoBucket files={files.photos || []}
+            onChange={(f) => setFiles((prev) => ({ ...prev, photos: f }))} />
         </div>
         <p className="mt-2 text-[12px] text-ink/50">
           {totalMb > 0
