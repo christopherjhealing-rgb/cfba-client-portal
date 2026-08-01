@@ -136,13 +136,19 @@ export default async function MyJobs({
                 const b = bucketOf(j.ref as string);
                 return (
                   <tr key={j.ref as string} className={needsClientInfo(j) ? "bg-[#FCF7EC]" : undefined}>
-                    <td className="td font-mono text-[12px] text-ink/50">{j.ref as string}</td>
+                    <td className="td font-mono text-[12px] text-ink/50">
+                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} className="hover:text-seal hover:underline">
+                        {j.ref as string}
+                      </Link>
+                    </td>
                     <td className="td">
-                      <div className="font-medium text-ink">{j.address as string}</div>
-                      <div className="mt-0.5 text-[13px] text-ink/55">
-                        {j.description as string}
-                        {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
-                      </div>
+                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} className="group">
+                        <div className="font-medium text-ink group-hover:text-seal">{j.address as string}</div>
+                        <div className="mt-0.5 text-[13px] text-ink/55">
+                          {j.description as string}
+                          {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
+                        </div>
+                      </Link>
                     </td>
                     <td className="td">
                       <span className={`chip ${needsClientInfo(j) ? "chip-brass" : b === "ready" ? "chip-seal" : ""}`}>
