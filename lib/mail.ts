@@ -50,8 +50,8 @@ export function updateEmail(opts: {
 }): { subject: string; html: string } {
   const { ref, address, body, needsAction, clientRef } = opts;
   const subject = needsAction
-    ? `Action required — job ${ref}, ${address}`
-    : `Update on job ${ref}, ${address}`;
+    ? `Action required — job ${ref}, ${address}${clientRef ? ` (your ref ${clientRef})` : ""}`
+    : `Update on job ${ref}, ${address}${clientRef ? ` (your ref ${clientRef})` : ""}`;
 
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
@@ -88,7 +88,7 @@ export function issuedEmail(opts: {
   ref: string; address: string; clientRef?: string;
 }): { subject: string; html: string } {
   const { ref, address, clientRef } = opts;
-  const subject = `Your certificate is ready — job ${ref}, ${address}`;
+  const subject = `Your certificate is ready — job ${ref}, ${address}${clientRef ? ` (your ref ${clientRef})` : ""}`;
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
   <p style="margin:0 0 16px">Hello,</p>
