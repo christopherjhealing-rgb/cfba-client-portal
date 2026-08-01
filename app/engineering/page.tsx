@@ -4,6 +4,8 @@ import * as repo from "@/lib/repo";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
+import { SpanChecker } from "@/components/SpanChecker";
+import { SPAN_SETS } from "@/lib/engineering";
 
 export const dynamic = "force-dynamic";
 
@@ -23,21 +25,21 @@ export default async function Engineering() {
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead title="Engineering checker" sub="Check a design against our engineering span tables before lodging." />
-      <div className="card p-6">
+      <PageHead title="Engineering checker" sub="Check a design against span tables before lodging." />
+      <div className="card mb-5 p-5">
         <p className="max-w-2xl text-[14px] leading-relaxed text-ink/70">
-          This is a guide to help you check a design before lodging — it is not a
-          certification and does not replace CFBA&apos;s assessment. Always confirm
-          the wind region and site classification for your site.
+          A guide to help you check a design before lodging — it is not a
+          certification and does not replace CFBA&apos;s assessment. Not sure of
+          your wind class? See info sheet 10, <em>Wind class &amp; site
+          classification</em>, or ask us.
         </p>
-        {eng.url ? (
+        {eng.url && (
           <a href={eng.url} target="_blank" rel="noopener noreferrer" className="btn mt-4">
-            Open the checker
+            Open the full checker
           </a>
-        ) : (
-          <p className="mt-4 text-[13px] text-ink/50">The checker link hasn&apos;t been set yet.</p>
         )}
       </div>
+      <SpanChecker sets={SPAN_SETS} />
     </AppShell>
   );
 }
