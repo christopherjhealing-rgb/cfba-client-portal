@@ -70,7 +70,7 @@ export default async function Dashboard() {
         <div aria-hidden="true"
           className="absolute inset-0 -z-20 bg-[url('/heroes/street.jpg')] bg-cover bg-center saturate-[0.75]" />
         <div aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A]/95 via-[#0D211A]/55 to-transparent" />
+          className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A]/90 via-[#0D211A]/35 to-transparent" />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[15px] text-white/75">{greeting()}</p>
