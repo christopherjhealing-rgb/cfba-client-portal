@@ -46,6 +46,7 @@ export default async function Amend({
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
+        hero="/heroes/shed.jpg"
         title="Amend a job"
         sub="Tell us what's changed on a job you already have with us."
       />

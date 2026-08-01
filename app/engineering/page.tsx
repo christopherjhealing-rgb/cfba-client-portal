@@ -30,7 +30,7 @@ export default async function Engineering() {
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead title="Engineering checker" sub="Check a design against the engineering before lodging." />
+      <PageHead hero="/heroes/garage.jpg" title="Engineering checker" sub="Check a design against the engineering before lodging." />
       <div className="card mb-5 p-5">
         <p className="max-w-2xl text-[14px] leading-relaxed text-ink/70">
           These checkers report whether a design is covered by the engineering,
