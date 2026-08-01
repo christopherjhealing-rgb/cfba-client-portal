@@ -31,6 +31,11 @@ async function handle(req: Request) {
 
   if (decision === "reject") {
     await repo.setSubmission(sub.id, { status: "rejected", reviewNote: String(note || "") });
+    // Data minimisation (APP 11.2): a rejected lodgement's files aren't part of
+    // any record we keep, so remove them rather than letting them linger.
+    for (const f of sub.files) {
+      try { await repo.deleteFile(`submissions/${sub.id}/${f.name}`); } catch { /* best effort */ }
+    }
     await repo.logAudit("submission.reject", sub.address || sub.id, String(note || ""));
     return NextResponse.json({ ok: true });
   }

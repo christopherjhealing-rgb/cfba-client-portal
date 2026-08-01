@@ -64,7 +64,9 @@ export async function runSync(): Promise<SyncResult> {
       ref: card.ref, companyId, mondayItemId: card.itemId,
       address: card.address, description: card.description,
       mondayStatus: card.status, fileCount: existing?.fileCount || 0,
-      issuedAt: existing?.issuedAt || now, firstDownloadedAt: existing?.firstDownloadedAt || null,
+      issuedAt: existing?.issuedAt || now,
+      receivedAt: existing?.receivedAt || card.createdAt || null,
+      firstDownloadedAt: existing?.firstDownloadedAt || null,
       lastSyncedAt: now, storagePrefix: `issued/${card.ref}`,
       sourceFolder: existing?.sourceFolder || null,
     };
@@ -117,6 +119,7 @@ export async function runSync(): Promise<SyncResult> {
       ref: card.ref, companyId, mondayItemId: card.itemId,
       address: card.address, description: card.description, mondayStatus: card.status,
       fileCount: existing?.fileCount || 0, issuedAt: existing?.issuedAt || null,
+      receivedAt: existing?.receivedAt || card.createdAt || null,
       firstDownloadedAt: existing?.firstDownloadedAt || null,
       lastSyncedAt: now, storagePrefix: existing?.storagePrefix || `issued/${card.ref}`,
       sourceFolder: existing?.sourceFolder || null,

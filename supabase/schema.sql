@@ -59,6 +59,7 @@ create table if not exists jobs (
   monday_status       text not null default '',
   file_count          integer not null default 0,
   issued_at           timestamptz,
+  received_at         timestamptz,
   first_downloaded_at timestamptz,
   last_synced_at      timestamptz,
   storage_prefix      text,

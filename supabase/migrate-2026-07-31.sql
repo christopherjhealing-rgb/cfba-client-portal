@@ -37,3 +37,6 @@ create table if not exists audit_log (
 );
 create index if not exists audit_log_at on audit_log (at desc);
 alter table audit_log enable row level security;
+
+-- Received date (Monday card creation) for turnaround reporting.
+alter table jobs add column if not exists received_at timestamptz;

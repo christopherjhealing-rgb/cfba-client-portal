@@ -37,6 +37,7 @@ export interface MondayCard {
   address: string;
   description: string;
   status: string;
+  createdAt: string | null;
 }
 
 function readCard(it: Record<string, unknown>): MondayCard {
@@ -52,10 +53,11 @@ function readCard(it: Record<string, unknown>): MondayCard {
     address: (it.name as string) || "",
     description: cols[COL.description] || "",
     status: cols[COL.status] || "",
+    createdAt: (it.created_at as string) || null,
   };
 }
 
-const CARD_FIELDS = `id name column_values(ids:["${COL.status}","${COL.client}","${COL.email}","${COL.ref}","${COL.description}"]){ id text }`;
+const CARD_FIELDS = `id name created_at column_values(ids:["${COL.status}","${COL.client}","${COL.email}","${COL.ref}","${COL.description}"]){ id text }`;
 
 /** Cards currently sitting at a given status label (default: Issued). */
 export async function listByStatus(label: string): Promise<MondayCard[]> {

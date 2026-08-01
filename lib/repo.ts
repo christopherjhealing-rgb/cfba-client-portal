@@ -14,6 +14,7 @@ export interface Job {
   mondayStatus: string;
   fileCount: number;
   issuedAt: string | null;
+  receivedAt: string | null;
   firstDownloadedAt: string | null;
   lastSyncedAt: string | null;
   storagePrefix: string;
@@ -347,7 +348,8 @@ export async function upsertJob(job: Job, files: JobFile[]) {
   must(await sb().from("jobs").upsert({
     ref: job.ref, company_id: job.companyId, monday_item_id: job.mondayItemId,
     address: job.address, description: job.description, monday_status: job.mondayStatus,
-    file_count: files.length, issued_at: job.issuedAt, last_synced_at: job.lastSyncedAt,
+    file_count: files.length, issued_at: job.issuedAt, received_at: job.receivedAt,
+    last_synced_at: job.lastSyncedAt,
     storage_prefix: job.storagePrefix, source_folder: job.sourceFolder,
   }, { onConflict: "ref" }));
   if (files.length) {
@@ -615,7 +617,7 @@ export async function signUploadUrl(path: string): Promise<string> {
 function stripFiles(j: demo.DemoJob): Job {
   const { files, ...rest } = j;
   void files;
-  return rest;
+  return { ...rest, receivedAt: (rest as { receivedAt?: string | null }).receivedAt ?? null };
 }
 function rowToJob(r: Record<string, unknown>): Job {
   return {
@@ -624,6 +626,7 @@ function rowToJob(r: Record<string, unknown>): Job {
     address: (r.address as string) || "", description: (r.description as string) || "",
     mondayStatus: (r.monday_status as string) || "", fileCount: Number(r.file_count || 0),
     issuedAt: (r.issued_at as string) ?? null,
+    receivedAt: (r.received_at as string) ?? null,
     firstDownloadedAt: (r.first_downloaded_at as string) ?? null,
     lastSyncedAt: (r.last_synced_at as string) ?? null,
     storagePrefix: (r.storage_prefix as string) || `issued/${r.ref}`,
