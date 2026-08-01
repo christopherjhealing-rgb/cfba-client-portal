@@ -3,6 +3,7 @@ import * as repo from "@/lib/repo";
 import { hashSetupCode, newSetupCode, normUsername } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
+import { checkLock, recordFailure } from "@/lib/throttle";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,11 @@ export async function POST(req: Request) {
   if (!u) return generic;
 
   try {
+    // Cap repeated recoveries so this can't be used to spam a client's inbox.
+    // Always returns the same generic message, so it still leaks nothing.
+    if (await checkLock(`recover:${u}`)) return generic;
+    await recordFailure(`recover:${u}`);
+
     const login = await repo.getLogin(u);
     if (!login || login.disabled) return generic;
     const company = await repo.companyById(login.companyId);

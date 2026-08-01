@@ -11,7 +11,7 @@
 import { DEMO_MODE, MONDAY_READY, GRAPH_READY, env } from "./env";
 import { matchCompany, READY_STATUS, CLIENT_ACTION_STATUSES, retention } from "./core.mjs";
 import * as monday from "./monday";
-import { sendMail, updateEmail } from "./mail";
+import { sendMail, updateEmail, issuedEmail } from "./mail";
 import * as graph from "./graph";
 import * as repo from "./repo";
 
@@ -85,6 +85,25 @@ export async function runSync(): Promise<SyncResult> {
     }
     await repo.upsertJob(job, files);
     res.jobsUpserted++;
+
+    // Certificate-ready email — the one the Help page promises. Fires only on
+    // the transition INTO issued: `existing && !existing.issuedAt` means we've
+    // seen this job before but never recorded it as issued. A job first seen
+    // already-issued (the pre-existing backlog) has existing === null, so the
+    // first sync after go-live never blasts old jobs. issuedAt is set on this
+    // upsert and preserved thereafter, so it never re-sends.
+    const isNewIssue = existing && !existing.issuedAt && files.length > 0;
+    if (isNewIssue) {
+      try {
+        const company = await repo.companyById(companyId);
+        if (company?.emails?.length) {
+          const mail = issuedEmail({ ref: card.ref, address: card.address });
+          await sendMail(company.emails, mail.subject, mail.html);
+        }
+      } catch (e) {
+        console.warn(`sync: could not send issued email for ${card.ref}:`, (e as Error).message);
+      }
+    }
   }
 
   // 2. Active cards -> refresh status (cheap; keeps the in-progress view live)
@@ -124,7 +143,7 @@ async function purgeExpired(): Promise<number> {
     const r = retention(job.firstDownloadedAt, now, env.retentionMonths);
     if (!r.expired) continue;
     try {
-      await repo.purgeJobFiles(job.ref);
+      await repo.purgeJobFiles(job.ref, job.storagePrefix || `issued/${job.ref}`);
       purged++;
     } catch (e) {
       console.warn(`sync: could not purge ${job.ref}:`, (e as Error).message);

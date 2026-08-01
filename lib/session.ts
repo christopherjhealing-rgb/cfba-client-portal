@@ -1,10 +1,25 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-import { env } from "./env";
+import { env, DEMO_MODE } from "./env";
 
 const secret = new TextEncoder().encode(env.authSecret);
 const CLIENT_COOKIE = "cfba_session";
 const STAFF_COOKIE = "cfba_staff";
+
+const DEV_SECRET = "dev-only-insecure-secret-change-me";
+
+// Fail CLOSED, not open. env.authSecret silently defaults to a public string
+// when AUTH_SECRET is unset; signing or verifying a session with a value
+// everyone knows would let anyone forge a staff cookie. In a live environment
+// (real Supabase configured) refuse rather than run insecure. Throws at
+// request time — a loud 500 — never at build.
+function assertSecret() {
+  if (!DEMO_MODE && env.authSecret === DEV_SECRET) {
+    throw new Error(
+      "AUTH_SECRET is not set in a live environment — refusing to sign or verify sessions with the public default."
+    );
+  }
+}
 
 export interface ClientSession {
   companyId: string;
@@ -15,6 +30,7 @@ export interface ClientSession {
 }
 
 async function sign(payload: Record<string, unknown>, hours: number) {
+  assertSecret();
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -34,6 +50,7 @@ export async function setClientSession(s: ClientSession, hours = 24 * 14) {
 }
 
 export async function getClientSession(): Promise<ClientSession | null> {
+  assertSecret();
   const c = (await cookies()).get(CLIENT_COOKIE)?.value;
   if (!c) return null;
   try {
@@ -66,6 +83,7 @@ export async function setStaffSession() {
 }
 
 export async function isStaff(): Promise<boolean> {
+  assertSecret();
   const c = (await cookies()).get(STAFF_COOKIE)?.value;
   if (!c) return false;
   try {

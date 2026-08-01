@@ -224,15 +224,19 @@ export async function issueSetupCode(username: string, setupCodeHash: string, se
     if (l) {
       l.setupCodeHash = setupCodeHash;
       l.setupExpiresAt = setupExpiresAt;
-      l.mustSetPassword = true;
-      l.passwordHash = null;
+      // Password preserved — see the note in the Supabase branch below.
       await demo.save(db);
     }
     return;
   }
+  // Issue a setup code WITHOUT destroying the existing password. The old
+  // password keeps working until the code is actually redeemed in
+  // set-password (which validates the code, not must_set_password), so a
+  // self-service recovery or an admin reset can't lock a client out — and an
+  // unauthenticated /api/auth/recover can no longer wipe a known user's
+  // password. A brand-new login still starts password-less via createLogin.
   must(await sb().from("client_logins").update({
     setup_code_hash: setupCodeHash, setup_expires_at: setupExpiresAt,
-    must_set_password: true, password_hash: null,
   }).eq("username", u));
 }
 
@@ -701,21 +705,25 @@ export async function listAllJobs(): Promise<Job[]> {
 /** Remove a job's stored files once its retention window has passed. The job
  *  record stays so the client still sees it in their history; only the
  *  documents go. */
-export async function purgeJobFiles(ref: string): Promise<void> {
+// Delete the stored certificate files for a job. `prefix` is the job's actual
+// storagePrefix ("issued/<ref>"); earlier this function hardcoded "jobs/<ref>",
+// a path nothing ever writes to, so the blobs were never removed and the
+// retention promise held only at the database layer.
+export async function purgeJobFiles(ref: string, prefix: string): Promise<void> {
   if (DEMO_MODE) {
     const db = await demo.load();
     const j = db.jobs[ref];
     if (j) { j.files = []; j.fileCount = 0; }
     for (const k of Object.keys(db.files)) {
-      if (k.startsWith(`jobs/${ref}/`)) delete db.files[k];
+      if (k.startsWith(`${prefix}/`)) delete db.files[k];
     }
     await demo.save(db);
     return;
   }
-  const { data } = await sb().storage.from(env.supabaseBucket).list(`jobs/${ref}`);
+  const { data } = await sb().storage.from(env.supabaseBucket).list(prefix);
   if (data?.length) {
     await sb().storage.from(env.supabaseBucket)
-      .remove(data.map((f) => `jobs/${ref}/${f.name}`));
+      .remove(data.map((f) => `${prefix}/${f.name}`));
   }
   await sb().from("job_files").delete().eq("ref", ref);
   await sb().from("jobs").update({ file_count: 0 }).eq("ref", ref);

@@ -78,3 +78,62 @@ export function updateEmail(opts: {
 
   return { subject, html };
 }
+
+/** Sent to the client the moment a job reaches Issued — the one email the Help
+ *  page promises and the number-one "is it ready yet?" call. Deep-links to the
+ *  downloads page. */
+export function issuedEmail(opts: {
+  ref: string; address: string;
+}): { subject: string; html: string } {
+  const { ref, address } = opts;
+  const subject = `Your certificate is ready — job ${ref}, ${address}`;
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 16px">Hello,</p>
+  <p style="margin:0 0 16px">
+    Good news — your certificate for job <strong>${esc(ref)}</strong> at ${esc(address)}
+    has been issued and is ready to download from the portal.
+  </p>
+  <p style="margin:0 0 22px">
+    <a href="${env.appUrl}/downloads"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;display:inline-block;font-weight:600">
+      Download your certificate
+    </a>
+  </p>
+  <p style="margin:0 0 18px;color:#5B6660;font-size:14px">
+    If it's for your builder or the local government, they'll receive it too.
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">
+    CF Building Approvals · 1300 029 074 · admin@cfba.com.au
+  </p>
+</div>`.trim();
+  return { subject, html };
+}
+
+/** Internal notice to the office when a client replies in the portal. Monday
+ *  never notifies the token owner of updates posted with its own token, so
+ *  without this a client's FIR reply — the event that unblocks a job — can
+ *  sit on the board unseen. */
+export function officeReplyEmail(opts: {
+  companyName: string; ref: string; address: string; body: string; fileNames: string[];
+}): { subject: string; html: string } {
+  const { companyName, ref, address, body, fileNames } = opts;
+  const subject = `Portal reply — ${companyName}, job ${ref}`;
+  const files = fileNames.length
+    ? `<p style="margin:0 0 12px;font-size:14px"><strong>Attachments:</strong> ${fileNames.map(esc).join(", ")}</p>`
+    : "";
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 12px"><strong>${esc(companyName)}</strong> replied on job <strong>${esc(ref)}</strong>${address ? ` (${esc(address)})` : ""}:</p>
+  <div style="border-left:3px solid #1E5B3C;background:#F4F8F4;padding:14px 18px;margin:0 0 14px;white-space:pre-line">${esc(body || "(no message — files only)")}</div>
+  ${files}
+  <p style="margin:0 0 18px">
+    <a href="${env.appUrl}/messages?ref=${encodeURIComponent(ref)}"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Open the thread
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">It's also on the job's Monday card.</p>
+</div>`.trim();
+  return { subject, html };
+}

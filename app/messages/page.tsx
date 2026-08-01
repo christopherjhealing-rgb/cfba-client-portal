@@ -33,9 +33,15 @@ export default async function Messages({
   ]);
 
   const refs = Array.from(new Set(msgs.map((m) => m.ref)));
-  const open = sp.ref && refs.includes(sp.ref)
-    ? sp.ref
-    : refs[0];
+  // Honour ?ref= for ANY job this company owns — not only ones that already
+  // have a thread. Previously an unknown ref silently fell back to refs[0],
+  // so a link to a not-yet-messaged job opened a DIFFERENT job's thread and a
+  // reply could post to the wrong Monday card.
+  const ownsRef = (r?: string) => !!r && jobs.some((j) => j.ref === r);
+  const open = ownsRef(sp.ref) ? sp.ref : refs[0];
+  // Show the opened job in the thread list even if it has no messages yet, so
+  // a deep-linked new conversation has somewhere to live.
+  const listRefs = open && !refs.includes(open) ? [open, ...refs] : refs;
 
   // Opening a thread marks it read. Thread links set prefetch={false}: Next
   // prefetches links on hover, and a prefetch would run this render and
@@ -67,7 +73,7 @@ export default async function Messages({
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead title="Messages" sub="Everything we've sent you about a job, and your replies." />
 
-      {refs.length === 0 ? (
+      {listRefs.length === 0 ? (
         <EmptyState
           title="No messages"
           body="When we need something on a job, or have an update worth sending, it appears here."
@@ -76,7 +82,7 @@ export default async function Messages({
         <div className="grid gap-5 lg:grid-cols-[280px_1fr] lg:items-start">
           {/* Threads */}
           <div className="card overflow-hidden">
-            {refs.map((ref) => {
+            {listRefs.map((ref) => {
               const j = jobFor(ref);
               const last = msgs.filter((m) => m.ref === ref).slice(-1)[0];
               const active = ref === open;

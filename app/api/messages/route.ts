@@ -3,6 +3,23 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
 import { pageDisabled } from "@/lib/pages";
+import { sendMail, officeReplyEmail } from "@/lib/mail";
+import { env } from "@/lib/env";
+
+/** Email the office when a client replies. Monday doesn't notify the token
+ *  owner of updates posted with its own token, so without this a client's FIR
+ *  reply — the event that unblocks a job — can sit on the board unseen. */
+async function notifyOffice(
+  companyName: string, ref: string, address: string, body: string, fileNames: string[]
+) {
+  if (!env.officeEmail) return;
+  try {
+    const mail = officeReplyEmail({ companyName, ref, address, body, fileNames });
+    await sendMail([env.officeEmail], mail.subject, mail.html);
+  } catch (e) {
+    console.warn(`messages: office notify failed for ${ref}:`, (e as Error).message);
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,6 +154,7 @@ async function handle(req: Request) {
     files: stored,
   }, msgId);
 
+  await notifyOffice(session.companyName, jobRef, job?.address || "", text, stored.map((f) => f.name));
   await repo.markThreadRead(session.companyId, jobRef);
   return NextResponse.json({ ok: true });
 }
@@ -236,6 +254,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     files: stored,
   }, msgId);
 
+  await notifyOffice(session.companyName, jobRef, job?.address || "", text, stored.map((f) => f.name));
   await repo.markThreadRead(session.companyId, jobRef);
   return NextResponse.json({ ok: true });
 }

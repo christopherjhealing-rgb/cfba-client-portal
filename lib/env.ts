@@ -35,8 +35,11 @@ export const env = {
   // publishing a number you miss creates the pressure it was meant to remove.
   // Mailbox notifications are sent from. Needs Mail.Send on the Graph app.
   mailFrom: process.env.MAIL_FROM || "",
+  // Where client-reply notifications land. Set to a watched inbox
+  // (e.g. admin@cfba.com.au); falls back to the sending mailbox.
+  officeEmail: process.env.OFFICE_EMAIL || process.env.MAIL_FROM || "",
   turnaroundDays: process.env.TURNAROUND_DAYS || "3-4",
-  retentionMonths: Number(process.env.RETENTION_MONTHS || "6"),
+  retentionMonths: Number(process.env.RETENTION_MONTHS || "3"),
   resendApiKey: process.env.RESEND_API_KEY || "",
   fromEmail: process.env.FROM_EMAIL || "no-reply@cfbuildingapprovals.com.au",
   appUrl: process.env.APP_URL || "http://localhost:3000",
