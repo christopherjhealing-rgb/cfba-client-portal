@@ -68,23 +68,23 @@ export default async function Dashboard() {
           the greeting stays readable whatever image is dropped in. */}
       <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-8 pt-9 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-11">
         <div aria-hidden="true"
-          className="absolute inset-0 -z-20 bg-[url('/heroes/street.jpg')] bg-cover bg-center saturate-[0.5]" />
+          className="absolute inset-0 -z-20 bg-[url('/heroes/street.jpg')] bg-cover bg-center saturate-[0.75]" />
         <div aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-gradient-to-r from-wash via-wash/95 to-wash/45" />
+          className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A]/90 via-[#0D211A]/70 to-[#0D211A]/35" />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-[15px] text-ink/60">{greeting()}</p>
-            <h1 className="mt-0.5 font-display text-[30px] font-semibold leading-tight text-ink">
+            <p className="text-[15px] text-white/75">{greeting()}</p>
+            <h1 className="mt-0.5 font-display text-[30px] font-semibold leading-tight text-white">
               {session.companyName}
             </h1>
-            <p className="mt-1.5 text-[14px] text-ink/60">
+            <p className="mt-1.5 text-[14px] text-white/75">
               Here&apos;s what&apos;s happening with your jobs today.
             </p>
-            <p className="mt-2.5 max-w-lg text-[13px] leading-relaxed text-ink/55">
+            <p className="mt-2.5 max-w-lg text-[13px] leading-relaxed text-white/65">
               Most jobs are certified within about{" "}
-              <span className="font-medium text-ink/75">{String(env.turnaroundDays).replace("-", "\u2013")} business days</span>{" "}
+              <span className="font-medium text-white">{String(env.turnaroundDays).replace("-", "\u2013")} business days</span>{" "}
               of everything being received.{" "}
-              <Link href="/help" className="text-seal underline underline-offset-2">
+              <Link href="/help" className="text-white underline underline-offset-2">
                 How long a job takes
               </Link>
             </p>
