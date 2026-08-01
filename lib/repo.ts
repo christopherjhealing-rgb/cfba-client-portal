@@ -68,6 +68,7 @@ export interface CompanyMatch { id: string; aliasKeys: string[]; emails: string[
 export interface Login {
   username: string;
   companyId: string;
+  displayName?: string | null;
   passwordHash: string | null;
   mustSetPassword: boolean;
   setupCodeHash: string | null;
@@ -199,12 +200,14 @@ export async function listLogins(): Promise<Login[]> {
 
 export async function createLogin(l: {
   username: string; companyId: string; setupCodeHash: string; setupExpiresAt: string;
+  displayName?: string | null;
 }): Promise<void> {
   const u = normUsername(l.username);
+  const displayName = (l.displayName || "").trim() || null;
   if (DEMO_MODE) {
     const db = await demo.load();
     db.logins[u] = {
-      username: u, companyId: l.companyId, passwordHash: null, mustSetPassword: true,
+      username: u, companyId: l.companyId, displayName, passwordHash: null, mustSetPassword: true,
       setupCodeHash: l.setupCodeHash, setupExpiresAt: l.setupExpiresAt,
       disabled: false, lastLoginAt: null, createdAt: new Date().toISOString(),
     };
@@ -212,7 +215,8 @@ export async function createLogin(l: {
     return;
   }
   must(await sb().from("client_logins").insert({
-    username: u, company_id: l.companyId, password_hash: null, must_set_password: true,
+    username: u, company_id: l.companyId, display_name: displayName,
+    password_hash: null, must_set_password: true,
     setup_code_hash: l.setupCodeHash, setup_expires_at: l.setupExpiresAt, disabled: false,
   }));
 }
@@ -652,6 +656,7 @@ function rowToSub(r: Record<string, unknown>): Submission {
 function rowToLogin(r: Record<string, unknown>): Login {
   return {
     username: String(r.username), companyId: String(r.company_id),
+    displayName: (r.display_name as string) ?? null,
     passwordHash: (r.password_hash as string) ?? null,
     mustSetPassword: !!r.must_set_password,
     setupCodeHash: (r.setup_code_hash as string) ?? null,

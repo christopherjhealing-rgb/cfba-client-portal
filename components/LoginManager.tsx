@@ -6,6 +6,7 @@ export function LoginManager({
 }: { companyId: string; companyName: string; existing: string[] }) {
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<{ username: string; setupCode: string } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -14,7 +15,7 @@ export function LoginManager({
     setBusy(true); setMsg(null); setIssued(null);
     const r = await fetch("/api/admin/logins", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, companyId, username: u }),
+      body: JSON.stringify({ action, companyId, username: u, displayName }),
     });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
@@ -35,10 +36,15 @@ export function LoginManager({
   return (
     <div className="mt-3 border-t border-rule pt-3">
       <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-[200px] flex-1">
+        <div className="min-w-[160px] flex-1">
           <label className="label">New username for {companyName}</label>
           <input className="field" value={username} autoCapitalize="none"
             onChange={(e) => setUsername(e.target.value)} placeholder="yourcompany" />
+        </div>
+        <div className="min-w-[140px] flex-1">
+          <label className="label">Person&apos;s name (optional)</label>
+          <input className="field" value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)} placeholder="Joe Bloggs" />
         </div>
         <button className="btn" disabled={busy || !username} onClick={() => call("create", username)}>
           {busy ? "…" : "Create"}

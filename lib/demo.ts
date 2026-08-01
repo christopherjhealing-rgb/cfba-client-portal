@@ -17,6 +17,7 @@ const SEED_VERSION = 4;
 export interface DemoLogin {
   username: string;
   companyId: string;
+  displayName?: string | null;
   passwordHash: string | null;
   mustSetPassword: boolean;
   setupCodeHash: string | null;

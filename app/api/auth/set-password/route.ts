@@ -57,6 +57,6 @@ export async function POST(req: Request) {
   await repo.setPassword(username, hashPassword(password));
   await repo.touchLogin(username);
   await clearFailures(username);
-  await setClientSession({ companyId: company.id, companyName: company.name, username });
+  await setClientSession({ companyId: company.id, companyName: company.name, username, displayName: login.displayName || undefined });
   return NextResponse.json({ ok: true });
 }

@@ -11,7 +11,7 @@ const SETUP_DAYS = 30;
 export async function POST(req: Request) {
   if (!(await isStaff())) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
-  const { action, companyId, username } = await req.json().catch(() => ({}));
+  const { action, companyId, username, displayName } = await req.json().catch(() => ({}));
   const u = normUsername(username);
   if (!u || !/^[a-z0-9._-]{3,40}$/.test(u)) {
     return NextResponse.json(
@@ -30,7 +30,10 @@ export async function POST(req: Request) {
     if (await repo.getLogin(u)) {
       return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
     }
-    await repo.createLogin({ username: u, companyId: company.id, setupCodeHash, setupExpiresAt });
+    await repo.createLogin({
+      username: u, companyId: company.id, setupCodeHash, setupExpiresAt,
+      displayName: typeof displayName === "string" ? displayName.slice(0, 60) : null,
+    });
     await repo.logAudit("login.create", u, company.name);
     return NextResponse.json({ ok: true, username: u, setupCode });
   }

@@ -64,7 +64,7 @@ export async function POST(req: Request) {
   await repo.touchLogin(username);
   await clearFailures(username);
   await setClientSession(
-    { companyId: company.id, companyName: company.name, username },
+    { companyId: company.id, companyName: company.name, username, displayName: login.displayName || undefined },
     remember ? 24 * 14 : 12
   );
   return NextResponse.json({ ok: true });

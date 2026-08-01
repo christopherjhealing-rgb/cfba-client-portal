@@ -37,6 +37,7 @@ create table if not exists company_aliases (
 create table if not exists client_logins (
   username           text primary key,
   company_id         text not null references companies(id) on delete cascade,
+  display_name       text,
   password_hash      text,
   must_set_password  boolean not null default true,
   setup_code_hash    text,

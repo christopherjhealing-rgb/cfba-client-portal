@@ -128,7 +128,7 @@ async function handle(req: Request) {
         : "";
       updateId = await monday.postUpdate(
         job.mondayItemId,
-        `Message from ${session.companyName} (via the client portal):\n\n` +
+        `Message from ${session.displayName ? `${session.displayName}, ` : ""}${session.companyName} (via the client portal):\n\n` +
           (text || "(no message — files only)") + listed
       );
       if (updateId) {
@@ -154,7 +154,9 @@ async function handle(req: Request) {
     files: stored,
   }, msgId);
 
-  await notifyOffice(session.companyName, jobRef, job?.address || "", text, stored.map((f) => f.name));
+  await notifyOffice(
+    session.displayName ? `${session.displayName}, ${session.companyName}` : session.companyName,
+    jobRef, job?.address || "", text, stored.map((f) => f.name));
   await repo.markThreadRead(session.companyId, jobRef);
   return NextResponse.json({ ok: true });
 }
@@ -230,7 +232,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
         : "";
       updateId = await monday.postUpdate(
         job.mondayItemId,
-        `Message from ${session.companyName} (via the client portal):\n\n` +
+        `Message from ${session.displayName ? `${session.displayName}, ` : ""}${session.companyName} (via the client portal):\n\n` +
           (text || "(no message — files only)") + listed
       );
       if (updateId) {
@@ -254,7 +256,9 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     files: stored,
   }, msgId);
 
-  await notifyOffice(session.companyName, jobRef, job?.address || "", text, stored.map((f) => f.name));
+  await notifyOffice(
+    session.displayName ? `${session.displayName}, ${session.companyName}` : session.companyName,
+    jobRef, job?.address || "", text, stored.map((f) => f.name));
   await repo.markThreadRead(session.companyId, jobRef);
   return NextResponse.json({ ok: true });
 }

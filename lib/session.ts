@@ -25,6 +25,8 @@ export interface ClientSession {
   companyId: string;
   companyName: string;
   username: string;
+  /** Optional person name for this login, used to attribute messages. */
+  displayName?: string;
   /** True when a staff member is viewing this company's portal. */
   impersonated?: boolean;
 }
@@ -60,6 +62,7 @@ export async function getClientSession(): Promise<ClientSession | null> {
       companyId: String(payload.companyId),
       companyName: String(payload.companyName),
       username: String(payload.username || ""),
+      displayName: payload.displayName ? String(payload.displayName) : undefined,
       impersonated: !!payload.impersonated,
     };
   } catch {
