@@ -58,7 +58,7 @@ export default async function Help() {
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead title="Help & support" sub="How the portal works, and how to reach us." />
+      <PageHead hero="/heroes/entry.jpg" title="Help & support" sub="How the portal works, and how to reach us." />
 
       <div className="mb-6"><TurnaroundNote /></div>
 

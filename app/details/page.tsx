@@ -20,7 +20,7 @@ export default async function Details() {
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead title="My details" sub="How your company is recorded with us." />
+      <PageHead hero="/heroes/letterbox.jpg" title="My details" sub="How your company is recorded with us." />
 
       <div className="card mb-6 divide-y divide-rule overflow-hidden">
         <Field label="Company name" value={company?.name || session.companyName} />
