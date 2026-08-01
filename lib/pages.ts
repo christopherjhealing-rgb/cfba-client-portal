@@ -18,8 +18,19 @@ export type PageKey = (typeof TOGGLEABLE_PAGES)[number]["key"];
 export const isPageKey = (k: string): k is PageKey =>
   TOGGLEABLE_PAGES.some((p) => p.key === k);
 
+// Nav items governed by their own admin setting rather than the page
+// toggles. Engineering rides the /admin engineering control: hidden from the
+// menu unless that setting is enabled (the page itself also guards).
+const SETTING_PAGES = [{ key: "engineering", href: "/engineering" }] as const;
+
 export async function disabledPages(): Promise<Set<string>> {
-  return repo.disabledPages();
+  const [disabled, eng] = await Promise.all([
+    repo.disabledPages(),
+    repo.getSetting<{ enabled?: boolean }>("engineering"),
+  ]);
+  const set = new Set(disabled);
+  if (!eng?.enabled) set.add("engineering");
+  return set;
 }
 
 export async function pageDisabled(key: PageKey): Promise<boolean> {
@@ -28,5 +39,6 @@ export async function pageDisabled(key: PageKey): Promise<boolean> {
 
 /** Sidebar hrefs to hide, given the disabled set. */
 export function hiddenHrefs(disabled: Set<string>): string[] {
-  return TOGGLEABLE_PAGES.filter((p) => disabled.has(p.key)).map((p) => p.href);
+  return [...TOGGLEABLE_PAGES, ...SETTING_PAGES]
+    .filter((p) => disabled.has(p.key)).map((p) => p.href);
 }

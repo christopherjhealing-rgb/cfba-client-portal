@@ -4,12 +4,12 @@ import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
 
 interface Sheet {
-  no: string;
+  no: string; // matches the number printed on the note itself
   title: string;
   blurb: string;
   file: string;
@@ -18,9 +18,10 @@ interface Sheet {
 // Every note listed here is published. Masters live in
 // docs/collateral/site-notes; render with render-site-notes.mjs, or supersede
 // any note from /admin without a deploy.
-const GROUPS: { group: string; sheets: Sheet[] }[] = [
+const GROUPS: { group: string; icon: IconName; sheets: Sheet[] }[] = [
   {
     group: "Getting a job through first time",
+    icon: "check",
     sheets: [
       { no: "07", title: "Lodging checklist",
         blurb: "Everything we need, by job type — check it before you send.",
@@ -38,6 +39,7 @@ const GROUPS: { group: string; sheets: Sheet[] }[] = [
   },
   {
     group: "Where the rules bite",
+    icon: "alert",
     sheets: [
       { no: "14", title: "Planning approval and Class 10",
         blurb: "Why a certified job can still stall at the council, and how to know early.",
@@ -61,6 +63,7 @@ const GROUPS: { group: string; sheets: Sheet[] }[] = [
   },
   {
     group: "Site and services",
+    icon: "folder",
     sheets: [
       { no: "11", title: "Stormwater and soak wells",
         blurb: "Placement, clearances, and how discharge is shown on the plan.",
@@ -72,6 +75,7 @@ const GROUPS: { group: string; sheets: Sheet[] }[] = [
   },
   {
     group: "After the certificate",
+    icon: "book",
     sheets: [
       { no: "13", title: "After your permit is issued",
         blurb: "Amendments, the completion notice, and keeping the approval valid.",
@@ -115,7 +119,7 @@ export default async function InfoSheets() {
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {g.sheets.map((s) => (
-              <SheetCard key={s.no} sheet={s} />
+              <SheetCard key={s.no} sheet={s} icon={g.icon} />
             ))}
           </div>
         </section>
@@ -129,13 +133,13 @@ export default async function InfoSheets() {
   );
 }
 
-function SheetCard({ sheet }: { sheet: Sheet }) {
+function SheetCard({ sheet, icon }: { sheet: Sheet; icon: IconName }) {
   return (
     <a href={sheet.file} target="_blank" rel="noopener noreferrer"
       className="card px-4 py-3.5 transition hover:border-seal/40 hover:bg-wash/40">
       <div className="flex items-start gap-3.5">
-        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-seal font-mono text-[12px] font-semibold text-white">
-          {sheet.no}
+        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-seal text-white">
+          <Icon name={icon} size={16} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-display text-[14px] font-semibold leading-snug text-ink">
