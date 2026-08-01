@@ -77,7 +77,7 @@ export default async function ClientCheckPage({ params }: { params: { id: string
                     <span className="font-medium">{job.address}</span>
                     <span className="chip">{job.mondayStatus || "no status"}</span>
                     <span className="text-[12px] text-ink/45">
-                      client sees: “{clientStatusLabel(job.mondayStatus)}” · {bucket.replace("_", " ")}
+                      client sees: “{clientStatusLabel(job.mondayStatus, job.fileCount)}” · {bucket.replace("_", " ")}
                     </span>
                   </div>
 

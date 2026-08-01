@@ -31,7 +31,7 @@ export function parseRef(nameOrUrl: string | null | undefined): string | null;
 export function folderMatchesRef(folderName: string | null | undefined, ref: string): boolean;
 export const READY_STATUS: string;
 export const HIDDEN_STATUSES: Set<string>;
-export function clientStatusLabel(mondayStatus: string | null | undefined): string;
+export function clientStatusLabel(mondayStatus: string | null | undefined, fileCount?: number): string;
 export function isClientVisible(job: PortalJob): boolean;
 export function addMonths(iso: string, months: number): string | null;
 export function retention(firstDownloadedAt: string | null | undefined, now?: Date | string, months?: number): Retention;

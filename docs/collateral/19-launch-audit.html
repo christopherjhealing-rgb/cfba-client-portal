@@ -99,11 +99,13 @@
     <div class="sec">5 · Issue &amp; download</div>
     <ul class="boxes">
       <li><strong>Files first:</strong> certificate package into the job's SharePoint folder,
-        <em>then</em> flip the card to <strong>Issued</strong>. Within 5–10 minutes (the
-        portal waits for OneDrive to finish syncing the folder): job shows
-        <strong>Ready to download</strong> and the certificate email arrives.</li>
+        <em>then</em> flip the card to <strong>Issued</strong>. /admin shows the green
+        <em>"In the issue hold"</em> note; roughly 10–20 minutes after the flip (the
+        10-minute hold, plus sync cycles and OneDrive settling) the job shows
+        <strong>Ready to download</strong> and the certificate email arrives. The hold is
+        the undo — pull a card back off Issued inside it and the client never knows.</li>
       <li><strong>Deliberately do it wrong once:</strong> flip a second test card to Issued with
-        an <em>empty</em> folder — /admin shows the amber
+        an <em>empty</em> folder — after the hold, /admin shows the amber
         <em>"Issued on Monday, but no files found"</em> warning. Add the files; next sync
         delivers and emails. (This is how you'll tell if an issue "didn't work".)</li>
       <li>Download the package — it opens, it's complete, every document stamped.</li>

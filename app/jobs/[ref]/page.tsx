@@ -74,7 +74,7 @@ export default async function JobDetail({
       <div className="card mb-6 p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <span className={`chip ${needsClientInfo(job) ? "chip-brass" : bucket === "ready" ? "chip-seal" : ""}`}>
-            {clientStatusLabel(job.mondayStatus as string)}
+            {clientStatusLabel(job.mondayStatus as string, job.fileCount as number)}
           </span>
           {downloadable && (
             <DownloadButton

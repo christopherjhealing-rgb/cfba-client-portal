@@ -44,6 +44,9 @@ export const env = {
   officeEmail: process.env.OFFICE_EMAIL || process.env.MAIL_FROM || "",
   turnaroundDays: process.env.TURNAROUND_DAYS || "3-4",
   retentionMonths: Number(process.env.RETENTION_MONTHS || "3"),
+  // Minutes a card must sit at Issued before the portal pulls files and
+  // emails the client. The undo window. 0 disables the hold.
+  issueHoldMinutes: Number(process.env.ISSUE_HOLD_MINUTES || "10"),
   resendApiKey: process.env.RESEND_API_KEY || "",
   fromEmail: process.env.FROM_EMAIL || "no-reply@cfbuildingapprovals.com.au",
   appUrl: process.env.APP_URL || "http://localhost:3000",

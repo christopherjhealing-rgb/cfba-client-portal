@@ -152,7 +152,7 @@ export default async function MyJobs({
                     </td>
                     <td className="td">
                       <span className={`chip ${needsClientInfo(j) ? "chip-brass" : b === "ready" ? "chip-seal" : ""}`}>
-                        {clientStatusLabel(j.mondayStatus as string)}
+                        {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
                       </span>
                     </td>
                     <td className="td text-right">

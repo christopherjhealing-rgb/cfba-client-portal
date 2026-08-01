@@ -204,7 +204,7 @@ export default async function Dashboard() {
                         <JobLink refNo={j.ref as string} address={j.address as string} />
                         <div className="mt-0.5 text-[13px] text-ink/55">{j.description}</div>
                         <span className="chip mt-1.5 inline-block">
-                          {clientStatusLabel(j.mondayStatus as string)}
+                          {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
                         </span>
                       </div>
                     </div>

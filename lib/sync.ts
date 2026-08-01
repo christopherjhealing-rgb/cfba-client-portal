@@ -31,6 +31,8 @@ export interface SyncResult {
   /** Issued cards whose folder changed in the last few minutes — OneDrive
       still syncing; pulled automatically once the folder goes quiet. */
   stillSyncing: string[];
+  /** Issued cards inside the deliberate ISSUE_HOLD_MINUTES window. */
+  holding: string[];
   emailsSent: number;
   emailFails: string[];
   note?: string;
@@ -51,7 +53,7 @@ export async function runSync(): Promise<SyncResult> {
   const res: SyncResult = {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
-    issuedNoFiles: [], stillSyncing: [], emailsSent: 0, emailFails: [],
+    issuedNoFiles: [], stillSyncing: [], holding: [], emailsSent: 0, emailFails: [],
   };
 
   if (!MONDAY_READY) {
@@ -86,8 +88,26 @@ export async function runSync(): Promise<SyncResult> {
 
     let files: repo.JobFile[] = await repo.jobFiles(card.ref);
     let settling = false;
+    let holding = false;
     // Pull from SharePoint only if we don't already have the files cached.
     if (files.length === 0 && GRAPH_READY) {
+      // Deliberate hold: nothing is pulled and no email goes until the card
+      // has sat at Issued for ISSUE_HOLD_MINUTES from when the portal first
+      // saw it there. The window is the undo — pull the card back off Issued
+      // within it and the client never hears a thing. (The issued_seen row
+      // lingers after the job purges; harmless.)
+      const holdMs = env.issueHoldMinutes * 60 * 1000;
+      const seenKey = `issued_seen:${card.ref}`;
+      const seen = await repo.getSetting<{ at: string }>(seenKey);
+      if (!seen) {
+        await repo.setSetting(seenKey, { at: now });
+        holding = holdMs > 0;
+      } else {
+        holding = Date.now() - new Date(seen.at).getTime() < holdMs;
+      }
+      if (holding) {
+        res.holding.push(card.ref);
+      } else {
       const remote = await graph.findIssuedFiles(card.ref);
       // OneDrive uploads a folder file-by-file, so a listing taken mid-sync
       // can be incomplete. If anything in the folder changed within the last
@@ -109,8 +129,9 @@ export async function runSync(): Promise<SyncResult> {
           res.filesCopied++;
         }
       }
+      }
     }
-    if (files.length === 0 && !settling) res.issuedNoFiles.push(card.ref);
+    if (files.length === 0 && !settling && !holding) res.issuedNoFiles.push(card.ref);
     if (files.length > 0 && !job.issuedAt) job.issuedAt = now;
     await repo.upsertJob(job, files);
     res.jobsUpserted++;
@@ -175,6 +196,7 @@ export async function runSync(): Promise<SyncResult> {
       jobsUpserted: res.jobsUpserted, messagesPulled: res.messagesPulled,
       filesPurged: res.filesPurged, unmatched: res.unmatched,
       issuedNoFiles: res.issuedNoFiles, stillSyncing: res.stillSyncing,
+      holding: res.holding,
       emailsSent: res.emailsSent, emailFails: res.emailFails,
     });
   } catch (e) {

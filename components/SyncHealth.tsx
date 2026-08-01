@@ -6,7 +6,8 @@ interface LastSync {
   issuedSeen?: number; filesCopied?: number; jobsUpserted?: number;
   messagesPulled?: number; filesPurged?: number;
   unmatched?: { ref: string; client: string }[];
-  issuedNoFiles?: string[]; stillSyncing?: string[]; emailsSent?: number; emailFails?: string[];
+  issuedNoFiles?: string[]; stillSyncing?: string[]; holding?: string[];
+  emailsSent?: number; emailFails?: string[];
 }
 
 function ago(iso?: string): string {
@@ -72,6 +73,17 @@ export function SyncHealth({
             {(last?.filesPurged ?? 0) > 0 ? `, ${last?.filesPurged} purged` : ""}</>
         )}
       </div>
+
+      {(last?.holding?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-seal/30 bg-[#EDF3EE] px-4 py-3 text-[13px] text-seal">
+          <strong>In the issue hold</strong> —{" "}
+          <span className="font-mono">{last?.holding?.join(", ")}</span>{" "}
+          went to Issued in the last few minutes. Files pull and the client
+          email goes once the hold passes. <strong>Change of mind?</strong> Pull
+          the card back off Issued before then and the client never hears a
+          thing.
+        </div>
+      )}
 
       {(last?.stillSyncing?.length ?? 0) > 0 && (
         <div className="mt-3 rounded-lg border border-seal/30 bg-[#EDF3EE] px-4 py-3 text-[13px] text-seal">

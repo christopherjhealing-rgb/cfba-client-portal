@@ -46,7 +46,7 @@ async function handle(req: Request) {
     if (!jobs.length) continue;
     const line = (p: ReturnType<typeof repo.toPortalJob>) => ({
       ref: String(p.ref), address: String(p.address || ""),
-      status: clientStatusLabel(p.mondayStatus as string),
+      status: clientStatusLabel(p.mondayStatus as string, p.fileCount as number),
     });
     const waiting = jobs.filter((p) => needsClientInfo(p)).map(line);
     const active = jobs.filter((p) => !needsClientInfo(p)).map(line);

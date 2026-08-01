@@ -23,7 +23,7 @@ export async function GET() {
   const header = ["Job no.", "Address", "Description", "Status", "Issued"];
   const rows = jobs.map((j) => [
     j.ref, j.address, j.description,
-    clientStatusLabel(j.mondayStatus as string),
+    clientStatusLabel(j.mondayStatus as string, j.fileCount as number),
     j.issuedAt ? new Date(j.issuedAt as string).toLocaleDateString("en-AU") : "",
   ]);
   const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
