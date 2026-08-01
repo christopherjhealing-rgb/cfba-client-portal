@@ -70,21 +70,44 @@ export const LINK_GROUPS: LinkGroup[] = [
   },
 ];
 
-// WA local governments within ~50 km of the Perth CBD. Homepage links are
+// Ordered by where CFBA jobs actually land: tallied from the site addresses
+// of all 3,829 Monday board items (Aug 2026, 95% mappable to an LGA). Job
+// counts in the comments. Top 20 first, the remaining metro/near-metro
+// councils after — the page renders this order as-is. Homepage links are
 // stable; deep-link each council's building/planning page during your review.
-// CFBA's nine shire clients should be listed first once you tell me who they are.
-export const COUNCILS: LinkItem[] = [
-  ["Wanneroo", "wanneroo"], ["Joondalup", "joondalup"], ["Stirling", "stirling"],
-  ["Swan", "swan"], ["Bayswater", "bayswater"], ["Bassendean", "bassendean"],
-  ["Mundaring", "mundaring"], ["Kalamunda", "kalamunda"], ["Perth", "perth"],
-  ["Vincent", "vincent"], ["Cambridge", "cambridge"], ["Subiaco", "subiaco"],
-  ["Nedlands", "nedlands"], ["Belmont", "belmont"], ["Victoria Park", "victoriapark"],
-  ["South Perth", "southperth"], ["Canning", "canning"], ["Melville", "melville"],
-  ["Fremantle", "fremantle"], ["Cockburn", "cockburn"], ["Kwinana", "kwinana"],
-  ["Rockingham", "rockingham"], ["Gosnells", "gosnells"], ["Armadale", "armadale"],
-  ["Serpentine-Jarrahdale", "sjshire"],
-].map(([name, slug]) => ({
-  name: `City of ${name}`,
+export const COUNCILS: LinkItem[] = ([
+  ["City of Wanneroo", "wanneroo"],                    // 362
+  ["City of Joondalup", "joondalup"],                  // 294
+  ["City of Swan", "swan"],                            // 260
+  ["City of Stirling", "stirling"],                    // 258
+  ["City of Rockingham", "rockingham"],                // 233
+  ["City of Melville", "melville"],                    // 182
+  ["City of Cockburn", "cockburn"],                    // 161
+  ["City of Kalamunda", "kalamunda"],                  // 122
+  ["City of Armadale", "armadale"],                    // 122
+  ["City of Gosnells", "gosnells"],                    // 118
+  ["City of Canning", "canning"],                      // 99
+  ["City of Bayswater", "bayswater"],                  // 97
+  ["City of Mandurah", "mandurah"],                    // 95
+  ["Shire of Serpentine-Jarrahdale", "sjshire"],       // 77
+  ["City of Kwinana", "kwinana"],                      // 56
+  ["Town of Cambridge", "cambridge"],                  // 55
+  ["Town of Victoria Park", "victoriapark"],           // 55
+  ["Shire of Mundaring", "mundaring"],                 // 50
+  ["City of South Perth", "southperth"],               // 49
+  ["City of Belmont", "belmont"],                      // 40
+  // — the rest —
+  ["City of Fremantle", "fremantle"],                  // 37
+  ["Shire of Murray", "murray"],                       // 32
+  ["Town of Bassendean", "bassendean"],                // 29
+  ["City of Vincent", "vincent"],                      // 20
+  ["Shire of Chittering", "chittering"],               // 19
+  ["City of Nedlands", "nedlands"],                    // 18
+  ["City of Subiaco", "subiaco"],                      // 15
+  ["Shire of Gingin", "gingin"],                       // 12
+  ["City of Perth", "perth"],
+] as [string, string][]).map(([name, slug]) => ({
+  name,
   url: `https://www.${slug}.wa.gov.au`,
   note: "Council website — building & planning",
 }));

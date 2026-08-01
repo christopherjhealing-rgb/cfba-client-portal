@@ -111,7 +111,8 @@ export default async function Resources() {
           <span className="h-px flex-1 bg-rule" />
         </div>
         <p className="mb-3 max-w-2xl text-[13.5px] leading-relaxed text-ink/60">
-          Where you lodge the building permit once your certificate is ready.
+          Where you lodge the building permit once your certificate is ready. The
+          councils our clients build in most are listed first.
         </p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {COUNCILS.map((c) => (
