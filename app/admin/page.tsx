@@ -13,6 +13,7 @@ import { PUBLISHED_SHEETS } from "@/lib/info-sheets";
 import { SyncHealth } from "@/components/SyncHealth";
 import { FormManager } from "@/components/FormManager";
 import { PORTAL_FORMS } from "@/lib/resources";
+import { EngineeringControl } from "@/components/EngineeringControl";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function AdminHome() {
     repo.getSetting<Record<string, unknown>>("last_sync").catch(() => null),
   ]);
   const uploadedForms = await repo.listFiles("forms").catch(() => []);
+  const eng = (await repo.getSetting<{ enabled?: boolean; url?: string }>("engineering").catch(() => null)) || {};
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
 
@@ -69,6 +71,8 @@ export default async function AdminHome() {
           forms={PORTAL_FORMS.map((f) => ({ key: f.key, code: f.code, title: f.title }))}
           uploaded={uploadedForms.map((f) => f.name)}
         />
+
+        <EngineeringControl initial={{ enabled: !!eng.enabled, url: eng.url || "" }} />
 
         <section>
           <div className="mb-2.5 flex items-center gap-3">

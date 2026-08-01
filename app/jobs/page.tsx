@@ -24,7 +24,7 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 
 export default async function MyJobs({
   searchParams,
-}: { searchParams: Promise<{ show?: string }> }) {
+}: { searchParams: Promise<{ show?: string; q?: string }> }) {
   const session = await getClientSession();
   if (!session) redirect("/");
   const sp = await searchParams;
@@ -32,6 +32,9 @@ export default async function MyJobs({
 
   const show = (FILTERS.find((f) => f.key === sp.show)?.key ||
     "all") as FilterKey;
+  const q = (sp.q || "").trim().toLowerCase();
+  // Carry the current search into the filter-chip links so the two combine.
+  const withQ = (href: string) => q ? `${href}${href.includes("?") ? "&" : "?"}q=${encodeURIComponent(q)}` : href;
 
   const [all, subs] = await Promise.all([
     repo.listJobsForCompany(session.companyId)
@@ -48,7 +51,11 @@ export default async function MyJobs({
       : g.downloaded.some((j) => j.ref === ref) ? "past"
       : "progress";
 
+  const matchesQ = (j: typeof all[number]) => !q ||
+    `${j.ref} ${j.address} ${j.description}`.toLowerCase().includes(q);
+
   const rows = all.filter((j) => {
+    if (!matchesQ(j)) return false;
     if (show === "all") return true;
     if (show === "action") return needsClientInfo(j);
     return bucketOf(j.ref as string) === show;
@@ -73,9 +80,20 @@ export default async function MyJobs({
         action={<Link href="/submit" className="btn"><Icon name="plus" /> Lodge a job</Link>}
       />
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <form className="flex-1 min-w-[200px]" action="/jobs" method="get">
+          {show !== "all" && <input type="hidden" name="show" value={show} />}
+          <input name="q" defaultValue={sp.q || ""} className="field h-9 py-1 text-[14px]"
+            placeholder="Search job no., address or description…" />
+        </form>
+        <a href="/api/jobs/export" className="btn-ghost shrink-0">
+          <Icon name="download" size={14} /> Export CSV
+        </a>
+      </div>
+
       <div className="mb-5 flex flex-wrap gap-1.5">
         {FILTERS.map((f) => (
-          <Link key={f.key} href={f.key === "all" ? "/jobs" : `/jobs?show=${f.key}`}
+          <Link key={f.key} href={withQ(f.key === "all" ? "/jobs" : `/jobs?show=${f.key}`)}
             className={`rounded-md border px-3 py-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.07em] transition ${
               show === f.key
                 ? "border-seal bg-seal text-white"
