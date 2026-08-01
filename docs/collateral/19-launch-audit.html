@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Go-live audit — check everything before the first client</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  ul.boxes { list-style: none; margin: 0 0 4mm; padding: 0; }
+  ul.boxes li { position: relative; padding: 1.1mm 0 1.1mm 7.5mm; font-size: 10.2pt; line-height: 1.45; }
+  ul.boxes li::before {
+    content: ""; position: absolute; left: 0; top: 2.1mm; width: 3.6mm; height: 3.6mm;
+    border: 0.5mm solid #1E5B3C; border-radius: 0.8mm; background: #fff;
+  }
+  .pass { color: #1E5B3C; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">Internal — go-live audit</div>
+    <h1>Before the first client goes on</h1>
+    <div class="goldrule"></div>
+    <div class="sub">Work top to bottom with a pen. Every box ticked once, in order, and the
+    portal is ready. Page 1 is the plumbing; page 2 is the client journey, end to end.</div>
+  </div>
+
+  <div class="content">
+    <div class="sec" style="margin-top:4mm">1 · Environment &amp; security</div>
+    <ul class="boxes">
+      <li>Vercel env vars all present: <strong>AUTH_SECRET</strong>, <strong>MAIL_FROM</strong>
+        <span class="pass">(proven — FIR test worked)</span>, <strong>OFFICE_EMAIL</strong>,
+        <strong>RETENTION_MONTHS=3</strong>, Supabase keys, Monday token, Graph IDs + secret.</li>
+      <li>Admin passcode is set, is not "demo", and /admin signs in with it.</li>
+      <li>Supabase migration ran with <em>"Success. No rows returned"</em>.</li>
+      <li>Supabase → Storage: the <strong>issued</strong> bucket shows <strong>Private</strong>.</li>
+      <li>Signed in as the test client, edit the address bar to another job's ref
+        (<span style="font-family:monospace">/jobs/12345</span>) — you get "not found", never
+        someone else's job.</li>
+      <li>Six wrong passwords in a row — the throttle message appears and offers the reset
+        path and phone number.</li>
+      <li>Graph client secret expiry noted in your calendar (24 months from creation) —
+        it takes emails and file-pulls down silently when it lapses.</li>
+    </ul>
+
+    <div class="sec">2 · The Monday loop</div>
+    <ul class="boxes">
+      <li>/admin shows <strong>Sync healthy</strong>, run within the last 10 minutes, without
+        pressing anything (proves the 5-minute cron).</li>
+      <li>On a <strong>test card</strong>: post an update starting
+        <span style="font-family:monospace">FIR:</span> — it appears in the portal
+        <em>and</em> the email arrives <span class="pass">(done — working)</span>.</li>
+      <li>Same test with <span style="font-family:monospace">CLIENT:</span> prefix.</li>
+      <li>An update <em>without</em> a prefix stays internal — never reaches the portal.</li>
+      <li>Reply from the portal — the reply lands on the Monday card as an update, and the
+        office notification email arrives at OFFICE_EMAIL.</li>
+      <li>Rename a test card's client to a misspelling — it appears under
+        <strong>Unmatched Monday clients</strong> in /admin; resolve it; jobs arrive on the
+        next sync.</li>
+    </ul>
+
+    <div class="sec">3 · Lodgement</div>
+    <ul class="boxes">
+      <li>Lodge a job with small PDFs — the card is on the board <em>instantly</em>, files
+        sit in the <strong>Files column</strong>, and the job page shows
+        "What you've sent us".</li>
+      <li>Lodge again with a big set (over ~5&nbsp;MB total) — the direct-upload path, with
+        the progress bar, succeeds and the files reach the card.</li>
+      <li>Try a Word document — the friendly "we can only accept PDFs" message appears and
+        nothing is lodged.</li>
+      <li>Try over 40&nbsp;MB — refused with the "email the biggest ones" message.</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — go-live audit</span>
+    <span>Page 1 of 2</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="band band-slim">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">Internal — go-live audit</div>
+    <h1>The client journey, end to end</h1>
+    <div class="goldrule"></div>
+  </div>
+
+  <div class="content">
+    <div class="sec" style="margin-top:4mm">4 · Further information round-trip</div>
+    <ul class="boxes">
+      <li>Set the test card to <strong>FIR</strong> — the job moves into
+        <strong>Action required</strong> with the amber "With you since" line.</li>
+      <li>Reply with an attachment — it lands on the card, and the status question
+        answers itself on the job page.</li>
+    </ul>
+
+    <div class="sec">5 · Issue &amp; download</div>
+    <ul class="boxes">
+      <li><strong>Files first:</strong> certificate package into the job's SharePoint folder,
+        <em>then</em> flip the card to <strong>Issued</strong>. Within 5 minutes: job shows
+        <strong>Ready to download</strong> and the certificate email arrives.</li>
+      <li><strong>Deliberately do it wrong once:</strong> flip a second test card to Issued with
+        an <em>empty</em> folder — /admin shows the amber
+        <em>"Issued on Monday, but no files found"</em> warning. Add the files; next sync
+        delivers and emails. (This is how you'll tell if an issue "didn't work".)</li>
+      <li>Download the package — it opens, it's complete, every document stamped.</li>
+      <li>The <strong>download receipt</strong> appears on the Monday card.</li>
+      <li>"Download again" works, and the retention countdown shows under Downloads.</li>
+    </ul>
+
+    <div class="sec">6 · Amendments</div>
+    <ul class="boxes">
+      <li>Lodge an amendment against the test job — a fresh card appears, linked to the
+        original, and shows under "What you've sent us" as an amendment.</li>
+    </ul>
+
+    <div class="sec">7 · Content</div>
+    <ul class="boxes">
+      <li>The six council forms (BA1, BA2, BA5, BA13, BA19, BA22) uploaded via /admin.</li>
+      <li>Resources links click-through done — especially the ones flagged
+        <span style="font-family:monospace">// confirm</span> in the code.</li>
+      <li>All 14 info sheets open on a phone.</li>
+      <li>Guidance notes 08–14: figures verified by the registered surveyor.</li>
+      <li>Engineering checker: toggle <strong>off</strong> unless its link is ready.</li>
+    </ul>
+
+    <div class="sec">8 · Housekeeping, then go</div>
+    <ul class="boxes">
+      <li>Delete the Monday test cards; disable the test client's login in /admin.</li>
+      <li>Activity log (/admin/audit) shows your test downloads and actions.</li>
+      <li>Reports page loads and the turnaround numbers look sane.</li>
+      <li>Kacie and Rebecca briefed — job-flow (09) and admin guide (10) in hand.</li>
+      <li>Incident card (11) printed and by the desk.</li>
+      <li>First client's welcome: login issued in /admin, first-job email (18) filled and
+        ready to send on their next issued certificate.</li>
+      <li>Know the rollback: Vercel → Deployments → previous build → <strong>Promote</strong>.
+        Sixty seconds, no code.</li>
+    </ul>
+
+    <div class="callout" style="margin-top:3mm">
+      <strong>The one habit that matters after go-live:</strong> glance at the /admin sync
+      banner each morning. Green and recent — everything downstream is working. Anything
+      amber or red tells you exactly what to fix before a client notices.
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — go-live audit</span>
+    <span>Page 2 of 2</span>
+  </div>
+</div>
+
+</body>
+</html>

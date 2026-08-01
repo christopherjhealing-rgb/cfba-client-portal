@@ -72,14 +72,19 @@ plain explanatory card.
 - **Don't write to real Monday cards during testing.** Demo mode (blank
   `SUPABASE_URL`) writes nothing to Monday or SharePoint — use it.
 - Australian English throughout: organisation, authorised, colour, licence (noun).
-- Brand colour is royal blue `#4169E1`.
+- Brand colours are seal green `#1E5B3C` / deep green `#12332A` / brass `#C9A227`
+  (see `docs/collateral/style.css` for the full print system).
+- **One login per client company** — that's policy, not a limitation. The schema
+  supports multiple named logins, but don't issue or advertise them.
+- Client-facing wording is deliberately warm: dead ends offer a phone number, jobs
+  are "with you" rather than "waiting on you". Keep new copy in that voice.
 
 ## Known issues — do not treat as bugs unless asked
 
 - Sync is additive; it never deletes a job. Cards deleted on Monday linger until
   removed manually.
-- Retention hides expired jobs from clients at 6 months but does not purge the
-  stored files. A scheduled purge is wanted eventually, not urgently.
+- Retention is `RETENTION_MONTHS` (default 3) from first download; expired jobs
+  are hidden AND their stored files purged by the sync (`purgeExpired`).
 - The Graph client secret expires 24 months after creation and takes the portal down
   silently when it does.
 

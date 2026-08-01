@@ -32,8 +32,8 @@ const FAQ = [
     a: `${env.retentionMonths} months from the day you first download it. The countdown is shown against each job under Downloads, and turns amber in the last month — so save the package with your job records when you get it.`,
   },
   {
-    q: "Can other people at my company have their own login?",
-    a: "Yes — everyone can have their own login, with their name on it so we know who we're talking to. Ring or email us with their names and we'll set them up in a couple of minutes.",
+    q: "Can other people at my company use the portal?",
+    a: "Yes — there's one login per company, and everyone who uses it sees the same jobs. Share it with whoever needs it in your office. If you ever need the password changed, ring us and we'll reset it on the spot.",
   },
   {
     q: "Something looks wrong on a job",

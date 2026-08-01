@@ -24,6 +24,12 @@ export interface SyncResult {
   messagesPulled: number;
   filesPurged: number;
   unmatched: { ref: string; client: string }[];
+  /** Cards set to Issued whose SharePoint folder had no files yet — the
+      certificate isn't downloadable and no email has gone. Flip visible in
+      /admin so "I set it to Issued, did it work?" answers itself. */
+  issuedNoFiles: string[];
+  emailsSent: number;
+  emailFails: string[];
   note?: string;
 }
 
@@ -42,6 +48,7 @@ export async function runSync(): Promise<SyncResult> {
   const res: SyncResult = {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
+    issuedNoFiles: [], emailsSent: 0, emailFails: [],
   };
 
   if (!MONDAY_READY) {
@@ -64,7 +71,10 @@ export async function runSync(): Promise<SyncResult> {
       ref: card.ref, companyId, mondayItemId: card.itemId,
       address: card.address, description: card.description,
       mondayStatus: card.status, fileCount: existing?.fileCount || 0,
-      issuedAt: existing?.issuedAt || now,
+      // issuedAt is stamped below, only once files exist — flipping the card
+      // to Issued before the folder is filled must not burn the one-shot
+      // email trigger.
+      issuedAt: existing?.issuedAt || null,
       receivedAt: existing?.receivedAt || card.createdAt || null,
       firstDownloadedAt: existing?.firstDownloadedAt || null,
       lastSyncedAt: now, storagePrefix: `issued/${card.ref}`,
@@ -85,6 +95,8 @@ export async function runSync(): Promise<SyncResult> {
         res.filesCopied++;
       }
     }
+    if (files.length === 0) res.issuedNoFiles.push(card.ref);
+    if (files.length > 0 && !job.issuedAt) job.issuedAt = now;
     await repo.upsertJob(job, files);
     res.jobsUpserted++;
 
@@ -101,8 +113,12 @@ export async function runSync(): Promise<SyncResult> {
         if (company?.emails?.length) {
           const mail = issuedEmail({ ref: card.ref, address: card.address });
           await sendMail(company.emails, mail.subject, mail.html);
+          res.emailsSent++;
+        } else {
+          res.emailFails.push(`${card.ref} — no email recorded on the client`);
         }
       } catch (e) {
+        res.emailFails.push(`${card.ref} — ${(e as Error).message}`);
         console.warn(`sync: could not send issued email for ${card.ref}:`, (e as Error).message);
       }
     }
@@ -143,6 +159,8 @@ export async function runSync(): Promise<SyncResult> {
       issuedSeen: res.issuedSeen, filesCopied: res.filesCopied,
       jobsUpserted: res.jobsUpserted, messagesPulled: res.messagesPulled,
       filesPurged: res.filesPurged, unmatched: res.unmatched,
+      issuedNoFiles: res.issuedNoFiles, emailsSent: res.emailsSent,
+      emailFails: res.emailFails,
     });
   } catch (e) {
     console.warn("sync: could not persist health record:", (e as Error).message);

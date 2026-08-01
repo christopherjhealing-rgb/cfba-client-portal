@@ -58,7 +58,7 @@ test("clientStatusLabel never leaks an internal label", () => {
 });
 
 test("To FIR tells the client an email is coming", () => {
-  assert.match(clientStatusLabel("To FIR"), /email will be sent shortly/);
+  assert.match(clientStatusLabel("To FIR"), /email with the details is on its way/);
 });
 
 test("isClientVisible hides Query unless downloaded", () => {

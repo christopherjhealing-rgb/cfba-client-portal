@@ -6,6 +6,7 @@ interface LastSync {
   issuedSeen?: number; filesCopied?: number; jobsUpserted?: number;
   messagesPulled?: number; filesPurged?: number;
   unmatched?: { ref: string; client: string }[];
+  issuedNoFiles?: string[]; emailsSent?: number; emailFails?: string[];
 }
 
 function ago(iso?: string): string {
@@ -67,9 +68,29 @@ export function SyncHealth({
         ) : (
           <><strong>Sync healthy</strong> — {ago(last?.at)} · {last?.jobsUpserted ?? 0} jobs,
             {" "}{last?.filesCopied ?? 0} files, {last?.messagesPulled ?? 0} messages
+            {(last?.emailsSent ?? 0) > 0 ? `, ${last?.emailsSent} issued email${(last?.emailsSent ?? 0) === 1 ? "" : "s"} sent` : ""}
             {(last?.filesPurged ?? 0) > 0 ? `, ${last?.filesPurged} purged` : ""}</>
         )}
       </div>
+
+      {(last?.issuedNoFiles?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-[13px] text-brass">
+          <strong>Issued on Monday, but no files found</strong> — the certificate
+          isn&apos;t downloadable and no email has gone for:{" "}
+          <span className="font-mono">{last?.issuedNoFiles?.join(", ")}</span>.
+          Put the package in the job&apos;s SharePoint folder; the next sync picks
+          it up and sends the email.
+        </div>
+      )}
+
+      {(last?.emailFails?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-flag/40 bg-[#FBECEC] px-4 py-3 text-[13px] text-flag">
+          <strong>Issued email didn&apos;t send</strong> — the job is downloadable
+          in the portal, but the client wasn&apos;t told:{" "}
+          {last?.emailFails?.join("; ")}. Fix the cause (client email address /
+          mailbox), then tell the client yourself — this email won&apos;t retry.
+        </div>
+      )}
 
       {bySpelling.size > 0 && (
         <div className="card mt-3 p-4">
