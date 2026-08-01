@@ -77,7 +77,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
     }
     const d = await r.json().catch(() => ({}));
     setBusy(false);
-    if (!r.ok) { setMsg(d.error || "Something went wrong."); return; }
+    if (!r.ok) { setMsg(d.error || "Something went wrong at our end — please try again, or ring 1300 029 074 and we'll sort it."); return; }
     setInstant(!!d.accepted);
     setDone(true);
   }

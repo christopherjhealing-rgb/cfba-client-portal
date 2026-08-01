@@ -54,7 +54,7 @@ type Session = NonNullable<Awaited<ReturnType<typeof getClientSession>>>;
 
 async function handle(req: Request) {
   const session = await getClientSession();
-  if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Your session has ended — sign in again and you can pick up where you left off." }, { status: 401 });
   if (session.impersonated) {
     return NextResponse.json(
       { error: "You're viewing this portal as staff — lodging is disabled." }, { status: 403 }
@@ -80,14 +80,14 @@ async function handle(req: Request) {
   }
 
   if (!address || !description || !jobClass) {
-    return NextResponse.json({ error: "Site address, class and description are required." }, { status: 400 });
+    return NextResponse.json({ error: "We just need a site address, class and a short description to lodge this." }, { status: 400 });
   }
 
   // An amendment must point at a job this company actually has.
   if (amendmentOf) {
     const own = await repo.listJobsForCompany(session.companyId);
     if (!own.some((j) => j.ref === amendmentOf)) {
-      return NextResponse.json({ error: "That job isn't on your account." }, { status: 404 });
+      return NextResponse.json({ error: "We can't find that job on your account — check the reference, or message us and we'll track it down." }, { status: 404 });
     }
   }
 
@@ -99,7 +99,7 @@ async function handle(req: Request) {
   const rejected = uploads.filter((f) => !PDF_ONLY(f.name, f.type)).map((f) => f.name);
   if (rejected.length) {
     return NextResponse.json(
-      { error: `PDFs only. Convert or remove: ${rejected.slice(0, 4).join(", ")}` },
+      { error: `We can only accept PDFs — please convert or remove: ${rejected.slice(0, 4).join(", ")}` },
       { status: 415 }
     );
   }
@@ -112,7 +112,7 @@ async function handle(req: Request) {
     const missing = ["drawings", "engineering"].filter((c) => !have.has(c));
     if (missing.length) {
       return NextResponse.json(
-        { error: `Attach ${missing.join(" and ")} before lodging — an assessment can't start without them.` },
+        { error: `We'll need ${missing.join(" and ")} to start the assessment — attach those and it's ready to lodge.` },
         { status: 400 }
       );
     }
@@ -120,7 +120,7 @@ async function handle(req: Request) {
   const total = uploads.reduce((n, f) => n + f.size, 0);
   if (total > MAX_TOTAL) {
     return NextResponse.json(
-      { error: "Those files come to more than 40 MB. Send the largest ones to the office by email." },
+      { error: "Those files come to more than 40 MB all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you." },
       { status: 413 }
     );
   }
@@ -167,13 +167,13 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   }
 
   if (!address || !description || !jobClass) {
-    return NextResponse.json({ error: "Site address, class and description are required." }, { status: 400 });
+    return NextResponse.json({ error: "We just need a site address, class and a short description to lodge this." }, { status: 400 });
   }
 
   if (amendmentOf) {
     const own = await repo.listJobsForCompany(session.companyId);
     if (!own.some((j) => j.ref === amendmentOf)) {
-      return NextResponse.json({ error: "That job isn't on your account." }, { status: 404 });
+      return NextResponse.json({ error: "We can't find that job on your account — check the reference, or message us and we'll track it down." }, { status: 404 });
     }
   }
 
@@ -191,7 +191,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     const missing = ["drawings", "engineering"].filter((c) => !have.has(c));
     if (missing.length) {
       return NextResponse.json(
-        { error: `Attach ${missing.join(" and ")} before lodging — an assessment can't start without them.` },
+        { error: `We'll need ${missing.join(" and ")} to start the assessment — attach those and it's ready to lodge.` },
         { status: 400 }
       );
     }
@@ -207,7 +207,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const rejected = claimed.filter((f) => !PDF_ONLY(f.name, "application/pdf")).map((f) => f.name);
   if (rejected.length) {
     return NextResponse.json(
-      { error: `PDFs only. Convert or remove: ${rejected.slice(0, 4).join(", ")}` },
+      { error: `We can only accept PDFs — please convert or remove: ${rejected.slice(0, 4).join(", ")}` },
       { status: 415 }
     );
   }
@@ -227,7 +227,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const total = claimed.reduce((n, f) => n + (landed.get(f.name) || 0), 0);
   if (total > MAX_TOTAL) {
     return NextResponse.json(
-      { error: "Those files come to more than 40 MB. Send the largest ones to the office by email." },
+      { error: "Those files come to more than 40 MB all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you." },
       { status: 413 }
     );
   }

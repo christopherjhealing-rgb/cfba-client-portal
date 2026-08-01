@@ -120,7 +120,7 @@ export default async function Messages({
                 )}
               </div>
               {job && needsClientInfo(job) && (
-                <span className="chip chip-brass shrink-0">Waiting on you</span>
+                <span className="chip chip-brass shrink-0">With you</span>
               )}
             </div>
 

@@ -124,10 +124,7 @@ export default async function Dashboard() {
                   <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-4">
                     <JobArt description={j.description as string} />
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="font-mono text-[12px] text-ink/45">{j.ref}</span>
-                        <span className="font-medium text-ink">{j.address}</span>
-                      </div>
+                      <JobLink refNo={j.ref as string} address={j.address as string} />
                       <div className="mt-0.5 text-[13px] text-ink/55">{j.description}</div>
                       <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-seal">
                         <Icon name="check" size={13} />
@@ -159,7 +156,7 @@ export default async function Dashboard() {
                           if (!at) return null;
                           return (
                             <p className="mt-1.5 text-[13px] font-medium text-brass">
-                              Waiting on you since {fmtDate(at)}
+                              With you since {fmtDate(at)}
                               {d !== null && d > 0 &&
                                 ` · ${d} business day${d === 1 ? "" : "s"}`}
                             </p>

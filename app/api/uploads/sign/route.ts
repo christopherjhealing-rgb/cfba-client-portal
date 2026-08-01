@@ -35,9 +35,9 @@ export async function POST(req: Request) {
     // needs a real (non-impersonated) client session.
     const staffUpload = purpose === "infosheet" || purpose === "form";
     if (staffUpload) {
-      if (!staff) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+      if (!staff) return NextResponse.json({ error: "Your session has ended — sign in again and you can pick up where you left off." }, { status: 401 });
     } else {
-      if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+      if (!session) return NextResponse.json({ error: "Your session has ended — sign in again and you can pick up where you left off." }, { status: 401 });
       if (session.impersonated) {
         return NextResponse.json(
           { error: "You're viewing this portal as staff — uploads are disabled." },
@@ -67,13 +67,13 @@ export async function POST(req: Request) {
       : [];
     if (!wanted.length) return NextResponse.json({ error: "No files to upload." }, { status: 400 });
     if (wanted.length > limits.maxFiles) {
-      return NextResponse.json({ error: `At most ${limits.maxFiles} files at a time.` }, { status: 400 });
+      return NextResponse.json({ error: `That's more than ${limits.maxFiles} files — send them in batches of ${limits.maxFiles} or fewer.` }, { status: 400 });
     }
 
     const notPdf = wanted.filter((f) => !/\.pdf$/i.test(f.name)).map((f) => f.name);
     if (notPdf.length) {
       return NextResponse.json(
-        { error: `PDFs only. Convert or remove: ${notPdf.slice(0, 4).join(", ")}` },
+        { error: `We can only accept PDFs — please convert or remove: ${notPdf.slice(0, 4).join(", ")}` },
         { status: 415 }
       );
     }
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     const total = wanted.reduce((n, f) => n + f.size, 0);
     if (total > limits.totalBytes) {
       return NextResponse.json(
-        { error: `Those files come to more than ${limits.label}. Send the largest ones to the office by email.` },
+        { error: `Those files come to more than ${limits.label} all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you.` },
         { status: 413 }
       );
     }

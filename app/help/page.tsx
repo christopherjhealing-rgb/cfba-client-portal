@@ -29,15 +29,15 @@ const FAQ = [
   },
   {
     q: "How long can I download a job for?",
-    a: `Six months from the day you first download it. The countdown is shown against each job under Downloads, and turns amber in the last month.`,
+    a: `${env.retentionMonths} months from the day you first download it. The countdown is shown against each job under Downloads, and turns amber in the last month — so save the package with your job records when you get it.`,
   },
   {
     q: "Can other people at my company have their own login?",
-    a: "At the moment there's one login per company and everyone sees the same jobs. Tell us if you'd like that to work differently.",
+    a: "Yes — everyone can have their own login, with their name on it so we know who we're talking to. Ring or email us with their names and we'll set them up in a couple of minutes.",
   },
   {
     q: "Something looks wrong on a job",
-    a: "Contact the office and quote the job number. Don't rely on the portal alone if a certificate looks incorrect — tell us before the work goes ahead.",
+    a: "Give us a ring and quote the job number — if anything on a certificate looks off, we'd much rather hear about it before the work goes ahead than after. A two-minute call sorts most of these.",
   },
 ];
 

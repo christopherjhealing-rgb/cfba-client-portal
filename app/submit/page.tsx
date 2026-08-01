@@ -28,7 +28,7 @@ export default async function SubmitPage() {
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         title="Lodge a job"
-        sub="Send us the site address and your plans. The office checks it over and accepts it onto the board — it will then show in your job list."
+        sub="Send us the site address and your plans — the job lands straight on our board and appears in your job list."
       />
       <div className="max-w-2xl">
         <div className="mb-5"><TurnaroundLine /></div>

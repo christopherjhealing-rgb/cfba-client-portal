@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const confirm = (body.confirm || "").toString();
 
   if (!username || !setupCode || !password) {
-    return NextResponse.json({ error: "Fill in every field." }, { status: 400 });
+    return NextResponse.json({ error: "Please fill in every field." }, { status: 400 });
   }
 
   // Setup-code redemption shares the login lockout, so guessing codes is
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const locked = await checkLock(username);
   if (locked) {
     return NextResponse.json(
-      { error: `Too many attempts. Try again in ${locked} minute${locked === 1 ? "" : "s"}.` },
+      { error: `Too many attempts — try again in ${locked} minute${locked === 1 ? "" : "s"}, or call the office on 1300 029 074 and we'll get you going.` },
       { status: 429 }
     );
   }

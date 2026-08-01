@@ -53,7 +53,7 @@ type Session = NonNullable<Awaited<ReturnType<typeof getClientSession>>>;
 
 async function handle(req: Request) {
   const session = await getClientSession();
-  if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Your session has ended — sign in again and you can pick up where you left off." }, { status: 401 });
   if (session.impersonated) {
     return NextResponse.json(
       { error: "You're viewing this portal as staff — replying is disabled." },
@@ -79,7 +79,7 @@ async function handle(req: Request) {
   const text = String(form.get("body") || "").trim().slice(0, MAX_TEXT);
   const uploads = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
 
-  if (!jobRef) return NextResponse.json({ error: "Missing job reference." }, { status: 400 });
+  if (!jobRef) return NextResponse.json({ error: "Choose which job this message is for." }, { status: 400 });
   if (!text && uploads.length === 0) {
     return NextResponse.json(
       { error: "Write a message or attach a file before sending." }, { status: 400 }
@@ -89,7 +89,7 @@ async function handle(req: Request) {
   const rejected = uploads.filter((f) => !PDF_ONLY(f.name, f.type)).map((f) => f.name);
   if (rejected.length) {
     return NextResponse.json(
-      { error: `PDFs only. Convert or remove: ${rejected.slice(0, 4).join(", ")}` },
+      { error: `We can only accept PDFs — please convert or remove: ${rejected.slice(0, 4).join(", ")}` },
       { status: 415 }
     );
   }
@@ -97,7 +97,7 @@ async function handle(req: Request) {
   const total = uploads.reduce((n, f) => n + f.size, 0);
   if (total > MAX_TOTAL) {
     return NextResponse.json(
-      { error: "Those files come to more than 25 MB. Send the largest ones to the office by email." },
+      { error: "Those files come to more than 25 MB all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you." },
       { status: 413 }
     );
   }
@@ -105,7 +105,7 @@ async function handle(req: Request) {
   // The job must belong to the signed-in company — never trust the ref alone.
   const jobs = await repo.listJobsForCompany(session.companyId);
   const job = jobs.find((j) => j.ref === jobRef);
-  if (!job) return NextResponse.json({ error: "Job not found." }, { status: 404 });
+  if (!job) return NextResponse.json({ error: "We can't find that job — check the reference, or ring us on 1300 029 074." }, { status: 404 });
 
   const msgId = "msg_" + Math.random().toString(36).slice(2, 10);
   const stored: repo.MessageFile[] = [];
@@ -171,7 +171,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     ? (body.files as unknown[]).map((n) => String(n || "")).filter(Boolean)
     : [];
 
-  if (!jobRef) return NextResponse.json({ error: "Missing job reference." }, { status: 400 });
+  if (!jobRef) return NextResponse.json({ error: "Choose which job this message is for." }, { status: 400 });
   if (!text && names.length === 0) {
     return NextResponse.json(
       { error: "Write a message or attach a file before sending." }, { status: 400 }
@@ -180,7 +180,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
 
   const jobs = await repo.listJobsForCompany(session.companyId);
   const job = jobs.find((j) => j.ref === jobRef);
-  if (!job) return NextResponse.json({ error: "Job not found." }, { status: 404 });
+  if (!job) return NextResponse.json({ error: "We can't find that job — check the reference, or ring us on 1300 029 074." }, { status: 404 });
 
   const msgId = "msg_" + Math.random().toString(36).slice(2, 10);
   const stored: repo.MessageFile[] = [];
@@ -195,7 +195,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     const rejected = names.filter((n) => !PDF_ONLY(n, "application/pdf"));
     if (rejected.length) {
       return NextResponse.json(
-        { error: `PDFs only. Convert or remove: ${rejected.slice(0, 4).join(", ")}` },
+        { error: `We can only accept PDFs — please convert or remove: ${rejected.slice(0, 4).join(", ")}` },
         { status: 415 }
       );
     }
@@ -210,7 +210,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     const total = names.reduce((n, x) => n + (landed.get(x) || 0), 0);
     if (total > MAX_TOTAL) {
       return NextResponse.json(
-        { error: "Those files come to more than 25 MB. Send the largest ones to the office by email." },
+        { error: "Those files come to more than 25 MB all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you." },
         { status: 413 }
       );
     }

@@ -101,7 +101,7 @@ export function issuedEmail(opts: {
     </a>
   </p>
   <p style="margin:0 0 18px;color:#5B6660;font-size:14px">
-    If it's for your builder or the local government, they'll receive it too.
+    Next stop is usually the building permit — the BA1 form and every council's link are under Resources in the portal. Anything you're unsure of, just ring — happy to help.
   </p>
   <p style="margin:0;color:#5B6660;font-size:13px">
     CF Building Approvals · 1300 029 074 · admin@cfba.com.au
@@ -132,7 +132,7 @@ export function digestEmail(opts: {
   <p style="margin:0 0 16px">Hello ${esc(companyName)},</p>
   <p style="margin:0 0 16px">Here's where your jobs with us stand this week.</p>
   ${waiting.length ? `
-    <p style="margin:0 0 4px;font-weight:600;color:#8A6D1E">Waiting on you (${waiting.length})</p>
+    <p style="margin:0 0 4px;font-weight:600;color:#8A6D1E">With you (${waiting.length})</p>
     ${table(waiting.map(row).join(""))}` : ""}
   ${active.length ? `
     <p style="margin:0 0 4px;font-weight:600">In progress (${active.length})</p>
@@ -142,7 +142,7 @@ export function digestEmail(opts: {
   </p>
   <p style="margin:0;color:#5B6660;font-size:13px">CF Building Approvals · 1300 029 074 · admin@cfba.com.au</p>
 </div>`.trim();
-  return { subject: `Your CFBA jobs this week — ${waiting.length} waiting on you`, html };
+  return { subject: `Your CFBA jobs this week — ${waiting.length} with you`, html };
 }
 
 /** Internal notice to the office when a client replies in the portal. Monday

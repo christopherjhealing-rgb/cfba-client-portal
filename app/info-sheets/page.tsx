@@ -38,7 +38,7 @@ const GROUPS: { group: string; icon: IconName; sheets: Sheet[] }[] = [
     ],
   },
   {
-    group: "Where the rules bite",
+    group: "Getting the tricky ones right",
     icon: "alert",
     sheets: [
       { no: "14", title: "Planning approval and Class 10",

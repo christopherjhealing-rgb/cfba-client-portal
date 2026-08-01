@@ -30,7 +30,7 @@ export function SignIn({ demo }: { demo?: boolean }) {
     e.preventDefault();
     const { ok, d } = await post("/api/auth/login", { username, password, remember });
     if (ok) { window.location.href = "/dashboard"; return; }
-    setMsg(d.error || "Something went wrong.");
+    setMsg(d.error || "Something went wrong at our end — please try again, or ring 1300 029 074 and we'll sort it.");
     if (d.needsSetup) setMode("setup");
   }
 
@@ -40,7 +40,7 @@ export function SignIn({ demo }: { demo?: boolean }) {
       username, setupCode, password, confirm,
     });
     if (ok) { window.location.href = "/dashboard"; return; }
-    setMsg(d.error || "Something went wrong.");
+    setMsg(d.error || "Something went wrong at our end — please try again, or ring 1300 029 074 and we'll sort it.");
   }
 
   return (

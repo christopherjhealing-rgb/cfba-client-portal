@@ -61,7 +61,7 @@ export function JobTimeline({ job }: { job: PortalJob }) {
             <span className="sr-only">
               {state === "done" ? "complete"
                 : state === "current" ? "current stage"
-                : state === "waiting" ? "waiting on you"
+                : state === "waiting" ? "with you"
                 : state === "skipped" ? "not required"
                 : state === "paused" ? "on hold"
                 : "not started"}
