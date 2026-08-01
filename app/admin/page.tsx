@@ -14,6 +14,7 @@ import { SyncHealth } from "@/components/SyncHealth";
 import { FormManager } from "@/components/FormManager";
 import { PORTAL_FORMS } from "@/lib/resources";
 import { EngineeringControl } from "@/components/EngineeringControl";
+import { listEngSets } from "@/lib/engineering";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function AdminHome() {
   ]);
   const uploadedForms = await repo.listFiles("forms").catch(() => []);
   const eng = (await repo.getSetting<{ enabled?: boolean; url?: string }>("engineering").catch(() => null)) || {};
+  const engSets = await listEngSets().catch(() => []);
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
 
@@ -74,7 +76,7 @@ export default async function AdminHome() {
           uploaded={uploadedForms.map((f) => f.name)}
         />
 
-        <EngineeringControl initial={{ enabled: !!eng.enabled, url: eng.url || "" }} />
+        <EngineeringControl initial={{ enabled: !!eng.enabled, url: eng.url || "" }} initialSets={engSets} />
 
         <section>
           <div className="mb-2.5 flex items-center gap-3">
