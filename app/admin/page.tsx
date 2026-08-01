@@ -10,17 +10,19 @@ import { PageToggles } from "@/components/PageToggles";
 import { TOGGLEABLE_PAGES } from "@/lib/pages";
 import { InfoSheetManager } from "@/components/InfoSheetManager";
 import { PUBLISHED_SHEETS } from "@/lib/info-sheets";
+import { SyncHealth } from "@/components/SyncHealth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [pending, companies, disabled, sheetOverrides] = await Promise.all([
+  const [pending, companies, disabled, sheetOverrides, lastSync] = await Promise.all([
     repo.listSubmissions("pending"),
     repo.listCompanies(),
     repo.disabledPages(),
     repo.listFiles("info-sheets").catch(() => []),
+    repo.getSetting<Record<string, unknown>>("last_sync").catch(() => null),
   ]);
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
@@ -44,6 +46,11 @@ export default async function AdminHome() {
           <Row label="SharePoint (Graph)" value={GRAPH_READY ? "Connected" : "No Graph credentials set"} warn={!GRAPH_READY} />
           <Row label="Retention" value={`${env.retentionMonths} months from first download`} />
         </div>
+
+        <SyncHealth
+          last={lastSync as never}
+          companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+        />
 
         <PageToggles
           pages={TOGGLEABLE_PAGES.map((p) => ({ key: p.key, label: p.label }))}

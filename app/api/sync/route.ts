@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isStaff } from "@/lib/session";
+import * as repo from "@/lib/repo";
 import { runSync } from "@/lib/sync";
 
 export const runtime = "nodejs";
@@ -20,7 +21,12 @@ async function handle(req: Request) {
   try {
     return NextResponse.json(await runSync());
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    const error = (e as Error).message;
+    // Record the failure so the admin health banner can show it — a silently
+    // failing cron is exactly how this portal goes stale unnoticed.
+    await repo.setSetting("last_sync", { at: new Date().toISOString(), ok: false, error })
+      .catch(() => {});
+    return NextResponse.json({ error }, { status: 500 });
   }
 }
 

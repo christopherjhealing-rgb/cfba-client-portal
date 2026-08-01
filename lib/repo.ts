@@ -546,6 +546,34 @@ export async function setPageDisabled(key: string, disabled: boolean) {
   ));
 }
 
+/** Generic portal_settings read/write (JSON value). */
+export async function getSetting<T = unknown>(key: string): Promise<T | null> {
+  if (DEMO_MODE) return (demoSettings[key] as T) ?? null;
+  const { data } = await sb().from("portal_settings")
+    .select("value").eq("key", key).maybeSingle();
+  return (data?.value as T) ?? null;
+}
+
+const demoSettings: Record<string, unknown> = {};
+
+export async function setSetting(key: string, value: unknown) {
+  if (DEMO_MODE) { demoSettings[key] = value; return; }
+  must(await sb().from("portal_settings").upsert(
+    { key, value, updated_at: new Date().toISOString() },
+    { onConflict: "key" }
+  ));
+}
+
+/** Add a Monday "Client" spelling as an alias of an existing company, so its
+ *  cards match on the next sync. Idempotent. */
+export async function addAlias(companyId: string, rawSpelling: string) {
+  const key = aliasKey(rawSpelling);
+  if (!key) return;
+  if (DEMO_MODE) return;
+  must(await sb().from("company_aliases")
+    .upsert({ company_id: companyId, alias_key: key }, { onConflict: "company_id,alias_key" }));
+}
+
 /** Short-lived signed URL permitting one browser PUT to one exact path.
  *  Grants no read access; the bucket stays private. */
 export async function signUploadUrl(path: string): Promise<string> {

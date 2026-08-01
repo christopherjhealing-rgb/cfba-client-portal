@@ -127,9 +127,23 @@ export async function runSync(): Promise<SyncResult> {
   // 3. Client-visible updates -> messages
   res.messagesPulled = await pullMessages(active, companies);
 
-  // 4. Retention. We tell clients six months from first download; that has to
-  //    be true, not just hidden from the UI.
+  // 4. Retention. We tell clients the download stays available for a set
+  //    window; that has to be true, not just hidden from the UI.
   res.filesPurged = await purgeExpired();
+
+  // Persist a health record so /admin can show sync freshness and the list of
+  // Monday cards that matched no client (otherwise invisible: their jobs never
+  // appear and their messages never deliver).
+  try {
+    await repo.setSetting("last_sync", {
+      at: now, ok: true,
+      issuedSeen: res.issuedSeen, filesCopied: res.filesCopied,
+      jobsUpserted: res.jobsUpserted, messagesPulled: res.messagesPulled,
+      filesPurged: res.filesPurged, unmatched: res.unmatched,
+    });
+  } catch (e) {
+    console.warn("sync: could not persist health record:", (e as Error).message);
+  }
 
   return res;
 }
