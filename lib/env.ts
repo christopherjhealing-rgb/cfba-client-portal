@@ -18,6 +18,10 @@ export const env = {
   // reach Monday at lodgement time.
   autoAcceptLodgements: (process.env.AUTO_ACCEPT_LODGEMENTS ?? "1") !== "0",
 
+  // Weekly per-builder digest email. Off until DIGEST_ENABLED=1, so it can't
+  // surprise 70+ builders before you've decided to switch it on.
+  digestEnabled: process.env.DIGEST_ENABLED === "1",
+
   // Microsoft Graph (app-only). Site + drive were confirmed against the live
   // tenant; override per environment if the library ever moves.
   graphTenantId: process.env.GRAPH_TENANT_ID || "",
