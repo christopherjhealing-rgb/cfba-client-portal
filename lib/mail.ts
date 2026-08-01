@@ -46,8 +46,9 @@ export function updateEmail(opts: {
   address: string;
   body: string;
   needsAction: boolean;
+  clientRef?: string;
 }): { subject: string; html: string } {
-  const { ref, address, body, needsAction } = opts;
+  const { ref, address, body, needsAction, clientRef } = opts;
   const subject = needsAction
     ? `Action required — job ${ref}, ${address}`
     : `Update on job ${ref}, ${address}`;
@@ -61,6 +62,7 @@ export function updateEmail(opts: {
       : `There's an update on job <strong>${esc(ref)}</strong> at ${esc(address)}.`}
   </p>
   <div style="border-left:3px solid #1E5B3C;background:#F4F8F4;padding:14px 18px;margin:0 0 18px;white-space:pre-line">${esc(body)}</div>
+  ${clientRef ? `<p style="margin:0 0 14px;color:#5B6660;font-size:13px">Your reference: <strong>${esc(clientRef)}</strong></p>` : ""}
   <p style="margin:0 0 18px">
     You can reply and attach documents in the client portal — it goes straight onto
     the job, so there's no need to email as well.
@@ -83,9 +85,9 @@ export function updateEmail(opts: {
  *  page promises and the number-one "is it ready yet?" call. Deep-links to the
  *  downloads page. */
 export function issuedEmail(opts: {
-  ref: string; address: string;
+  ref: string; address: string; clientRef?: string;
 }): { subject: string; html: string } {
-  const { ref, address } = opts;
+  const { ref, address, clientRef } = opts;
   const subject = `Your certificate is ready — job ${ref}, ${address}`;
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
@@ -94,6 +96,7 @@ export function issuedEmail(opts: {
     Good news — your certificate for job <strong>${esc(ref)}</strong> at ${esc(address)}
     has been issued and is ready to download from the portal.
   </p>
+  ${clientRef ? `<p style="margin:0 0 16px;color:#5B6660;font-size:14px">Your reference: <strong>${esc(clientRef)}</strong></p>` : ""}
   <p style="margin:0 0 22px">
     <a href="${env.appUrl}/downloads"
        style="background:#1E5B3C;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;display:inline-block;font-weight:600">

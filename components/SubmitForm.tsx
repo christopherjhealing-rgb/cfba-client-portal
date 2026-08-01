@@ -26,6 +26,7 @@ export function SubmitForm() {
   const [jobClass, setJobClass] = useState("");
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [clientRef, setClientRef] = useState("");
   const [contact, setContact] = useState("");
   const [files, setFiles] = useState<Record<string, File[]>>({});
   const [busy, setBusy] = useState(false);
@@ -63,7 +64,7 @@ export function SubmitForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          address, jobClass, description, notes, contact,
+          address, jobClass, description, notes, contact, clientRef,
           draftId: up.draftId,
           files: entries.map((x, i) => ({ name: up.names[i], category: x.category })),
         }),
@@ -75,6 +76,7 @@ export function SubmitForm() {
       fd.set("jobClass", jobClass);
       fd.set("description", description);
       fd.set("notes", notes);
+      fd.set("clientRef", clientRef);
       fd.set("contact", contact);
       for (const x of entries) {
         fd.append("files", x.file);
@@ -160,6 +162,11 @@ export function SubmitForm() {
             : "Up to 40 MB in total. Email anything larger to the office."}
         </p>
       </div>
+
+      <label className="label mt-6" htmlFor="clientRef">Your reference (optional)</label>
+      <input id="clientRef" value={clientRef} maxLength={60}
+        onChange={(e) => setClientRef(e.target.value)} className="field"
+        placeholder="Your own PO or job number — shown on this job and quoted in our emails" />
 
       <label className="label mt-6" htmlFor="notes">Notes for CFBA (optional)</label>
       <textarea id="notes" rows={3} value={notes}

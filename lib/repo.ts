@@ -19,6 +19,10 @@ export interface Job {
   lastSyncedAt: string | null;
   storagePrefix: string;
   sourceFolder: string | null;
+  /** First name shown to the client, e.g. "Chris"; null = being allocated. */
+  surveyor?: string | null;
+  /** The client's own PO/job number. Portal + emails only, never Monday. */
+  clientRef?: string | null;
   /** What we've asked the client for, when the job is at FIR. */
   firRequest?: string | null;
 }
@@ -37,6 +41,7 @@ export interface Submission {
   description: string;
   notes: string;
   files: { name: string; category?: string }[];
+  clientRef?: string | null;
   status: "pending" | "accepted" | "rejected";
   mondayItemId: string | null;
   reviewNote: string | null;
@@ -355,6 +360,7 @@ export async function upsertJob(job: Job, files: JobFile[]) {
     file_count: files.length, issued_at: job.issuedAt, received_at: job.receivedAt,
     last_synced_at: job.lastSyncedAt,
     storage_prefix: job.storagePrefix, source_folder: job.sourceFolder,
+    surveyor: job.surveyor ?? null, client_ref: job.clientRef ?? null,
   }, { onConflict: "ref" }));
   if (files.length) {
     must(await sb().from("job_files").delete().eq("ref", job.ref));
@@ -384,7 +390,8 @@ export async function addSubmission(
   must(await sb().from("submissions").insert({
     id, company_id: s.companyId, email: s.email, address: s.address,
     job_class: s.jobClass, description: s.description, notes: s.notes,
-    files: s.files, status: "pending", amendment_of: s.amendmentOf ?? null,
+    files: s.files, client_ref: s.clientRef ?? null, status: "pending",
+    amendment_of: s.amendmentOf ?? null,
   }));
   return id;
 }
@@ -635,6 +642,8 @@ function rowToJob(r: Record<string, unknown>): Job {
     lastSyncedAt: (r.last_synced_at as string) ?? null,
     storagePrefix: (r.storage_prefix as string) || `issued/${r.ref}`,
     sourceFolder: (r.source_folder as string) ?? null,
+    surveyor: (r.surveyor as string) ?? null,
+    clientRef: (r.client_ref as string) ?? null,
     firRequest: (r.fir_request as string) ?? null,
   };
 }
@@ -646,6 +655,7 @@ function rowToSub(r: Record<string, unknown>): Submission {
     description: (r.description as string) || "",
     notes: (r.notes as string) || "",
     files: (r.files as { name: string; category?: string }[]) || [],
+    clientRef: (r.client_ref as string) ?? null,
     amendmentOf: (r.amendment_of as string) ?? null,
     status: (r.status as Submission["status"]) || "pending",
     mondayItemId: (r.monday_item_id as string) ?? null,

@@ -73,6 +73,7 @@ async function handle(req: Request) {
   const jobClass = tidyAddress(String(form.get("jobClass") || ""));
   const description = tidyAddress(String(form.get("description") || ""));
   const notes = String(form.get("notes") || "").trim().slice(0, 4000);
+  const clientRef = String(form.get("clientRef") || "").trim().slice(0, 60);
   const contact = String(form.get("contact") || "").trim().toLowerCase();
   const amendmentOf = tidyAddress(String(form.get("amendmentOf") || "")) || null;
   if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
@@ -136,6 +137,7 @@ async function handle(req: Request) {
   }
 
   await repo.addSubmission({
+    clientRef: clientRef || null,
     companyId: session.companyId,
     email: contact,
     address,
@@ -160,6 +162,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const jobClass = tidyAddress(String(body.jobClass || ""));
   const description = tidyAddress(String(body.description || ""));
   const notes = String(body.notes || "").trim().slice(0, 4000);
+  const clientRef = String(body.clientRef || "").trim().slice(0, 60);
   const contact = String(body.contact || "").trim().toLowerCase();
   const amendmentOf = tidyAddress(String(body.amendmentOf || "")) || null;
   if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
@@ -238,6 +241,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   }
 
   await repo.addSubmission({
+    clientRef: clientRef || null,
     companyId: session.companyId,
     email: contact,
     address,

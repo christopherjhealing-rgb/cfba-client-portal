@@ -60,7 +60,7 @@ export default async function JobDetail({
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         title={job.address as string || `Job ${ref}`}
-        sub={`Job ${ref}${job.description ? ` · ${job.description}` : ""}`}
+        sub={`Job ${ref}${job.clientRef ? ` · your ref ${job.clientRef}` : ""}${job.description ? ` · ${job.description}` : ""}`}
         action={<Link href="/jobs" className="btn-ghost">← All jobs</Link>}
       />
 
@@ -84,9 +84,11 @@ export default async function JobDetail({
           )}
         </div>
         <JobTimeline job={job} />
-        {job.issuedAt ? (
-          <p className="mt-4 text-[12.5px] text-ink/50">Issued {fmtDate(job.issuedAt as string)}.</p>
-        ) : null}
+        <p className="mt-4 text-[12.5px] text-ink/50">
+          Your surveyor:{" "}
+          <span className="font-medium text-ink/70">{job.surveyor || "being allocated"}</span>
+          {job.issuedAt ? <> · Issued {fmtDate(job.issuedAt as string)}.</> : null}
+        </p>
       </div>
 
       {lodgements.length > 0 && (

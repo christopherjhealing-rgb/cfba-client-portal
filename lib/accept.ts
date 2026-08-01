@@ -28,6 +28,13 @@ export async function acceptSubmission(
     jobClass: sub.jobClass,
   });
 
+  // Stash the client's own reference against the card id — the sync copies it
+  // onto the job row on first sight. Portal-only; never written to Monday.
+  if (sub.clientRef) {
+    try { await repo.setSetting(`clientref:${itemId}`, { ref: sub.clientRef }); }
+    catch { /* a lost nicety must never block an accept */ }
+  }
+
   if (sub.amendmentOf) {
     try {
       await monday.postUpdate(

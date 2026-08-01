@@ -43,3 +43,8 @@ alter table jobs add column if not exists received_at timestamptz;
 
 -- Optional person name per login, for message attribution.
 alter table client_logins add column if not exists display_name text;
+
+-- Assigned surveyor + the client's own reference (Aug 2026).
+alter table jobs add column if not exists surveyor text;
+alter table jobs add column if not exists client_ref text;
+alter table submissions add column if not exists client_ref text;

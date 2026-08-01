@@ -47,3 +47,5 @@ export const PAUSED_STATUSES: Set<string>;
 export function stageIndex(job: PortalJob): number;
 export function stageStates(job: PortalJob): string[];
 export function businessDaysSince(iso: string, now?: Date): number | null;
+
+export function surveyorFor(peopleText: string | null | undefined, status: string | null | undefined): string | null;

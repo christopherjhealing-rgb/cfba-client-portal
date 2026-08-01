@@ -12,6 +12,7 @@ const COL = {
   ref: "text__1",
   description: "text0__1",
   files: "file_mksmhvsk", // "Files" column — lodged documents land here
+  people: "multiple_person_mkstvc5z",
 };
 
 async function gql<T = Record<string, unknown>>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -38,6 +39,8 @@ export interface MondayCard {
   description: string;
   status: string;
   createdAt: string | null;
+  /** Names in the People column, e.g. "Kacie X, Rebecca Y". */
+  peopleText: string;
 }
 
 function readCard(it: Record<string, unknown>): MondayCard {
@@ -54,10 +57,11 @@ function readCard(it: Record<string, unknown>): MondayCard {
     description: cols[COL.description] || "",
     status: cols[COL.status] || "",
     createdAt: (it.created_at as string) || null,
+    peopleText: cols[COL.people] || "",
   };
 }
 
-const CARD_FIELDS = `id name created_at column_values(ids:["${COL.status}","${COL.client}","${COL.email}","${COL.ref}","${COL.description}"]){ id text }`;
+const CARD_FIELDS = `id name created_at column_values(ids:["${COL.status}","${COL.client}","${COL.email}","${COL.ref}","${COL.description}","${COL.people}"]){ id text }`;
 
 /** Cards currently sitting at a given status label (default: Issued). */
 export async function listByStatus(label: string): Promise<MondayCard[]> {

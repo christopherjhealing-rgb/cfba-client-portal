@@ -9,7 +9,7 @@
 // Idempotent and additive: a job already downloaded is never dropped, even once
 // Monday later moves it to Invoiced / Completed.
 import { DEMO_MODE, MONDAY_READY, GRAPH_READY, env } from "./env";
-import { matchCompany, READY_STATUS, CLIENT_ACTION_STATUSES, retention } from "./core.mjs";
+import { matchCompany, READY_STATUS, CLIENT_ACTION_STATUSES, retention, surveyorFor } from "./core.mjs";
 import * as monday from "./monday";
 import { sendMail, updateEmail, issuedEmail } from "./mail";
 import * as graph from "./graph";
@@ -72,10 +72,17 @@ export async function runSync(): Promise<SyncResult> {
     if (!companyId) { res.unmatched.push({ ref: card.ref, client: card.clientName }); continue; }
 
     const existing = await repo.getJob(card.ref);
+    // The client's own reference arrives via the lodgement (stashed against
+    // the card id at accept time); after the first sync it lives on the job.
+    const clientRef = existing
+      ? existing.clientRef ?? null
+      : (await repo.getSetting<{ ref?: string }>(`clientref:${card.itemId}`))?.ref || null;
     const job: repo.Job = {
       ref: card.ref, companyId, mondayItemId: card.itemId,
       address: card.address, description: card.description,
       mondayStatus: card.status, fileCount: existing?.fileCount || 0,
+      surveyor: surveyorFor(card.peopleText, card.status) || existing?.surveyor || null,
+      clientRef,
       // issuedAt is stamped below, only once files exist — flipping the card
       // to Issued before the folder is filled must not burn the one-shot
       // email trigger.
@@ -147,7 +154,8 @@ export async function runSync(): Promise<SyncResult> {
       try {
         const company = await repo.companyById(companyId);
         if (company?.emails?.length) {
-          const mail = issuedEmail({ ref: card.ref, address: card.address });
+          const mail = issuedEmail({ ref: card.ref, address: card.address,
+            clientRef: job.clientRef ?? undefined });
           await sendMail(company.emails, mail.subject, mail.html);
           res.emailsSent++;
         } else {
@@ -167,9 +175,14 @@ export async function runSync(): Promise<SyncResult> {
     if (!companyId) continue;
     const existing = await repo.getJob(card.ref);
     if (card.status === READY_STATUS) continue; // handled above
+    const clientRef = existing
+      ? existing.clientRef ?? null
+      : (await repo.getSetting<{ ref?: string }>(`clientref:${card.itemId}`))?.ref || null;
     await repo.upsertJob({
       ref: card.ref, companyId, mondayItemId: card.itemId,
       address: card.address, description: card.description, mondayStatus: card.status,
+      surveyor: surveyorFor(card.peopleText, card.status) || existing?.surveyor || null,
+      clientRef,
       fileCount: existing?.fileCount || 0, issuedAt: existing?.issuedAt || null,
       receivedAt: existing?.receivedAt || card.createdAt || null,
       firstDownloadedAt: existing?.firstDownloadedAt || null,
@@ -268,6 +281,7 @@ async function pullMessages(
           address: job?.address || "",
           body,
           needsAction: CLIENT_ACTION_STATUSES.has(job?.mondayStatus || ""),
+          clientRef: job?.clientRef ?? undefined,
         });
         await sendMail(company.emails, mail.subject, mail.html);
       }
