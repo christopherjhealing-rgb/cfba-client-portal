@@ -115,3 +115,20 @@ height in note 7"). It refuses to render compliance verdicts — "does my shed
 comply" gets the relevant note passages and a handoff, not a yes or no — and
 anything beyond the notes hands off to portal messages, where a person
 answers. No browsing, no other sources, no memory of other clients.
+
+### Site plan builder — v2 additions (agreed 2 Aug 2026)
+
+**Underlay tracing.** Load an aerial screenshot or photo/scan of existing plans
+as a semi-transparent layer under the drawing; calibrate once by ruling a line
+over any known dimension and typing its true length; trace/place over it. The
+underlay never uploads (browser-only) and is excluded from the printed sheet by
+construction — which also keeps licensed aerial imagery out of lodged
+documents. ~1 session.
+
+**Generated elevations.** Structures gain wall height, roof type
+(flat/gable/skillion) and pitch; the tool draws schematic front and side
+elevations satisfying guidance note 05 by construction: overall height from
+NGL, clearance under beam, pitch stated as a figure, post positions, ground
+line and FFL. Parametric preset structures only — never traced dwellings or
+complex designs. Same applicant-authored footer; measures, never judges.
+~1-2 sessions.
