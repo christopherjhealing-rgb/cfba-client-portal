@@ -142,3 +142,15 @@ SLIP aerial imagery as an optional reference layer beneath. Google satellite
 only as fallback (licence-grey for tracing); Nearmap as premium underlay if
 CFBA holds a subscription (ask owner). Underlay layers remain browser-only and
 excluded from the printed sheet.
+
+## One-off public lodgement (planned)
+
+A no-login flow for private/homeowner jobs, reusing the existing pipeline.
+Access via signed magic links emailed at each touchpoint (lodged / FIR /
+issued) — no accounts, no passwords. Abuse controls are the new work: email
+verification before the form unlocks, captcha, per-IP throttles, and one-offs
+land in the REVIEW QUEUE (not auto-accept) so nothing anonymous reaches the
+Monday board unreviewed. Optional upfront payment via Stripe for homeowner
+jobs (builders remain invoiced). Decisions for the owner: which job classes to
+accept, pricing display, pay-at-lodgement or invoice. ~2 sessions; +1-2 with
+payment.
