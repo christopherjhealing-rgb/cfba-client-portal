@@ -66,6 +66,8 @@ export function ReplyBox({ refNo }: { refNo: string }) {
     <form onSubmit={send} className="border-t border-rule bg-wash p-4">
       <label className="label" htmlFor="reply">Reply</label>
       <textarea id="reply" rows={4} value={body} onChange={(e) => setBody(e.target.value)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) add(e.dataTransfer.files); }}
         className="field resize-y"
         placeholder="Type your message. It goes straight onto the job — no email needed." />
 

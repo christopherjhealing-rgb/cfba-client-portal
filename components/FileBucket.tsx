@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Icon } from "./Icon";
 
 export interface Bucket {
@@ -17,18 +17,29 @@ export function FileBucket({
   onChange: (files: File[]) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
   const missing = bucket.required && files.length === 0;
 
   return (
-    <div className={`rounded-lg border px-4 py-3.5 ${
-      missing ? "border-rule bg-white" : "border-seal/35 bg-[#F4F8F4]"}`}>
+    <div
+      onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault(); setOver(false);
+        const dropped = Array.from(e.dataTransfer?.files || [])
+          .filter((f) => /\.pdf$/i.test(f.name));
+        if (dropped.length) onChange([...files, ...dropped]);
+      }}
+      className={`rounded-lg border px-4 py-3.5 transition ${
+      over ? "border-seal bg-[#EDF3EE] outline-dashed outline-2 outline-seal/40"
+        : missing ? "border-rule bg-white" : "border-seal/35 bg-[#F4F8F4]"}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="font-display text-[13px] font-semibold text-ink">
             {bucket.label}
             {bucket.required && <span className="ml-1.5 text-flag">*</span>}
           </p>
-          <p className="mt-0.5 text-[12px] leading-snug text-ink/55">{bucket.hint} PDF only.</p>
+          <p className="mt-0.5 text-[12px] leading-snug text-ink/55">{bucket.hint} PDF only — or drag them onto this box.</p>
         </div>
         <button type="button" onClick={() => input.current?.click()} className="btn-ghost shrink-0">
           {files.length ? "Change" : "Choose files"}

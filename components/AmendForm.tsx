@@ -169,9 +169,17 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         placeholder="Why it changed, whether anything has been built yet, and anything the surveyor should look at first." />
 
       <label className="label mt-5" htmlFor="files">Revised drawings</label>
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const d = Array.from(e.dataTransfer?.files || []).filter((f) => /\.pdf$/i.test(f.name));
+          if (d.length) setFiles((prev) => [...prev, ...d]);
+        }}>
       <input id="files" type="file" multiple
         onChange={(e) => setFiles(Array.from(e.target.files || []))}
         className="field file:mr-3 file:rounded file:border-0 file:bg-wash file:px-3 file:py-1.5 file:text-[13px]" />
+      </div>
       <p className="mt-1.5 text-[12px] text-ink/50">
         Send the amended plans, and the engineering if it changed too. Up to 40 MB.
       </p>
