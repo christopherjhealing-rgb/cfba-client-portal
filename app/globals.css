@@ -72,3 +72,24 @@ body {
 
 :focus-visible { outline: 2px solid theme(colors.seal.DEFAULT); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* Motion layer — the portal breathes. CSS-only, and switched off entirely
+   for users who ask the OS for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  main { animation: pagein 0.4s ease both; }
+  @keyframes pagein { from { opacity: 0; transform: translateY(10px); } }
+
+  .card { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+  a.card:hover, a .card:hover { transform: translateY(-2px); }
+
+  .btn, .btn-ghost { transition: transform 0.15s ease, filter 0.15s ease, background-color 0.15s ease; }
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  .btn:active { transform: translateY(0) scale(0.98); }
+
+  /* Action-required amber chips softly pulse — the one place that should tug the eye. */
+  .chip-brass { animation: chippulse 2.6s ease-in-out infinite; }
+  @keyframes chippulse { 50% { box-shadow: 0 0 0 5px rgba(201, 162, 39, 0.14); } }
+
+  /* Sidebar items and stat tiles ease rather than snap. */
+  nav a, .grid > a { transition: background-color 0.15s ease, transform 0.15s ease; }
+}
