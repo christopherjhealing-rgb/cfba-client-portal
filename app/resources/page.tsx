@@ -111,16 +111,27 @@ export default async function Resources() {
           <span className="h-px flex-1 bg-rule" />
         </div>
         <p className="mb-3 max-w-2xl text-[13.5px] leading-relaxed text-ink/60">
-          Where you lodge the building permit once your certificate is ready. The
-          councils our clients build in most are listed first.
+          Where you lodge the building permit once your certificate is ready.
+          The council&apos;s name opens its website; &ldquo;Lodge with
+          council&rdquo; goes to its building application page.
         </p>
+        {/* 30 councils — two even rows of 15 at sm, three even rows of 10 at lg. */}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {COUNCILS.map((c) => (
-            <a key={c.url} href={c.url} target="_blank" rel="noopener noreferrer"
-              className="card flex items-center justify-between gap-2 px-3.5 py-2.5 text-[13.5px] transition hover:bg-wash">
-              <span className="truncate font-medium">{c.name}</span>
-              <span className="shrink-0 text-ink/35"><Icon name="arrowRight" size={14} /></span>
-            </a>
+            <div key={c.url}
+              className="card flex flex-col gap-1 px-3.5 py-2.5 text-[13.5px] transition hover:bg-wash">
+              <a href={c.url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-between gap-2 transition hover:text-seal">
+                <span className="truncate font-medium">{c.name}</span>
+                <span className="shrink-0 text-ink/35"><Icon name="arrowRight" size={14} /></span>
+              </a>
+              {c.applyUrl && (
+                <a href={c.applyUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-1 text-[12px] font-medium text-seal underline-offset-2 hover:underline">
+                  Lodge with council <Icon name="arrowRight" size={11} />
+                </a>
+              )}
+            </div>
           ))}
         </div>
       </section>

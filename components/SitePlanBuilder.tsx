@@ -2660,8 +2660,11 @@ export function SitePlanBuilder(
           </div>
         </div>
 
-        {/* the canvas */}
-        <div className="card p-4">
+        {/* The canvas. Sticky from lg up: the options column is long, and
+            scrolling down to reach a control used to take the drawing you are
+            adjusting off the screen. self-start stops the grid stretching this
+            item, which would make sticky a no-op. */}
+        <div className="card p-4 lg:sticky lg:top-4 lg:self-start">
           {/* Tracing the lot out over the photo — the same tap-the-corners
               gesture the odd-shape tool uses, pointed at the boundary. */}
           {trace && (

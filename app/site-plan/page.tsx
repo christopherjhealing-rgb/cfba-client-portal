@@ -31,7 +31,7 @@ export default async function SitePlan() {
   }
 
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)} wide>
       <PageHead
         hero="/heroes/street.jpg"
         title="Site Plan Tool"

@@ -3,7 +3,14 @@
 // straight from it. URLs marked "// confirm" couldn't be machine-verified when
 // this was built — do the 10-minute click-through before relying on them.
 
-export interface LinkItem { name: string; url: string; note: string }
+export interface LinkItem {
+  name: string;
+  url: string;
+  note: string;
+  /** Second link on an entry: where the application is actually lodged. Only
+      the councils carry one. */
+  applyUrl?: string;
+}
 export interface LinkGroup { group: string; items: LinkItem[] }
 
 // Council forms clients lodge WITH THE LOCAL GOVERNMENT alongside CFBA's
@@ -63,51 +70,62 @@ export const LINK_GROUPS: LinkGroup[] = [
       { name: "Water Corporation — Build Over/Near Assets",
         url: "https://www.watercorporation.com.au/Building-and-developing", // confirm
         note: "Consent for building over or near a sewer or drain." },
-      { name: "Registered building surveyor / licence search",
-        url: "https://www.wa.gov.au/organisation/energy-policy-wa/building-and-energy", // confirm
-        note: "Confirm a practitioner's registration." },
     ],
   },
 ];
 
-// Ordered by where CFBA jobs actually land: tallied from the site addresses
-// of all 3,829 Monday board items (Aug 2026, 95% mappable to an LGA). Job
-// counts in the comments. Top 20 first, the remaining metro/near-metro
-// councils after — the page renders this order as-is. Homepage links are
-// stable; deep-link each council's building/planning page during your review.
+// Every local government CFBA jobs land in, A–Z. The trailing number on each
+// row is that council's share of the volume tally — the site addresses of all
+// 3,829 Monday board items (Aug 2026, 95% mappable to an LGA). The order used
+// to BE that tally; it's alphabetical now so a builder can find their council,
+// and the counts stay in the comments so the data isn't lost.
+//
+// Columns: name, domain slug (<slug>.wa.gov.au), and optionally the council's
+// own "lodge a building application" page.
+//
+// LEAVE THE THIRD COLUMN OUT and the council falls back to a site-scoped search
+// of its own domain. That link always resolves and never rots — councils
+// rearrange their sites constantly, and a stale deep link is worse than no deep
+// link. When you've clicked through and confirmed a real one, paste it in as
+// the third element: one line per council, nothing else to change.
+//   ["City of Wanneroo", "wanneroo", "https://www.wanneroo.wa.gov.au/…"],
 export const COUNCILS: LinkItem[] = ([
-  ["City of Wanneroo", "wanneroo"],                    // 362
-  ["City of Joondalup", "joondalup"],                  // 294
-  ["City of Swan", "swan"],                            // 260
-  ["City of Stirling", "stirling"],                    // 258
-  ["City of Rockingham", "rockingham"],                // 233
-  ["City of Melville", "melville"],                    // 182
-  ["City of Cockburn", "cockburn"],                    // 161
-  ["City of Kalamunda", "kalamunda"],                  // 122
   ["City of Armadale", "armadale"],                    // 122
-  ["City of Gosnells", "gosnells"],                    // 118
-  ["City of Canning", "canning"],                      // 99
   ["City of Bayswater", "bayswater"],                  // 97
-  ["City of Mandurah", "mandurah"],                    // 95
-  ["Shire of Serpentine-Jarrahdale", "sjshire"],       // 77
-  ["City of Kwinana", "kwinana"],                      // 56
-  ["Town of Cambridge", "cambridge"],                  // 55
-  ["Town of Victoria Park", "victoriapark"],           // 55
-  ["Shire of Mundaring", "mundaring"],                 // 50
-  ["City of South Perth", "southperth"],               // 49
   ["City of Belmont", "belmont"],                      // 40
-  // — the rest —
+  ["City of Canning", "canning"],                      // 99
+  ["City of Cockburn", "cockburn"],                    // 161
   ["City of Fremantle", "fremantle"],                  // 37
-  ["Shire of Murray", "murray"],                       // 32
-  ["Town of Bassendean", "bassendean"],                // 29
-  ["City of Vincent", "vincent"],                      // 20
-  ["Shire of Chittering", "chittering"],               // 19
+  ["City of Gosnells", "gosnells"],                    // 118
+  ["City of Joondalup", "joondalup"],                  // 294
+  ["City of Kalamunda", "kalamunda"],                  // 122
+  ["City of Kwinana", "kwinana"],                      // 56
+  ["City of Mandurah", "mandurah"],                    // 95
+  ["City of Melville", "melville"],                    // 182
   ["City of Nedlands", "nedlands"],                    // 18
-  ["City of Subiaco", "subiaco"],                      // 15
-  ["Shire of Gingin", "gingin"],                       // 12
   ["City of Perth", "perth"],
-] as [string, string][]).map(([name, slug]) => ({
+  ["City of Rockingham", "rockingham"],                // 233
+  ["City of South Perth", "southperth"],               // 49
+  ["City of Stirling", "stirling"],                    // 258
+  ["City of Subiaco", "subiaco"],                      // 15
+  ["City of Swan", "swan"],                            // 260
+  ["City of Vincent", "vincent"],                      // 20
+  ["City of Wanneroo", "wanneroo"],                    // 362
+  ["Shire of Chittering", "chittering"],               // 19
+  ["Shire of Gingin", "gingin"],                       // 12
+  ["Shire of Mundaring", "mundaring"],                 // 50
+  ["Shire of Murray", "murray"],                       // 32
+  ["Shire of Serpentine-Jarrahdale", "sjshire"],       // 77
+  ["Town of Bassendean", "bassendean"],                // 29
+  ["Town of Cambridge", "cambridge"],                  // 55
+  // Western suburbs, alongside Nedlands and Subiaco. New to the list — it had
+  // no volume of its own in the Aug 2026 tally.
+  ["Town of Claremont", "claremont"],
+  ["Town of Victoria Park", "victoriapark"],           // 55
+] as [string, string, string?][]).map(([name, slug, applyUrl]) => ({
   name,
   url: `https://www.${slug}.wa.gov.au`,
   note: "Council website — building & planning",
+  applyUrl: applyUrl ||
+    `https://www.google.com/search?q=site:${slug}.wa.gov.au+building+permit+application`,
 }));
