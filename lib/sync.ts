@@ -108,6 +108,36 @@ export async function runSync(): Promise<SyncResult> {
     let files: repo.JobFile[] = await repo.jobFiles(card.ref);
     let settling = false;
     let holding = false;
+
+    // A cached row list is only as good as the blobs behind it. Until now the
+    // pull was skipped whenever rows existed, so a job that once went wrong —
+    // a half-written upload, a file recorded but never stored — stayed broken
+    // for good and pressing Sync changed nothing. Check the storage actually
+    // holds what the rows claim, and if it doesn't, pull the package again.
+    if (files.length > 0 && GRAPH_READY) {
+      try {
+        const stored = new Map(
+          (await repo.listStored(job.storagePrefix)).map((f) => [f.name, f.size])
+        );
+        const broken = files.filter((f) => {
+          const name = f.storagePath.slice(job.storagePrefix.length + 1);
+          const size = stored.get(name);
+          return size === undefined || size === 0;
+        });
+        if (broken.length) {
+          console.warn(
+            `sync ${card.ref}: ${broken.length} of ${files.length} stored file(s) ` +
+            `missing or empty (${broken.map((f) => f.filename).join(", ")}) — pulling again`
+          );
+          files = [];
+        }
+      } catch (e) {
+        // Couldn't check. Leave the cache alone rather than re-pulling every
+        // job on every sync because storage had a bad minute.
+        console.warn(`sync ${card.ref}: couldn't verify stored files:`, (e as Error).message);
+      }
+    }
+
     // Pull from SharePoint only if we don't already have the files cached.
     if (files.length === 0 && GRAPH_READY) {
       // Deliberate hold: nothing is pulled and no email goes until the card

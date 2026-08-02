@@ -1,20 +1,68 @@
 "use client";
 import { useState } from "react";
 
+/** Download the certificate package.
+ *
+ *  This used to be a plain link that called `window.location.reload()` on a
+ *  2.2 second timer, so the job would move into Downloaded once the server had
+ *  recorded it. The timer was the bug: before the server can answer it reads
+ *  every file back out of storage, zips them and posts a receipt to Monday —
+ *  comfortably longer than two seconds — and reloading mid-flight cancels the
+ *  request. Clicking Download did nothing at all, repeatably, with no error
+ *  anywhere, because nothing had failed: the browser had simply been told to
+ *  go somewhere else before the answer arrived.
+ *
+ *  Now we wait for the bytes, save them, and only then reload. It also means a
+ *  server-side failure can be shown to the client instead of vanishing. */
 export function DownloadButton({ href, label = "Download" }: { href: string; label?: string }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(e: React.MouseEvent<HTMLAnchorElement>) {
+    // Leave modified clicks (new tab, save link as) to the browser.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(href);
+      if (!r.ok) {
+        setError(
+          (await r.text().catch(() => "")) ||
+          "That didn't work. Ring us on 1300 029 074 and we'll email your documents over."
+        );
+        setBusy(false);
+        return;
+      }
+      const blob = await r.blob();
+      const name = /filename="([^"]+)"/.exec(r.headers.get("content-disposition") || "")?.[1];
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name || "certificate-package.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      // Safely on their machine now — refresh so the job moves across.
+      window.location.reload();
+    } catch {
+      setError("We couldn't reach the server just then — check your connection and try again.");
+      setBusy(false);
+    }
+  }
+
   return (
-    <a
-      href={href}
-      className="btn"
-      onClick={() => {
-        setBusy(true);
-        // The browser handles the file download; reload to move the job into
-        // the Downloaded section once the server records it.
-        setTimeout(() => window.location.reload(), 2200);
-      }}
-    >
-      {busy ? "Preparing…" : label}
-    </a>
+    <span className="inline-flex flex-col items-end gap-1.5">
+      <a href={href} onClick={run} className="btn" aria-busy={busy}>
+        {busy ? "Preparing…" : label}
+      </a>
+      {error && (
+        <span className="max-w-[280px] text-right text-[12.5px] leading-snug text-[#9E2B25]">
+          {error}
+        </span>
+      )}
+    </span>
   );
 }
