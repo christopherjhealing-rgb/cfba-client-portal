@@ -66,40 +66,136 @@ function parentEndsWithIssued(pathStr: string, ref: string): boolean {
   return last.toLowerCase() === "issued" && folderMatchesRef(parent, ref);
 }
 
-/** Find every file in the job's Issued folder, matched by ref. */
-export async function findIssuedFiles(ref: string): Promise<RemoteFile[]> {
-  const q = encodeURIComponent(`'${ref}'`);
-  const url =
-    `/drives/${env.graphDriveId}/root/search(q=${q})` +
-    `?$top=200&$select=id,name,size,file,parentReference,lastModifiedDateTime,@microsoft.graph.downloadUrl`;
-  const out: RemoteFile[] = [];
-  let next: string | null = url;
+const SELECT =
+  "$top=200&$select=id,name,size,folder,file,parentReference,lastModifiedDateTime," +
+  "@microsoft.graph.downloadUrl";
+
+/** Children of a drive item by id. */
+async function childrenOf(itemId: string): Promise<Record<string, unknown>[]> {
+  const out: Record<string, unknown>[] = [];
+  let next: string | null =
+    `/drives/${env.graphDriveId}/items/${itemId}/children?${SELECT}`;
   while (next) {
     const page: Record<string, unknown> = await gget(next.replace(GRAPH, ""));
-    for (const it of (page.value as Record<string, unknown>[]) || []) {
-      const file = it.file as { mimeType?: string } | undefined;
-      if (!file) continue; // folders
-      if (EXCLUDED_FILE.test((it.name as string) || "")) continue; // templates / temp files
-      const parent = (it.parentReference as { path?: string })?.path || "";
-      if (!parentEndsWithIssued(parent, ref)) continue;
-      const dl = it["@microsoft.graph.downloadUrl"] as string | undefined;
-      if (!dl) continue;
-      const decoded = decodeURIComponent(parent).replace(/^\/drive(s)?\/[^/]+\/root:?/, "");
-      const rel = decoded.replace(new RegExp("^/?" + env.clientFilesRoot + "/?"), "");
-      out.push({
-        name: it.name as string,
-        size: Number(it.size || 0),
-        contentType: file.mimeType || "application/octet-stream",
-        downloadUrl: dl,
-        itemId: it.id as string,
-        folderPath: rel || null,
-        lastModified: (it.lastModifiedDateTime as string) || null,
-      });
-    }
+    out.push(...((page.value as Record<string, unknown>[]) || []));
     const nl = page["@odata.nextLink"] as string | undefined;
-    next = nl ? nl : null;
+    next = nl || null;
   }
   return out;
+}
+
+/** Children of a path relative to the drive root. Null when the path is
+ *  missing, so a caller can tell "not there" from "couldn't ask". */
+async function childrenAt(relPath: string): Promise<Record<string, unknown>[] | null> {
+  const encoded = relPath.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  try {
+    const page = await gget(
+      `/drives/${env.graphDriveId}/root:/${encoded}:/children?${SELECT}`
+    );
+    return (page.value as Record<string, unknown>[]) || [];
+  } catch (e) {
+    if (/-> 404/.test((e as Error).message)) return null;
+    throw e;
+  }
+}
+
+function toRemote(it: Record<string, unknown>): RemoteFile | null {
+  const file = it.file as { mimeType?: string } | undefined;
+  if (!file) return null;
+  if (EXCLUDED_FILE.test((it.name as string) || "")) return null; // templates / temp
+  const dl = it["@microsoft.graph.downloadUrl"] as string | undefined;
+  if (!dl) return null;
+  const parent = (it.parentReference as { path?: string })?.path || "";
+  const decoded = decodeURIComponent(parent).replace(/^\/drive(s)?\/[^/]+\/root:?/, "");
+  const rel = decoded.replace(new RegExp("^/?" + env.clientFilesRoot + "/?"), "");
+  return {
+    name: it.name as string,
+    size: Number(it.size || 0),
+    contentType: file.mimeType || "application/octet-stream",
+    downloadUrl: dl,
+    itemId: it.id as string,
+    folderPath: rel || null,
+    lastModified: (it.lastModifiedDateTime as string) || null,
+  };
+}
+
+/** The Issued files inside an already-located job folder. */
+async function issuedInsideJobFolder(jobFolderId: string): Promise<RemoteFile[]> {
+  const kids = await childrenOf(jobFolderId);
+  const issued = kids.find(
+    (k) => k.folder && String(k.name || "").trim().toLowerCase() === "issued"
+  );
+  if (!issued) return []; // certificate not filed yet — not an error
+  const files = await childrenOf(issued.id as string);
+  return files.map(toRemote).filter((f): f is RemoteFile => f !== null);
+}
+
+/** Find every file in the job's Issued folder.
+ *
+ *  Locating the folder matters more than it looks. The old approach searched
+ *  the drive for the ref and kept matching *files* — but the certificates are
+ *  named for the address, not the job number (".../24 Narranbee Ridge, Tapping
+ *  WA - 56733/Issued/CDC - 24 Narranbee Ridge.pdf"). The ref lives on the
+ *  FOLDER. So the search matched the folder, the folder was discarded for not
+ *  being a file, and the job sat at "Being finalised" with its certificate
+ *  sitting right there.
+ *
+ *  Now: find the job FOLDER (by search, which its name does match), then read
+ *  its Issued child directly. If search hasn't indexed it yet — new folders can
+ *  take a while — walk the client-files tree instead, which no index can lie
+ *  about. */
+export async function findIssuedFiles(ref: string): Promise<RemoteFile[]> {
+  const q = encodeURIComponent(`'${ref}'`);
+  const hits: Record<string, unknown>[] = [];
+  let next: string | null =
+    `/drives/${env.graphDriveId}/root/search(q=${q})?${SELECT}`;
+  while (next) {
+    const page: Record<string, unknown> = await gget(next.replace(GRAPH, ""));
+    hits.push(...((page.value as Record<string, unknown>[]) || []));
+    const nl = page["@odata.nextLink"] as string | undefined;
+    next = nl || null;
+  }
+
+  // A job folder named "<address> - <ref>".
+  const jobFolder = hits.find(
+    (h) => h.folder && folderMatchesRef(String(h.name || ""), ref)
+  );
+  if (jobFolder) return issuedInsideJobFolder(jobFolder.id as string);
+
+  // Search also returns the Issued folder itself when its path is indexed.
+  const issuedFolder = hits.find(
+    (h) =>
+      h.folder &&
+      String(h.name || "").trim().toLowerCase() === "issued" &&
+      parentEndsWithIssued(
+        ((h.parentReference as { path?: string })?.path || "") + "/issued",
+        ref
+      )
+  );
+  if (issuedFolder) {
+    const files = await childrenOf(issuedFolder.id as string);
+    return files.map(toRemote).filter((f): f is RemoteFile => f !== null);
+  }
+
+  // Nothing indexed yet — walk the tree. One listing of the client folders,
+  // then one per client until the ref turns up.
+  const root = env.clientFilesRoot;
+  const clients = await childrenAt(root);
+  if (clients === null) {
+    throw new Error(
+      `Can't open the client files folder "${root}" in SharePoint — ` +
+      `check GRAPH_CLIENT_FILES_ROOT and GRAPH_DRIVE_ID.`
+    );
+  }
+  for (const c of clients) {
+    if (!c.folder) continue;
+    const jobs = await childrenOf(c.id as string);
+    const job = jobs.find(
+      (j) => j.folder && folderMatchesRef(String(j.name || ""), ref)
+    );
+    if (job) return issuedInsideJobFolder(job.id as string);
+  }
+  return [];
 }
 
 export async function downloadFile(f: RemoteFile): Promise<Buffer> {
