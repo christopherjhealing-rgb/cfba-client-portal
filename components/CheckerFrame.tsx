@@ -45,8 +45,8 @@ export function CheckerFrame({ src, title }: { src: string; title: string }) {
         src={src}
         title={title}
         sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"
-        className={`w-full rounded-xl border border-rule bg-white ${
-          full ? "h-screen rounded-none border-0" : "h-[calc(100vh-190px)] min-h-[600px]"
+        className={`w-full bg-transparent ${
+          full ? "h-screen" : "h-[calc(100vh-190px)] min-h-[600px]"
         }`}
       />
     </div>
