@@ -80,7 +80,14 @@ export default async function JobDetail({
       <PageHead
         title={job.address as string || `Job ${ref}`}
         sub={`Job ${ref}${job.clientRef ? ` · your ref ${job.clientRef}` : ""}${job.description ? ` · ${job.description}` : ""}`}
-        action={<Link href="/jobs" className="btn-ghost">← All Jobs</Link>}
+        // Navigation, not an action. As a bordered block it carried the same
+        // weight as Download; as a text link it reads as the way back.
+        action={
+          <Link href="/jobs"
+            className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink/60 underline-offset-4 transition hover:text-seal hover:underline">
+            <span aria-hidden="true">←</span> All Jobs
+          </Link>
+        }
       />
 
       {needsClientInfo(job) && (
@@ -105,8 +112,12 @@ export default async function JobDetail({
             <span className={`chip ${needsClientInfo(job) ? "chip-brass" : bucket === "ready" ? "chip-seal" : ""}`}>
               {clientStatusLabel(job.mondayStatus as string, job.fileCount as number)}
             </span>
+            {/* The day count is half of what a client opens this page to see,
+                and at desktop width it was reading as stray text beside the
+                chip. Same position, same wording — just enough weight to read
+                as the chip's pair rather than a footnote. */}
             {elapsed !== null && (
-              <span className="text-[12px] text-ink/55">
+              <span className="text-[12.5px] font-medium text-ink/65">
                 Day {elapsed + 1}
               </span>
             )}
