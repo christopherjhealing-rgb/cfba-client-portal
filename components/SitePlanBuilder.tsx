@@ -380,6 +380,27 @@ export function SitePlanBuilder(
   const [today, setToday] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
+  /** A free-drawn shape has just closed and is waiting to be named. */
+  const [naming, setNaming] = useState(false);
+  const labelRef = useRef<HTMLInputElement>(null);
+  // Put the cursor in the name field with the placeholder text selected, so
+  // the next thing typed replaces it. Runs after the panel has rendered the
+  // newly selected structure, which is why it hangs off `naming` rather than
+  // being called inside finishDraw.
+  useEffect(() => {
+    if (!naming) return;
+    // Deferred by a frame on purpose: closing the shape also puts focus back
+    // on the drawing so the keyboard shortcuts keep working, and that call
+    // runs synchronously inside the same click. Without the frame it lands
+    // after this one and the cursor never reaches the name field.
+    const id = requestAnimationFrame(() => {
+      const el = labelRef.current;
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      el.select();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [naming]);
   const [pxPerM, setPxPerM] = useState(30);
   /** Boundary editing: whether the handles are out, which corner or edge is
    *  picked up, the outline being traced from scratch, what to say when a
@@ -1183,6 +1204,11 @@ export function SitePlanBuilder(
       id: uid(), kind: "custom", label: "Custom Shape",
       rot: 0, shape: "poly", state: "proposed", ...stored,
     });
+    // A shape nobody named is a shape nobody can read on the printed sheet.
+    // Ask for the name the moment it closes, while they still know what they
+    // just drew — the field is focused with its placeholder text selected, so
+    // typing replaces it and ignoring it still leaves something sensible.
+    setNaming(true);
   }
 
   const ARROWS: Record<string, [number, number]> = {
@@ -2444,6 +2470,17 @@ export function SitePlanBuilder(
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Add a Structure</h2>
             <div className="grid grid-cols-2 gap-2">
+              {/* Free draw leads. The presets cover the common shapes, but the
+                  reason someone opens this panel with something unusual in
+                  mind is the one thing the presets can't do — so it shouldn't
+                  be the last thing they find. */}
+              <button type="button" onClick={startDraw}
+                className={`col-span-2 rounded-md border px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash ${draw ? "border-seal bg-wash" : "border-rule bg-white"}`}>
+                <span className="block text-[13.5px] font-medium">Free Draw</span>
+                <span className="block font-mono text-[11px] text-ink/45">
+                  tap its corners, then name it
+                </span>
+              </button>
               {STRUCTURE_PRESETS.map((p) => (
                 <button key={p.kind} type="button" onClick={() => addStructure(p)}
                   className="rounded-md border border-rule bg-white px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash">
@@ -2459,11 +2496,6 @@ export function SitePlanBuilder(
                 <span className="block text-[13.5px] font-medium">L-shape</span>
                 <span className="block font-mono text-[11px] text-ink/45">6 × 4 m, notched</span>
               </button>
-              <button type="button" onClick={startDraw}
-                className={`rounded-md border px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash ${draw ? "border-seal bg-wash" : "border-rule bg-white"}`}>
-                <span className="block text-[13.5px] font-medium">Odd Shape</span>
-                <span className="block font-mono text-[11px] text-ink/45">tap its corners</span>
-              </button>
             </div>
           </div>
 
@@ -2472,9 +2504,20 @@ export function SitePlanBuilder(
             {sel ? (
               <div className="space-y-3">
                 <div>
-                  <label className="label">Label</label>
-                  <input className="field" value={sel.label}
-                    onChange={(e) => patchStructure(sel.id, { label: e.target.value })} />
+                  <label className="label" htmlFor="structure-label">
+                    {naming ? "Name This Shape" : "Label"}
+                  </label>
+                  <input id="structure-label" ref={labelRef} className="field" value={sel.label}
+                    onChange={(e) => {
+                      setNaming(false);
+                      patchStructure(sel.id, { label: e.target.value });
+                    }} />
+                  {naming && (
+                    <p className="mt-1.5 text-[12.5px] leading-snug text-brass-deep">
+                      What is it? Alfresco, workshop, verandah — whatever you&apos;d
+                      call it. The name goes on the printed plan.
+                    </p>
+                  )}
                 </div>
                 {/* Existing or proposed. First thing under the name, because
                     it changes what the drawing means rather than how it
