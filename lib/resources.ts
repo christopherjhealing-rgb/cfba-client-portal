@@ -122,10 +122,18 @@ export const COUNCILS: LinkItem[] = ([
   // no volume of its own in the Aug 2026 tally.
   ["Town of Claremont", "claremont"],
   ["Town of Victoria Park", "victoriapark"],           // 55
-] as [string, string, string?][]).map(([name, slug, applyUrl]) => ({
-  name,
-  url: `https://www.${slug}.wa.gov.au`,
-  note: "Council website — building & planning",
-  applyUrl: applyUrl ||
-    `https://www.google.com/search?q=site:${slug}.wa.gov.au+building+permit+application`,
-}));
+] as [string, string, string?][])
+  // Sorted on the locality, not the designation. Sorting the full name puts
+  // every City first and buries Bassendean and Victoria Park at the bottom,
+  // which is not what someone scanning for their own council expects.
+  .sort((a, b) => {
+    const locality = (s: string) => s.replace(/^(City|Town|Shire) of /, "");
+    return locality(a[0]).localeCompare(locality(b[0]), "en-AU");
+  })
+  .map(([name, slug, applyUrl]) => ({
+    name,
+    url: `https://www.${slug}.wa.gov.au`,
+    note: "Council website — building & planning",
+    applyUrl: applyUrl ||
+      `https://www.google.com/search?q=site:${slug}.wa.gov.au+building+permit+application`,
+  }));
