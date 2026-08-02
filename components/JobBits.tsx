@@ -49,7 +49,9 @@ export function ReadyRow({
         aria-hidden="true"
         className="absolute left-0 top-0 h-full w-[3px] bg-seal"
       />
-      <div className="min-w-0 flex-1">
+      {/* min-w keeps the line readable on phones — the action wraps below
+          instead of crushing the words. */}
+      <div className="min-w-[170px] max-w-full flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="font-mono text-[12px] text-ink/55">{refNo}</span>
           <span className="truncate font-medium text-ink">{address}</span>

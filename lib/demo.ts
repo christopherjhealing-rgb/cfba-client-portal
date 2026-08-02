@@ -85,6 +85,10 @@ export interface DemoDB {
   messages?: DemoMessage[];
   reads?: Record<string, Record<string, string>>;
   attempts?: Record<string, { count: number; last: string }>;
+  /** portal_settings stand-in (login_design, engineering, …). */
+  settings?: Record<string, unknown>;
+  /** disabled_pages stand-in for the staff page toggles. */
+  disabledPages?: string[];
 }
 
 function placeholder(name: string): string {
@@ -254,13 +258,18 @@ function seed(): DemoDB {
 let cache: DemoDB | null = null;
 
 export async function load(): Promise<DemoDB> {
-  if (cache) return cache;
+  // Always re-read the file. The dev server can hold separate module
+  // instances for route handlers and pages, so anything kept only in memory
+  // by one is invisible to the other — which made staff switches (page
+  // toggles, sign-in design) appear to do nothing in demo. The file is the
+  // single source of truth; the cache only breaks a reseed loop if the file
+  // is unreadable.
   try {
     const loaded = JSON.parse(await fs.readFile(FILE, "utf8")) as DemoDB;
     if (loaded.seedVersion !== SEED_VERSION) throw new Error("stale demo seed");
     cache = loaded;
   } catch {
-    cache = seed();
+    if (!cache || cache.seedVersion !== SEED_VERSION) cache = seed();
     await save(cache);
   }
   return cache!;

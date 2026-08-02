@@ -124,7 +124,9 @@ export default async function Dashboard() {
                 {g.ready.map((j) => (
                   <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-4">
                     <JobArt description={j.description as string} />
-                    <div className="min-w-0 flex-1">
+                    {/* min-w keeps the text column readable on phones — the
+                        button wraps below instead of crushing the words. */}
+                    <div className="min-w-[170px] max-w-full flex-1">
                       <JobLink refNo={j.ref as string} address={j.address as string} />
                       <div className="mt-0.5 break-words text-[13px] text-ink/55">
                         {j.description}
@@ -151,7 +153,7 @@ export default async function Dashboard() {
                   <div key={j.ref} className="border-b border-[#E9D7AC] px-4 py-4 last:border-b-0">
                     <div className="flex flex-wrap items-start gap-4">
                       <JobArt description={j.description as string} tone="amber" />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-[170px] max-w-full flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} tone="amber" />
                         <div className="mt-0.5 break-words text-[13px] text-ink/55">
                         {j.description}
@@ -245,7 +247,7 @@ export default async function Dashboard() {
                   return (
                     <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-3.5">
                       <JobArt description={j.description as string} />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-[170px] max-w-full flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} muted />
                         <div className="mt-0.5 break-words text-[13px] text-ink/50">
                           {j.description}

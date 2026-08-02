@@ -58,8 +58,8 @@ export default async function Details() {
       <div className="mt-6">
         <p className="text-[13px] text-ink/55">
           To change your password, sign out and use{" "}
-          <span className="font-medium text-ink/75">Forgot password?</span> on the sign-in
-          screen — we&apos;ll issue a new setup code.
+          <span className="font-medium text-ink/75">Forgot password?</span>{" "}
+          on the sign-in screen — we&apos;ll issue a new setup code.
         </p>
       </div>
     </AppShell>

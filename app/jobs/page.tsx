@@ -124,7 +124,11 @@ export default async function MyJobs({
           body="No jobs match this filter. Try 'All' to see everything you have with us." />
       ) : (
         <div className="card overflow-hidden">
-          <table className="w-full border-collapse">
+          {/* The table keeps its column layout and scrolls sideways on
+              phones — without this the action column was clipped
+              unreachably behind the card's overflow-hidden. */}
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] border-collapse">
             <thead className="border-b border-rule bg-wash">
               <tr>
                 <th className="th w-[110px]">Job no.</th>
@@ -191,6 +195,7 @@ export default async function MyJobs({
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </AppShell>

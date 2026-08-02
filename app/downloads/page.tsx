@@ -69,7 +69,7 @@ export default async function Downloads() {
                   const soon = (r.daysLeft ?? 999) <= 30;
                   return (
                     <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-3.5">
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-[170px] max-w-full flex-1">
                         <div className="flex flex-wrap items-baseline gap-2">
                           <span className="font-mono text-[12px] text-ink/55">{j.ref}</span>
                           <span className="truncate font-medium text-ink/80">{j.address}</span>

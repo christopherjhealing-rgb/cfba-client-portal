@@ -33,9 +33,10 @@ export function LoginDesignToggle({ initial }: { initial: Design }) {
         Sign-in design
       </h2>
       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
-        Which sign-in page clients see. <strong>New</strong> is the full photo
-        treatment; <strong>Classic</strong> is the original split panel. Switches
-        on the next page load — no redeploy needed.
+        Which sign-in page clients see. <strong>New</strong>{" "}
+        is the full photo treatment; <strong>Classic</strong>{" "}
+        is the original split panel. Switches on the next page load — no
+        redeploy needed.
       </p>
       <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Sign-in design">
         {(["new", "classic"] as const).map((d) => {

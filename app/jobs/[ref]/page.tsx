@@ -77,8 +77,9 @@ export default async function JobDetail({
       {needsClientInfo(job) && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-[13.5px] text-brass-deep">
           <p className="min-w-0">
-            <strong>We need something from you</strong> before this can continue —
-            see the messages below and reply with what&apos;s asked.
+            <strong>We need something from you</strong>{" "}
+            before this can continue — see the messages below and reply with
+            what&apos;s asked.
           </p>
           {!messagesOff && (
             <a href="#reply"

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   // "Add to Home Screen" installs an app-like icon and standalone window.
   // Deliberately no service worker — job status must never be stale cache.
   manifest: "/manifest.json",
-  icons: { apple: "/icons/icon-192.png" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
   appleWebApp: { title: "CFBA Portal" },
 };
 

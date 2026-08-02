@@ -533,11 +533,15 @@ export async function moveFile(from: string, to: string) {
 
 // ---------------------------------------------------------------------------
 // Portal settings — staff-controlled switches (e.g. hiding a page for updates)
+// Demo mode keeps these in the demo store FILE, not module memory: the dev
+// server can hold separate module instances for routes and pages, and a
+// switch held in one instance's memory never reaches the other.
 // ---------------------------------------------------------------------------
-const demoDisabledPages = new Set<string>();
-
 export async function disabledPages(): Promise<Set<string>> {
-  if (DEMO_MODE) return new Set(demoDisabledPages);
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    return new Set((db.disabledPages || []).map(String));
+  }
   const { data } = await sb().from("portal_settings")
     .select("value").eq("key", "disabled_pages").maybeSingle();
   const list = Array.isArray(data?.value) ? (data.value as unknown[]) : [];
@@ -546,8 +550,12 @@ export async function disabledPages(): Promise<Set<string>> {
 
 export async function setPageDisabled(key: string, disabled: boolean) {
   if (DEMO_MODE) {
-    if (disabled) demoDisabledPages.add(key);
-    else demoDisabledPages.delete(key);
+    const db = await demo.load();
+    const current = new Set(db.disabledPages || []);
+    if (disabled) current.add(key);
+    else current.delete(key);
+    db.disabledPages = [...current];
+    await demo.save(db);
     return;
   }
   const current = await disabledPages();
@@ -586,16 +594,22 @@ export async function listAudit(limit = 200): Promise<AuditEntry[]> {
 
 /** Generic portal_settings read/write (JSON value). */
 export async function getSetting<T = unknown>(key: string): Promise<T | null> {
-  if (DEMO_MODE) return (demoSettings[key] as T) ?? null;
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    return ((db.settings || {})[key] as T) ?? null;
+  }
   const { data } = await sb().from("portal_settings")
     .select("value").eq("key", key).maybeSingle();
   return (data?.value as T) ?? null;
 }
 
-const demoSettings: Record<string, unknown> = {};
-
 export async function setSetting(key: string, value: unknown) {
-  if (DEMO_MODE) { demoSettings[key] = value; return; }
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    (db.settings ||= {})[key] = value;
+    await demo.save(db);
+    return;
+  }
   must(await sb().from("portal_settings").upsert(
     { key, value, updated_at: new Date().toISOString() },
     { onConflict: "key" }

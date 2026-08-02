@@ -60,17 +60,17 @@ export default async function Amend({
           </p>
           <ol className="mt-3 space-y-3 text-[13px] leading-relaxed text-ink/70">
             <li>
-              <span className="font-medium text-ink">1. You send the change.</span> Pick the
-              job, say what&apos;s different and attach the revised drawings.
+              <span className="font-medium text-ink">1. You send the change.</span>{" "}
+              Pick the job, say what&apos;s different and attach the revised drawings.
             </li>
             <li>
-              <span className="font-medium text-ink">2. We open it as a new job.</span> An
-              amendment gets its own reference and its own assessment, linked back to the
-              original so the history stays together.
+              <span className="font-medium text-ink">2. We open it as a new job.</span>{" "}
+              An amendment gets its own reference and its own assessment, linked back
+              to the original so the history stays together.
             </li>
             <li>
-              <span className="font-medium text-ink">3. The original stays put.</span> Its
-              certificate is unchanged and still covers the plans it was issued against.
+              <span className="font-medium text-ink">3. The original stays put.</span>{" "}
+              Its certificate is unchanged and still covers the plans it was issued against.
             </li>
           </ol>
           <p className="mt-4 border-t border-rule pt-4 text-[13px] leading-relaxed text-ink/60">

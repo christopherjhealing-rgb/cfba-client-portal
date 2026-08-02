@@ -8,8 +8,8 @@ export function TurnaroundLine({ className = "" }: { className?: string }) {
   return (
     <p className={`text-[13px] leading-relaxed text-ink/60 ${className}`}>
       Most jobs are certified within about{" "}
-      <span className="font-medium text-ink/80">{DAYS} business days</span> of
-      everything being received. We don&apos;t put a date on individual jobs —{" "}
+      <span className="font-medium text-ink/80">{DAYS} business days</span>{" "}
+      of everything being received. We don&apos;t put a date on individual jobs —{" "}
       <span className="whitespace-nowrap">here&apos;s why.</span>
     </p>
   );
@@ -32,9 +32,9 @@ export function TurnaroundNote() {
           <div className="mt-2 space-y-2.5 text-[14px] leading-relaxed text-ink/70">
             <p>
               Most jobs are certified within about{" "}
-              <span className="font-medium text-ink">{DAYS} business days</span> of
-              us having everything we need. The clock starts when the last document
-              arrives — not when the job is first lodged.
+              <span className="font-medium text-ink">{DAYS} business days</span>{" "}
+              of us having everything we need. The clock starts when the last
+              document arrives — not when the job is first lodged.
             </p>
             <p>
               We don&apos;t give a date for an individual job. A certificate of
