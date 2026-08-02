@@ -164,6 +164,15 @@ interface Guide {
   to: number;
 }
 
+/** Screen pixels to drawing metres, frozen for the length of one gesture. */
+interface Frame {
+  left: number;
+  top: number;
+  k: number;
+  mL: number;
+  mT: number;
+}
+
 /** One step back from a boundary edit. The structures are held by id and by
  *  position only, so undoing a drag never un-adds a shed placed since. */
 interface LotSnapshot {
@@ -349,7 +358,7 @@ export function SitePlanBuilder(
   const lotDragRef = useRef<{
     kind: "corner" | "edge"; i: number; pts: Pt[]; start: Pt; from: Pt;
     bounds: { minX: number; minY: number; maxX: number; maxY: number };
-    base: LotSnapshot; banked: boolean;
+    base: LotSnapshot; banked: boolean; frame: Frame;
   } | null>(null);
   /** Long-press on a boundary adds a corner, which is how a thumb does what a
    *  mouse does with a double-click. */
@@ -1031,9 +1040,22 @@ export function SitePlanBuilder(
   /** Pointer position in lot metres — the SVG keeps its viewBox aspect, so
    *  one uniform factor maps client px to drawing metres. */
   function toM(e: { clientX: number; clientY: number }) {
+    return toMIn(e, frameNow());
+  }
+
+  /** The mapping from screen pixels to drawing metres, as it stands right
+   *  now. A boundary drag takes a copy of this when the finger goes down and
+   *  reads every move through that copy — because the sidebar, the hint bar
+   *  and the lot's own proportions all change while a corner is being moved,
+   *  and any of them shifting the canvas would slide the drawing out from
+   *  under the finger mid-gesture. */
+  function frameNow(): Frame {
     const r = svgRef.current!.getBoundingClientRect();
-    const k = vbW / r.width;
-    return { x: -mL + (e.clientX - r.left) * k, y: -mT + (e.clientY - r.top) * k };
+    return { left: r.left, top: r.top, k: vbW / r.width, mL, mT };
+  }
+
+  function toMIn(e: { clientX: number; clientY: number }, f: Frame) {
+    return { x: -f.mL + (e.clientX - f.left) * f.k, y: -f.mT + (e.clientY - f.top) * f.k };
   }
 
   // ---- the odd-shape drawing mode -----------------------------------------
@@ -1346,11 +1368,12 @@ export function SitePlanBuilder(
       e.stopPropagation();
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
       const from = kind === "corner" ? lotOutline[i] : edges[i].mid;
+      const frame = frameNow();
       // The way back is banked on the first move that actually lands, not
       // here — picking a corner up and putting it down again is not an edit,
       // and shouldn't cost an undo.
       lotDragRef.current = {
-        kind, i, pts: lotOutline, start: toM(e), from, bounds,
+        kind, i, pts: lotOutline, start: toMIn(e, frame), from, bounds, frame,
         base: takeSnapshot(), banked: false,
       };
       setLotSel({ kind, i });
@@ -1366,7 +1389,7 @@ export function SitePlanBuilder(
     const move = (e: React.PointerEvent) => {
       const g = lotDragRef.current;
       if (!g) return;
-      const p = toM(e);
+      const p = toMIn(e, g.frame);
       // Alt is a free hand: no grid, no lining up with the other corners, no
       // squaring — the same key that frees a structure drag.
       const opts = { snap: !e.altKey, bounds: g.bounds };
@@ -1458,6 +1481,8 @@ export function SitePlanBuilder(
     const show = lotDrag.kind === "corner"
       ? [edges[(lotDrag.i - 1 + edges.length) % edges.length], edges[lotDrag.i]]
       : [edges[lotDrag.i]];
+    const held = lotDrag.kind === "corner"
+      ? lotOutline[lotDrag.i] : edges[lotDrag.i].mid;
     return (
       <g pointerEvents="none">
         {show.map((e) => (
@@ -1467,6 +1492,15 @@ export function SitePlanBuilder(
             {fmtM2(e.length)} m
           </text>
         ))}
+        {/* Said on the drawing rather than in a panel: a refused move must
+            never move the plan under the finger that made it. */}
+        {lotNudge && (
+          <text x={held.x} y={held.y - mm(4)} textAnchor="middle"
+            fontFamily={FONT_LAB} fontWeight={600} fontSize={mm(2.7)}
+            fill={BRASS} style={halo}>
+            {lotNudge}
+          </text>
+        )}
       </g>
     );
   }
@@ -1959,7 +1993,7 @@ export function SitePlanBuilder(
                 )}
               </div>
             )}
-            {lotNudge && (
+            {lotNudge && !lotDrag && (
               <p className="mt-2 text-[12.5px] leading-snug text-brass-deep">{lotNudge}</p>
             )}
 
@@ -2253,14 +2287,17 @@ export function SitePlanBuilder(
               </div>
             </div>
           )}
+          {/* One steady message. Nothing in here may change while a corner is
+              being dragged: this bar sits above the drawing, so a line of
+              text appearing or disappearing would slide the whole plan out
+              from under the finger. What's live goes on the drawing itself. */}
           {editing && (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-brass/50 bg-[#FBF7EE] px-3 py-2">
-              <p className={`min-w-[180px] flex-1 text-[12.5px] leading-snug ${lotNudge ? "text-brass-deep" : "text-ink/70"}`}>
-                {lotNudge || (lotDrag
-                  ? (lotDrag.kind === "corner"
-                    ? "Moving a corner — it lines up with your other corners and squares itself off when it's close."
-                    : "Moving a whole boundary — it stays straight and keeps its bearing.")
-                  : "Drag the square handles to move a corner, or the diamonds to shift a whole boundary. Double-tap or hold a boundary to add a corner. Hold Alt to turn the snapping off. A drag reaches as far as you can see — drag again to keep going.")}
+              <p className="min-w-[180px] flex-1 text-[12.5px] leading-snug text-ink/70">
+                Drag the square handles to move a corner, or the diamonds to
+                shift a whole boundary. Double-tap or hold a boundary to add a
+                corner. Hold Alt to turn the snapping off. A drag reaches as
+                far as you can see — drag again to keep going.
               </p>
               <div className="flex gap-2">
                 <button type="button" className="btn-ghost min-h-[40px] !px-3 !py-1.5"
