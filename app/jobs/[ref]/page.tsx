@@ -4,7 +4,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import {
   isClientVisible, needsClientInfo, clientStatusLabel, jobBucket,
-  businessDaysSince, PAUSED_STATUSES,
+  elapsedBusinessDays, PAUSED_STATUSES,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -37,12 +37,13 @@ export default async function JobDetail({
   const job = repo.toPortalJob(raw);
   if (!isClientVisible(job)) notFound();
 
-  const [unread, hidden, allMsgs, files, allSubs] = await Promise.all([
+  const [unread, hidden, allMsgs, files, allSubs, pauses] = await Promise.all([
     unreadCount(session.companyId),
     disabledPages(),
     repo.listMessagesForCompany(session.companyId),
     repo.jobFiles(ref),
     repo.listSubmissionsForCompany(session.companyId),
+    repo.clientPauses([ref]),
   ]);
   await repo.markThreadRead(session.companyId, ref);
 
@@ -62,10 +63,16 @@ export default async function JobDetail({
   // with the client, paused or cancelled. Just the day count: the published
   // turnaround belongs where it is a statement of service, not hung off one
   // job's status line.
+  //
+  // Days the job spent waiting on the client come back OUT of the count, so a
+  // client who replies after a fortnight doesn't return to a counter that ran
+  // the whole time they had it.
   const paused = PAUSED_STATUSES.has(job.mondayStatus as string) ||
     job.mondayStatus === "Cancelled";
   const elapsed = bucket === "in_progress" && !needsClientInfo(job) && !paused &&
-    job.receivedAt ? businessDaysSince(job.receivedAt as string) : null;
+    job.receivedAt
+    ? elapsedBusinessDays(job.receivedAt as string, pauses[ref])
+    : null;
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>

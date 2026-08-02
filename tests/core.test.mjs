@@ -4,6 +4,7 @@ import {
   aliasKey, matchCompany, parseRef, folderMatchesRef, clientStatusLabel,
   addMonths, retention, jobBucket, groupJobs, isClientVisible,
   stageIndex, stageStates, businessDaysSince,
+  clientPausedDays, nextClientPause, elapsedBusinessDays,
 } from "../lib/core.mjs";
 
 test("aliasKey collapses the messy client variants onto one key", () => {
@@ -166,4 +167,106 @@ test("businessDaysSince: a full week is five", () => {
 
 test("businessDaysSince: rubbish in returns null rather than a wrong number", () => {
   assert.equal(businessDaysSince("not a date"), null);
+});
+
+// --- the with-the-client clock ---------------------------------------------
+//
+// All dates below are 2026 and were picked for their weekdays:
+//   Mon 25 May · Thu 28 May · Mon 1 Jun (WA Day) · Wed 3 Jun · Wed 10 Jun
+//   Mon 6 Jul · Thu 9 Jul · Mon 13 Jul · Mon 20 Jul · Wed 22 Jul
+//   Mon 27 Jul · Tue 28 Jul · Fri 31 Jul
+
+const at = (d) => new Date(`${d}T02:00:00Z`); // ~10am Perth, same UTC date
+const stamp = (d) => `${d}T02:00:00.000Z`;
+
+test("a job with no pause history counts exactly as it always did", () => {
+  const from = "2026-07-13T02:00:00Z";
+  for (const day of ["2026-07-15", "2026-07-22", "2026-07-31"]) {
+    const now = at(day);
+    assert.equal(elapsedBusinessDays(from, null, now), businessDaysSince(from, now));
+    assert.equal(elapsedBusinessDays(from, undefined, now), businessDaysSince(from, now));
+  }
+  assert.equal(clientPausedDays(null), 0);
+  assert.equal(clientPausedDays(undefined), 0);
+});
+
+test("one closed pause comes back out of the count", () => {
+  const from = "2026-07-13T02:00:00Z";
+  const now = at("2026-07-31");
+  const total = businessDaysSince(from, now);
+  assert.equal(total, 14);
+  const pause = { days: 4, since: null };
+  assert.equal(clientPausedDays(pause, now), 4);
+  assert.equal(elapsedBusinessDays(from, pause, now), 10);
+});
+
+test("an open pause holds the counter still while the client has the job", () => {
+  // Received Mon 13 Jul, went out to the client Mon 20 Jul and still there.
+  const from = "2026-07-13T02:00:00Z";
+  const pause = { days: 0, since: stamp("2026-07-20") };
+
+  // Five working days with CFBA: 14, 15, 16 and 17 Jul, then the 20th.
+  assert.equal(elapsedBusinessDays(from, pause, at("2026-07-22")), 5);
+  // Nine days later and the counter has not moved — that is the whole point.
+  assert.equal(elapsedBusinessDays(from, pause, at("2026-07-31")), 5);
+  // Meanwhile the raw elapsed figure has run on, which is what used to show.
+  assert.equal(businessDaysSince(from, at("2026-07-31")), 14);
+});
+
+test("several pauses accumulate across the sync's transitions", () => {
+  // Each step is one sync seeing the card at a new status.
+  let p = null;
+  p = nextClientPause(p, true, at("2026-07-06"));   // out to the client
+  assert.deepEqual(p, { days: 0, since: stamp("2026-07-06") });
+  p = nextClientPause(p, false, at("2026-07-09"));  // back with us: banks 3
+  assert.deepEqual(p, { days: 3, since: null });
+  p = nextClientPause(p, true, at("2026-07-20"));   // out again
+  assert.deepEqual(p, { days: 3, since: stamp("2026-07-20") });
+  p = nextClientPause(p, false, at("2026-07-22"));  // back: banks 2 more
+  assert.deepEqual(p, { days: 5, since: null });
+  p = nextClientPause(p, true, at("2026-07-27"));   // and once more
+  p = nextClientPause(p, false, at("2026-07-28"));  // banks 1
+  assert.deepEqual(p, { days: 6, since: null });
+
+  const from = "2026-07-13T02:00:00Z";
+  const now = at("2026-07-31");
+  assert.equal(businessDaysSince(from, now), 14);
+  assert.equal(elapsedBusinessDays(from, p, now), 8);
+});
+
+test("a pause over a weekend and a WA public holiday banks working days only", () => {
+  // Out Thu 28 May, back Wed 3 Jun. Six calendar days; four weekdays; three
+  // working days, because Mon 1 Jun is WA Day.
+  let p = nextClientPause(null, true, at("2026-05-28"));
+  p = nextClientPause(p, false, at("2026-06-03"));
+  assert.deepEqual(p, { days: 3, since: null });
+
+  // And it lands in the counter: received Mon 25 May, now Wed 10 Jun.
+  const from = "2026-05-25T02:00:00Z";
+  const now = at("2026-06-10");
+  assert.equal(businessDaysSince(from, now), 11); // WA Day already excluded
+  assert.equal(elapsedBusinessDays(from, p, now), 8);
+});
+
+test("nextClientPause writes nothing when the card has not moved", () => {
+  // Still with us, still no record — the sync must not create one.
+  assert.equal(nextClientPause(null, false, at("2026-07-22")), null);
+  assert.equal(nextClientPause({ days: 3, since: null }, false, at("2026-07-22")), null);
+  // Still with the client — the original stamp must survive, or the client
+  // silently loses every day banked so far.
+  const open = { days: 3, since: stamp("2026-07-20") };
+  assert.equal(nextClientPause(open, true, at("2026-07-31")), null);
+  assert.equal(open.since, stamp("2026-07-20"));
+});
+
+test("the counter never goes negative, and a rubbish record is ignored", () => {
+  const from = "2026-07-27T02:00:00Z";
+  const now = at("2026-07-29");
+  assert.equal(businessDaysSince(from, now), 2);
+  assert.equal(elapsedBusinessDays(from, { days: 99, since: null }, now), 0);
+  // A record written by hand, or half-written, must not poison the count.
+  assert.equal(elapsedBusinessDays(from, { days: -5, since: null }, now), 2);
+  assert.equal(elapsedBusinessDays(from, { days: "x", since: null }, now), 2);
+  assert.equal(elapsedBusinessDays(from, { since: null }, now), 2);
+  assert.equal(elapsedBusinessDays("not a date", { days: 2, since: null }, now), null);
 });

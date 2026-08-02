@@ -46,6 +46,25 @@ export const STAGES: { key: string; label: string }[];
 export const PAUSED_STATUSES: Set<string>;
 export function stageIndex(job: PortalJob): number;
 export function stageStates(job: PortalJob): string[];
-export function businessDaysSince(iso: string, now?: Date): number | null;
+export const WA_PUBLIC_HOLIDAYS: Set<string>;
+export function businessDaysSince(iso: string, now?: Date, holidays?: Set<string>): number | null;
+
+/** A job's with-the-client clock, stored in portal_settings as `firdays:<ref>`. */
+export interface ClientPause {
+  /** Business days banked from with-the-client periods that have closed. */
+  days: number;
+  /** When the current open period started; null when not with the client. */
+  since: string | null;
+}
+export function clientPausedDays(
+  pause: ClientPause | null | undefined, now?: Date, holidays?: Set<string>
+): number;
+export function nextClientPause(
+  pause: ClientPause | null | undefined, isWithClient: boolean,
+  now?: Date, holidays?: Set<string>
+): ClientPause | null;
+export function elapsedBusinessDays(
+  receivedAt: string, pause?: ClientPause | null, now?: Date, holidays?: Set<string>
+): number | null;
 
 export function surveyorFor(peopleText: string | null | undefined, status: string | null | undefined): string | null;

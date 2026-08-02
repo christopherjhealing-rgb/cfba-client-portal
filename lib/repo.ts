@@ -3,7 +3,7 @@ import { DEMO_MODE, env } from "./env";
 import { aliasKey, normEmail } from "./core.mjs";
 import { normUsername } from "./auth";
 import * as demo from "./demo";
-import type { PortalJob } from "./core.mjs";
+import type { ClientPause, PortalJob } from "./core.mjs";
 
 export interface Job {
   ref: string;
@@ -616,6 +616,40 @@ export async function setSetting(key: string, value: unknown) {
   ));
 }
 
+// ---------------------------------------------------------------------------
+// The with-the-client clock. One portal_settings row per job — deliberately,
+// so the feature needs no migration and nobody has to paste SQL to get it.
+// The record's shape is documented above clientPausedDays in core.mjs.
+// ---------------------------------------------------------------------------
+export const PAUSE_PREFIX = "firdays:";
+export const pauseKey = (ref: string) => `${PAUSE_PREFIX}${ref}`;
+
+/** Pause records for a set of refs, keyed by ref, in ONE query — a client with
+ *  a hundred running jobs must not cost a hundred round trips. A ref with no
+ *  record is simply absent, which the arithmetic reads as "never paused". */
+export async function clientPauses(refs: string[]): Promise<Record<string, ClientPause>> {
+  const out: Record<string, ClientPause> = {};
+  const wanted = [...new Set(refs.filter(Boolean))];
+  if (wanted.length === 0) return out;
+
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    const settings = db.settings || {};
+    for (const ref of wanted) {
+      const v = settings[pauseKey(ref)];
+      if (v) out[ref] = v as ClientPause;
+    }
+    return out;
+  }
+  const { data } = await sb().from("portal_settings")
+    .select("key,value").in("key", wanted.map(pauseKey));
+  for (const row of data || []) {
+    const ref = String(row.key).slice(PAUSE_PREFIX.length);
+    if (row.value) out[ref] = row.value as ClientPause;
+  }
+  return out;
+}
+
 /** Add a Monday "Client" spelling as an alias of an existing company, so its
  *  cards match on the next sync. Idempotent. */
 export async function addAlias(companyId: string, rawSpelling: string) {
@@ -812,4 +846,26 @@ export async function purgeJobFiles(ref: string, prefix: string): Promise<void> 
   }
   await sb().from("job_files").delete().eq("ref", ref);
   await sb().from("jobs").update({ file_count: 0 }).eq("ref", ref);
+}
+
+/** Names of the blobs actually sitting under a job's storage prefix, with
+ *  their sizes. The job_files rows say what SHOULD be there; this says what
+ *  is. A row whose blob is missing or empty is worse than no row at all —
+ *  the client gets a Download button that yields nothing. */
+export async function listStored(prefix: string): Promise<{ name: string; size: number }[]> {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    return Object.keys(db.files)
+      .filter((k) => k.startsWith(`${prefix}/`))
+      .map((k) => ({
+        name: k.slice(prefix.length + 1),
+        size: Buffer.from(db.files[k] as string, "base64").length,
+      }));
+  }
+  const { data, error } = await sb().storage.from(env.supabaseBucket).list(prefix);
+  if (error) throw new Error(`Storage list failed for ${prefix}: ${error.message}`);
+  return (data || []).map((f) => ({
+    name: f.name,
+    size: Number((f.metadata as { size?: number } | null)?.size ?? 0),
+  }));
 }
