@@ -12,7 +12,7 @@ assessment judges.
 
 ---
 
-## 1. Site plan builder — status: v1 framework shipped
+## 1. Site plan builder — status: v2 shipped 2 Aug 2026
 
 **What.** `/site-plan` — "Site plan tool" in the sidebar. Clients draw a
 dimensioned site plan good enough to lodge with: set out the lot, drop the
@@ -69,7 +69,7 @@ into a lodgement.
 
 ---
 
-## 2. Client document library — status: building
+## 2. Client document library — status: shipped
 
 "My documents" on the My details page: a per-company store for the PDFs
 builders lodge again and again — standard patio engineering, shed
@@ -81,7 +81,7 @@ documents as tick-to-attach, and anything uploaded fresh can be ticked
 no separate admin surface. Same rules as every upload: PDF-only, size caps,
 private storage, streamed through an ownership check.
 
-## 3. Site photos at lodgement — status: building
+## 3. Site photos at lodgement — status: shipped
 
 An optional photos bucket on the lodgement form. Builders have the site on
 their phone camera roll; certifiers want to see it. Phone JPEG/PNG photos are
@@ -158,7 +158,7 @@ Underlay layers remain browser-only and excluded from the printed sheet.
 
 ---
 
-## 7. Automatic lot boundaries from the WA cadastre — status: built, endpoint UNVERIFIED
+## 7. Automatic lot boundaries from the WA cadastre — status: built; endpoint reachable, LICENCE BLOCKED
 
 **What.** On the site plan tool, **Find my lot** geocodes the typed address and
 asks Landgate's cadastre for the parcel that contains it. The real lot outline
@@ -367,3 +367,111 @@ Monday board unreviewed. Optional upfront payment via Stripe for homeowner
 jobs (builders remain invoiced). Decisions for the owner: which job classes to
 accept, pricing display, pay-at-lodgement or invoice. ~2 sessions; +1-2 with
 payment.
+
+---
+
+## 8. The board's "Send?" column — status: shipped 2 Aug 2026
+
+**What.** Monday column `status_16__1` ("Send?") with its date partner
+`date__1` ("Job Sent") is where a job's journey *to the client* is recorded.
+Not the main Status column, which tracks the assessment and carries no Sent
+label — an earlier version of this code wrote there and silently did nothing
+for its whole life.
+
+**The ladder.** `NO` → `YES` → `SENT` → `READY` → `DOWNLOADED`. The office
+sets SENT by hand when it issues a job and puts the files out. The portal
+writes the last two, because they are the only two it can see:
+
+- **READY** — the portal HAS the files *and* the client has been emailed.
+  Written from `lib/sync.ts` on the transition into issued, only once the
+  email actually went. A card marked ready for a client who was never told is
+  the one wrong answer this column can give.
+- **DOWNLOADED** — written from `app/api/jobs/[ref]/download` on first
+  download.
+
+The gap between SENT and READY is the point. It is exactly where job 56733 sat
+for a night in July: the card said issued, the files were in the folder, and
+nothing anywhere said the client still couldn't get them.
+
+**Rules.** Forward only — never rewrites a rung reached, never drags a card
+back, and leaves a label that isn't on the ladder alone (somebody put it there
+on purpose). `create_labels_if_missing` stays off, so a rung the board doesn't
+carry fails loudly in the admin banner and the evening report rather than
+appearing on a 3,700-item board unasked. `NO` and `YES` are retired from the
+board but stay in the ladder deliberately — a card that kept an old value must
+still be able to move forward; see the note in `lib/core.mjs`.
+
+**Where.** `lib/core.mjs` (`sendLadder`, `sendRank`, `sendColumnWrite`),
+`lib/monday.ts` (`markReady`, `markDownloaded`), `lib/env.ts` for the two
+overridable label spellings. `Job Sent` is stamped in Perth time, not UTC, and
+only when empty.
+
+---
+
+## 9. General enquiry channel — status: shipped 2 Aug 2026
+
+**What.** A client with a question that isn't about a job — a quote, a fee,
+"do I even need a CDC for this?" — had nowhere in the portal to put it. It
+came by phone, as an interruption, and left no record.
+
+**How.** Every message hangs off a job reference, so the enquiry thread gets a
+reserved one: `GENERAL` (`lib/core.mjs`). Board references are one optional
+letter and 3–6 digits, so nothing a client owns can collide with it, and no
+schema changed to make room. There is a test that fails if that ref shape ever
+widens far enough to matter.
+
+**Client side.** An Enquiry thread pinned to the bottom of My Messages,
+present whether or not it has anything in it, plus a way in from Help. Asks
+for a one-line subject as well as the message — "something else" arriving with
+no subject is what makes a shared inbox unusable — and takes the same PDF
+attachments as a job reply.
+
+**Office side.** `/admin/enquiries` lists every conversation, unanswered
+first. Replying writes into the client's thread and emails them. Nothing
+touches the board, because there is no card to touch; if an enquiry turns out
+to be real work, the answer is "lodge it".
+
+**Backstops.** An enquiry has no card and no sync, so the notification email
+is the only thing that says one arrived. It is saved and listed regardless of
+whether that email sends, the admin dashboard carries a count of what's
+waiting, and the evening report names it. A staff reply that saves but doesn't
+email says so instead of showing a tick.
+
+---
+
+## 10. The evening report — status: shipped 2 Aug 2026, OFF until switched on
+
+**What.** Everything else in this portal reacts to something happening. This
+is the one thing that looks for something that should have happened and
+didn't — the job that never reaches the client, which is the only failure here
+that costs somebody a week and never announces itself.
+
+**When.** 5pm Perth on weekdays (`0 9 * * 1-5` UTC, in `vercel.json`), to
+`OFFICE_EMAIL`. Off until `DAILY_REPORT_ENABLED=1`.
+
+**What it says**, worst first:
+
+1. The sync itself, if it isn't running — before anything else, because
+   everything below is only as current as the last run.
+2. Lodged, but not on the board — auto-accept couldn't reach Monday, so the
+   job is in the review queue while the client believes it's with us.
+3. Issued on the board, no files in the portal.
+4. In the portal, but the ready email never sent (it doesn't retry).
+5. Ready for a few days and still not opened — how a dead email address shows
+   up.
+6. Board writes Monday wouldn't take.
+7. Enquiries waiting on an answer.
+
+A clean day still sends, two lines: a quiet day has to look quiet rather than
+look like the report stopped working.
+
+**Memory.** A sync result lives for one run and the failure it describes can
+last a week, so the things that should have happened and didn't persist in one
+`portal_settings` row (`watch`), clearing themselves when the client
+downloads. Anything older than three weeks is counted rather than named, and
+the report says how many — a short report must never be a quiet lie.
+
+**Where.** `lib/watchdog.ts` builds it, `lib/mail.ts` renders it,
+`app/api/report/route.ts` sends it. GET previews (`?html=1` renders the actual
+email), POST sends — a staff member refreshing a page must never put email in
+somebody's inbox. `components/DailyReportCard.tsx` puts all of it on `/admin`.

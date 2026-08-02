@@ -154,11 +154,24 @@ git push -u origin main
 | `RETENTION_MONTHS` | `6` |
 | `FROM_EMAIL` | `no-reply@cfba.com.au` |
 | `CRON_SECRET` | run `openssl rand -base64 32` again — different value |
+| `MAIL_FROM` | the real tenant mailbox notifications send as, e.g. `admin@cfba.com.au` |
+| `OFFICE_EMAIL` | the inbox somebody actually watches — client replies, general enquiries and the evening report all land here |
+| `DAILY_REPORT_ENABLED` | `1` to switch the 5pm weekday report on. Leave unset and it builds without sending; you can preview it from `/admin` either way |
+| `SEND_READY_LABEL` | only if the board's **Send?** column spells that rung differently — confirmed `READY` on 2 Aug 2026, so normally leave unset |
+| `SEND_DOWNLOADED_LABEL` | as above — confirmed `DOWNLOADED` |
 
 Plus any Graph mail variables in your v11 `.env.example` that aren't listed here. **Work from the file, not this table.**
 
+⚠️ **`APP_URL` matters more than it looks.** Every link a client is emailed
+hangs off it. It now falls back to the deployment's own address rather than to
+localhost, so a wrong or missing value can no longer send somebody nowhere —
+but set it the moment the domain is live, or clients get `*.vercel.app` links
+in their inbox for as long as it stays unset.
+
 4. **Deploy.** Takes 2–3 minutes.
-5. Once green: **Settings → Cron Jobs** — confirm `/api/sync` is registered at `*/15 * * * *`.
+5. Once green: **Settings → Cron Jobs** — confirm all three are registered:
+   `/api/sync` every 5 minutes, `/api/digest` weekly, and `/api/report` at
+   `0 9 * * 1-5` (that's 5pm Perth — cron runs in UTC).
 6. **Settings → Domains** → add `portal.cfba.com.au`. Vercel gives you a CNAME to add at your DNS host. Add it, then wait — DNS can take anywhere from 5 minutes to a few hours, so **do this early Saturday, not Sunday night**.
 
 **Worked when:** the `.vercel.app` URL loads the login page and does *not* show any demo-mode banner.

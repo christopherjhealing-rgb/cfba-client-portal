@@ -29,6 +29,7 @@ and is laid out as an A4 page; the rendered PDFs live in `pdf/`.
 | 10 | Admin guide (2pp) | Running /admin: clients, logins, toggles, sheets, switches |
 | 11 | Incident card | One page by the desk: symptom → fix, rollback, never-do list |
 | 19 | Go-live audit (2pp) | Tick-box pre-launch checklist — plumbing, then the client journey |
+| 20 | Development report (3pp) | What the portal does now, for a boss or a client who asks — refreshed 2 Aug 2026 |
 
 **Drafts — NOT for release until Chris signs off**
 
