@@ -2048,9 +2048,13 @@ export function SitePlanBuilder(
             {dimTexts()}
           </>
         )}
-        {sel && setbackLines(sel)}
         {design.structures.map((s) =>
           structureNode(s, interactive && !draw && !trace && !editing, hatch, interactive))}
+        {/* Every dimension goes over the structures, which is where a
+            dimension belongs. A setback figure that runs across a hatched
+            building used to end up under the hatching, and a figure nobody
+            can read off the sheet is worse than one that crosses a line. */}
+        {sel && setbackLines(sel)}
         {/* Distances between the structures, over the top of them so the
             figures always read. On screen: the selected structure's nearest
             neighbours plus every pinned one. On the sheet: the pins, plus each
@@ -2801,10 +2805,10 @@ export function SitePlanBuilder(
           style={{ width: `${sheetWmm.toFixed(2)}mm`, height: `${sheetHmm.toFixed(2)}mm`, display: "block", margin: "0 auto" }}>
           {plan(false)}
         </svg>
-        <div style={{ marginTop: "4mm", border: "0.5mm solid #2B3A31", color: INK, fontFamily: FONT_LAB }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4mm", padding: "2.5mm 3.5mm", borderBottom: "0.3mm solid #2B3A31" }}>
+        <div style={{ marginTop: "2mm", border: "0.5mm solid #2B3A31", color: INK, fontFamily: FONT_LAB }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4mm", padding: "1.2mm 3mm", borderBottom: "0.3mm solid #2B3A31" }}>
             <span style={{ fontSize: "2.8mm", fontWeight: 700, letterSpacing: "0.5mm", textTransform: "uppercase", color: SEAL }}>Site plan</span>
-            <strong style={{ fontSize: "4mm", fontWeight: 600 }}>{design.address.trim() || "Site address not entered"}</strong>
+            <strong style={{ fontSize: "3.4mm", fontWeight: 600 }}>{design.address.trim() || "Site address not entered"}</strong>
           </div>
           <div style={{ display: "flex" }}>
             {[
@@ -2815,9 +2819,9 @@ export function SitePlanBuilder(
               ["Scale", fits ? `1:${denom} (A4)` : "Reduced to fit A4 — use the scale bar"],
               ["Date", today],
             ].map(([k, v], i) => (
-              <div key={k} style={{ flex: 1, padding: "2mm 3.5mm", borderLeft: i ? "0.3mm solid #2B3A31" : "none" }}>
+              <div key={k} style={{ flex: 1, padding: "1.1mm 3mm", borderLeft: i ? "0.3mm solid #2B3A31" : "none" }}>
                 <div style={{ fontSize: "2.3mm", textTransform: "uppercase", letterSpacing: "0.4mm", opacity: 0.55 }}>{k}</div>
-                <div style={{ fontSize: "3.2mm", fontFamily: FONT_NUM }}>{v}</div>
+                <div style={{ fontSize: "2.8mm", fontFamily: FONT_NUM }}>{v}</div>
               </div>
             ))}
           </div>
@@ -2831,20 +2835,20 @@ export function SitePlanBuilder(
               since been moved. It is never allowed to read as the State's
               own record. */}
           {boundaryRow(boundary) && (
-            <div style={{ padding: "2mm 3.5mm", borderTop: "0.3mm solid #2B3A31" }}>
-              <div style={{ fontSize: "2.3mm", textTransform: "uppercase", letterSpacing: "0.4mm", opacity: 0.55 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "2.5mm", padding: "1.1mm 3mm", borderTop: "0.3mm solid #2B3A31" }}>
+              <span style={{ flexShrink: 0, fontSize: "2.3mm", textTransform: "uppercase", letterSpacing: "0.4mm", opacity: 0.55 }}>
                 Lot boundary
-              </div>
-              <div style={{ fontSize: "2.9mm", fontFamily: FONT_NUM }}
+              </span>
+              <span style={{ fontSize: "2.7mm", fontFamily: FONT_NUM }}
                 data-lot-origin={origin}
                 data-cadastre-source={origin.startsWith("cadastre") ? "1" : undefined}>
                 {boundaryRow(boundary)}
-              </div>
+              </span>
             </div>
           )}
         </div>
         <p data-lot-footer={origin}
-          style={{ marginTop: "3mm", fontSize: "2.6mm", lineHeight: 1.5, color: INK, opacity: 0.75, fontFamily: FONT_LAB }}>
+          style={{ marginTop: "1.2mm", fontSize: "2.15mm", lineHeight: 1.3, color: INK, opacity: 0.75, fontFamily: FONT_LAB }}>
           {boundaryFooter(boundary)}
         </p>
       </div>

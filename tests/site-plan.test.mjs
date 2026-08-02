@@ -878,6 +878,9 @@ test("the printed footer says exactly where the boundary came from", () => {
   assert.ok(/adjusted by hand by the applicant/.test(adj));
   assert.ok(/no longer that record/.test(adj));
   assert.ok(/applicant's own measurement/.test(adj));
+  assert.ok(/indicative rather than surveyed/.test(adj));
+  // It has to fit the sheet's title block: one paragraph, not an essay.
+  assert.ok(adj.length < 480, `footer is ${adj.length} characters`);
   // And it never uses the untouched wording.
   assert.ok(!/boundary is taken from/.test(adj));
   assert.notEqual(adj, cad);
