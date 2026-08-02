@@ -31,6 +31,7 @@ export function AppShell({
   impersonated,
   unread = 0,
   hidden = [],
+  wide = false,
   children,
 }: {
   company: string;
@@ -38,6 +39,9 @@ export function AppShell({
   unread?: number;
   /** hrefs switched off from /admin — filtered out of the sidebar */
   hidden?: string[];
+  /** Drop the reading-width cap. For pages that are a tool rather than a
+      document — the engineering checkers need every pixel they can get. */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -177,7 +181,7 @@ export function AppShell({
             Staff view — you are seeing this portal exactly as {company} sees it
           </div>
         )}
-        <main className="mx-auto max-w-[1100px] px-5 py-7 lg:px-9 lg:py-9">
+        <main className={`mx-auto px-5 py-7 lg:px-9 lg:py-9 ${wide ? "max-w-none" : "max-w-[1100px]"}`}>
           {children}
         </main>
       </div>

@@ -6,6 +6,7 @@ import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { listEngSets, canAccessSet } from "@/lib/engineering";
+import { CheckerFrame } from "@/components/CheckerFrame";
 
 export const dynamic = "force-dynamic";
 
@@ -31,17 +32,15 @@ export default async function EngineeringSet({
   ]);
 
   return (
-    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
+    <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)} wide>
       <PageHead
         title={set.name}
         sub="A guide, not a certification — CFBA's assessment is what counts."
         action={<Link href="/engineering" className="btn-ghost">← All checkers</Link>}
       />
-      <iframe
+      <CheckerFrame
         src={`/api/engineering/${encodeURIComponent(set.key)}`}
         title={set.name}
-        sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"
-        className="h-[calc(100vh-190px)] min-h-[600px] w-full rounded-xl border border-rule bg-white"
       />
     </AppShell>
   );
