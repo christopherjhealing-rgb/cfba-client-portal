@@ -6,6 +6,7 @@ interface Report {
   date: string; allClear: boolean;
   issuedToday: number; readyToday: number; downloadedToday: number;
   stuck: Line[]; untold: Line[]; unopened: Line[]; boardFails: Line[];
+  queued: Line[];
   stuckOlder: number; unopenedOlder: number;
   enquiriesWaiting: number; syncProblem: string | null;
 }
@@ -101,6 +102,7 @@ export function DailyReportCard({ enabled, to }: { enabled: boolean; to: string 
               Nothing needs you.
             </p>
           )}
+          {group("Lodged, not on the board", report.queued)}
           {group("Issued but not in the portal", report.stuck, report.stuckOlder)}
           {group("Client wasn't told", report.untold)}
           {group("Ready, not opened", report.unopened, report.unopenedOlder)}

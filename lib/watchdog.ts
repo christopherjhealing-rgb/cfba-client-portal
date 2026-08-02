@@ -45,6 +45,10 @@ export interface DailyReport {
   boardFails: ReportLine[];
   /** Enquiries waiting on an answer. */
   enquiriesWaiting: number;
+  /** Lodgements sitting in the review queue. Normally none: a job goes
+   *  straight onto the board. One that couldn't — Monday down at the moment
+   *  they pressed Lodge — lands here, and the client believes it's lodged. */
+  queued: ReportLine[];
   /** Set when the sync itself is the problem — everything above is only as
    *  current as the last run, so a stale sync is said first, not last. */
   syncProblem: string | null;
@@ -79,12 +83,13 @@ function stuckDays(
 
 export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
   const today = perthDate(now);
-  const [jobs, companies, watch, lastSync, enquiries] = await Promise.all([
+  const [jobs, companies, watch, lastSync, enquiries, pending] = await Promise.all([
     repo.listAllJobs().catch(() => []),
     repo.listCompanies().catch(() => []),
     repo.getWatch().catch(() => repo.EMPTY_WATCH),
     repo.getSetting<{ at?: string; ok?: boolean; error?: string }>("last_sync").catch(() => null),
     repo.listMessagesByRef(GENERAL_REF).catch(() => []),
+    repo.listSubmissions("pending").catch(() => []),
   ]);
 
   const nameOf = new Map(companies.map((c) => [c.id, c.name]));
@@ -163,6 +168,19 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
     (j) => j.firstDownloadedAt && perthDate(new Date(j.firstDownloadedAt)) === today
   ).length;
 
+  // --- lodgements that never reached the board -----------------------------
+  // Auto-accept puts a job on Monday the moment it's lodged. When it can't —
+  // Monday down, a token expired — the lodgement drops into the review queue
+  // and nothing else in the system says so, while the client has every reason
+  // to believe the job is with us.
+  const queued: ReportLine[] = pending.map((s) => ({
+    ref: s.clientRef || "—",
+    address: s.address || "",
+    company: nameOf.get(s.companyId) || "",
+    detail: "lodged, waiting to be accepted onto the board",
+    days: daysSince(s.createdAt, now),
+  })).sort((a, b) => b.days - a.days);
+
   // --- enquiries waiting ---------------------------------------------------
   const lastFrom = new Map<string, string>();
   for (const m of enquiries) lastFrom.set(m.companyId, m.from);
@@ -177,10 +195,10 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
   return {
     date: today,
     allClear: !syncProblem && !stuck.length && !untold.length && !unopened.length
-      && !boardFails.length && enquiriesWaiting === 0
+      && !boardFails.length && !queued.length && enquiriesWaiting === 0
       && stuckOlder === 0 && unopenedOlder === 0,
     issuedToday, readyToday, downloadedToday,
     stuck, untold, unopened, boardFails, stuckOlder, unopenedOlder,
-    enquiriesWaiting, syncProblem,
+    queued, enquiriesWaiting, syncProblem,
   };
 }

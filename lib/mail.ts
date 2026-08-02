@@ -185,7 +185,7 @@ export function dailyReportEmail(r: {
   allClear: boolean;
   issuedToday: number; readyToday: number; downloadedToday: number;
   stuck: ReportRow[]; untold: ReportRow[]; unopened: ReportRow[];
-  boardFails: ReportRow[];
+  boardFails: ReportRow[]; queued: ReportRow[];
   stuckOlder: number; unopenedOlder: number;
   enquiriesWaiting: number;
   syncProblem: string | null;
@@ -196,7 +196,7 @@ export function dailyReportEmail(r: {
 
   const needsYou =
     r.stuck.length + r.untold.length + r.unopened.length + r.boardFails.length
-    + r.enquiriesWaiting + r.stuckOlder + r.unopenedOlder;
+    + r.queued.length + r.enquiriesWaiting + r.stuckOlder + r.unopenedOlder;
   const older = (n: number) =>
     n > 0 ? ` Plus ${n} more over three weeks old, not listed here.` : "";
   // A broken sync leads, because everything else in here is only as current as
@@ -243,6 +243,7 @@ export function dailyReportEmail(r: {
                <p style="margin:6px 0 0;font-size:13px;color:#5B6660">${esc(r.syncProblem)}</p>
              </div>`
           : "",
+        section("Lodged, but not on the board", "A job normally reaches Monday the second it's lodged. These didn't, so they're sitting in the review queue at /admin — and the client believes the job is with us. Accept them, or ring the client.", r.queued, "red"),
         section("Issued but not in the portal", "The board says these are issued. The portal has no files, so the client can't download anything. Check the job's Issued folder." + older(r.stuckOlder), r.stuck, "red", r.stuckOlder),
         section("In the portal but the client wasn't told", "The files are there and downloadable. The ready email didn't send, and it won't retry — ring or email them.", r.untold, "red"),
         section("Ready, but nobody's opened it", "Not necessarily wrong. If it keeps appearing, check we have the right email address for them." + older(r.unopenedOlder), r.unopened, "amber", r.unopenedOlder),
