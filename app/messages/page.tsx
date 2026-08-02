@@ -47,6 +47,20 @@ export default async function Messages({
   const jobRefs = open && !isGeneralRef(open) && !refs.includes(open) ? [open, ...refs] : refs;
   const listRefs = [...jobRefs, GENERAL_REF];
 
+  // Checked BEFORE anything is marked read. Opening a thread clears its badge,
+  // and a client who lands here while messaging is switched off sees the
+  // offline card — clearing the badge on a message they were never shown would
+  // lose it for good.
+  const hidden = await disabledPages();
+  if (hidden.has("messages")) {
+    return (
+      <AppShell company={session.companyName} impersonated={session.impersonated}
+        unread={await unreadCount(session.companyId)} hidden={hiddenHrefs(hidden)}>
+        <PageOffline section="Messages" />
+      </AppShell>
+    );
+  }
+
   // Opening a thread marks it read. Thread links set prefetch={false}: Next
   // prefetches links on hover, and a prefetch would run this render and
   // silently clear the badge on a thread the client never opened.
@@ -62,16 +76,6 @@ export default async function Messages({
       .map((m) => m.createdAt).sort().pop();
     return !!latest && (!reads[ref] || reads[ref] < latest);
   };
-
-  const hidden = await disabledPages();
-
-  if (hidden.has("messages")) {
-    return (
-      <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-        <PageOffline section="Messages" />
-      </AppShell>
-    );
-  }
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>

@@ -885,26 +885,57 @@ function rowToMessage(r: Record<string, unknown>): Message {
   };
 }
 
-/** Monday update ids already mirrored into the portal, so a sync never
- *  duplicates a message it has seen before. */
-export async function knownMondayUpdateIds(): Promise<Set<string>> {
+/**
+ * Which of these Monday update ids the portal has already mirrored.
+ *
+ * Asked about a specific handful rather than "give me every id you have".
+ * PostgREST caps a plain select at the project's max-rows (1000 by default),
+ * silently — so the old version would, the day the messages table crossed
+ * that line, start reporting old updates as unseen. The sync would re-import
+ * them and re-email the client every five minutes. Bounded by the number of
+ * updates in this cycle, this can't drift with the size of the table.
+ */
+export async function knownMondayUpdateIds(ids: string[] = []): Promise<Set<string>> {
+  const wanted = ids.filter(Boolean);
   if (DEMO_MODE) {
     const db = await demo.load();
-    return new Set((db.messages || []).map((m) => m.mondayUpdateId).filter(Boolean) as string[]);
+    const all = new Set((db.messages || []).map((m) => m.mondayUpdateId).filter(Boolean) as string[]);
+    return wanted.length ? new Set(wanted.filter((id) => all.has(id))) : all;
   }
-  const { data } = await sb().from("messages").select("monday_update_id")
-    .not("monday_update_id", "is", null);
-  return new Set((data || []).map((r) => String(r.monday_update_id)));
+  if (!wanted.length) return new Set();
+  const out = new Set<string>();
+  // Chunked: a URL with a few thousand ids in it is a request no gateway wants.
+  for (let i = 0; i < wanted.length; i += 200) {
+    const { data } = await sb().from("messages").select("monday_update_id")
+      .in("monday_update_id", wanted.slice(i, i + 200));
+    for (const r of data || []) out.add(String(r.monday_update_id));
+  }
+  return out;
 }
 
-/** Every job, for retention sweeps. */
+/**
+ * Every job, for retention sweeps and the evening report.
+ *
+ * Paged explicitly. A plain select stops at the project's max-rows without
+ * saying so, and the two things that read this — the retention purge and the
+ * report that exists to notice what's gone wrong — would both quietly go
+ * blind past that line, which is the worst possible pair to lose.
+ */
 export async function listAllJobs(): Promise<Job[]> {
   if (DEMO_MODE) {
     const db = await demo.load();
     return Object.values(db.jobs).map(stripFiles);
   }
-  const { data } = await sb().from("jobs").select("*");
-  return (data || []).map(rowToJob);
+  const PAGE = 1000;
+  const rows: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data } = await sb().from("jobs").select("*")
+      .order("ref").range(from, from + PAGE - 1);
+    const batch = data || [];
+    rows.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return rows.map(rowToJob);
 }
 
 /** Remove a job's stored files once its retention window has passed. The job

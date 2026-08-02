@@ -41,6 +41,9 @@ export interface SyncResult {
   /** Jobs the client was told about but whose "Send?" column we couldn't
       stamp SENT. The client has the package; the board doesn't say so. */
   boardWriteFails: string[];
+  /** Cards this run couldn't finish at all — the rest of the run carried on
+      without them. Anything here is a job the portal hasn't got. */
+  cardFails: string[];
   /** Jobs whose with-the-client clock started or stopped this cycle. */
   pausesUpdated: number;
   note?: string;
@@ -62,7 +65,7 @@ export async function runSync(): Promise<SyncResult> {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
     issuedNoFiles: [], stillSyncing: [], holding: [], emailsSent: 0, emailFails: [],
-    boardWriteFails: [], pausesUpdated: 0,
+    boardWriteFails: [], cardFails: [], pausesUpdated: 0,
   };
 
   if (!MONDAY_READY) {
@@ -89,6 +92,97 @@ export async function runSync(): Promise<SyncResult> {
     if (!companyId) { res.unmatched.push({ ref: card.ref, client: card.clientName }); continue; }
     seen.push({ ref: card.ref, status: card.status });
 
+    // One card's bad day must not become everybody's. SharePoint refusing a
+    // single file used to throw straight out of this loop and take the whole
+    // run with it: every issued card after this one skipped, no status
+    // refresh, no messages delivered to anyone, no retention sweep. A file
+    // that fails the same way every cycle would have left the portal frozen
+    // for the whole firm until somebody found it.
+    try {
+      await syncIssuedCard(card, companyId, now, res, watch);
+    } catch (e) {
+      const why = (e as Error).message;
+      console.error(`sync ${card.ref}: skipped —`, why);
+      res.cardFails.push(`${card.ref} — ${why}`);
+      // Issued on the board and the portal hasn't got it: exactly what the
+      // evening report calls stuck, so start its clock here too.
+      watch.stuckSince[card.ref] ||= now;
+    }
+  }
+
+  // 2. Active cards -> refresh status (cheap; keeps the in-progress view live)
+  const active = await monday.listActive();
+  for (const card of active) {
+    try {
+      await refreshActiveCard(card, companies, now, seen, res);
+    } catch (e) {
+      console.warn(`sync ${card.ref}: status refresh failed —`, (e as Error).message);
+      res.cardFails.push(`${card.ref} — ${(e as Error).message}`);
+    }
+  }
+
+  // 3. The with-the-client clock. A job's "Day N" must not run while we are
+  //    waiting on the client, so every card's current status is folded into
+  //    its pause record here.
+  res.pausesUpdated = await trackClientPauses(seen, nowDate);
+
+  // 4. Client-visible updates -> messages
+  res.messagesPulled = await pullMessages(active, companies);
+
+  // 5. Retention. We tell clients the download stays available for a set
+  //    window; that has to be true, not just hidden from the UI.
+  res.filesPurged = await purgeExpired();
+
+  // 6. Close out the watch list. A job the client has downloaded is a job
+  //    nothing was wrong with, whatever we were worried about along the way —
+  //    and a worry with no job behind it any more is noise.
+  try {
+    const refs = new Set([
+      ...Object.keys(watch.stuckSince),
+      ...Object.keys(watch.emailFailed),
+      ...Object.keys(watch.boardFailed),
+    ]);
+    for (const ref of refs) {
+      const j = await repo.getJob(ref);
+      if (!j || j.firstDownloadedAt) repo.clearWatch(watch, ref);
+    }
+    await repo.setWatch(watch);
+  } catch (e) {
+    console.warn("sync: could not update the watch list:", (e as Error).message);
+  }
+
+  // Persist a health record so /admin can show sync freshness and the list of
+  // Monday cards that matched no client (otherwise invisible: their jobs never
+  // appear and their messages never deliver).
+  try {
+    await repo.setSetting("last_sync", {
+      at: now, ok: true,
+      issuedSeen: res.issuedSeen, filesCopied: res.filesCopied,
+      jobsUpserted: res.jobsUpserted, messagesPulled: res.messagesPulled,
+      filesPurged: res.filesPurged, unmatched: res.unmatched,
+      issuedNoFiles: res.issuedNoFiles, stillSyncing: res.stillSyncing,
+      holding: res.holding,
+      emailsSent: res.emailsSent, emailFails: res.emailFails,
+      boardWriteFails: res.boardWriteFails, cardFails: res.cardFails,
+      pausesUpdated: res.pausesUpdated,
+    });
+  } catch (e) {
+    console.warn("sync: could not persist health record:", (e as Error).message);
+  }
+
+  return res;
+}
+
+/** One issued card: pull its files, record them, tell the client. Throws on
+ *  anything it can't do; the caller isolates that to this card. */
+async function syncIssuedCard(
+  card: monday.MondayCard,
+  companyId: string,
+  now: string,
+  res: SyncResult,
+  watch: repo.WatchState,
+) {
+  {
     const existing = await repo.getJob(card.ref);
     // The client's own reference arrives via the lodgement (stashed against
     // the card id at accept time); after the first sync it lives on the job.
@@ -260,82 +354,36 @@ export async function runSync(): Promise<SyncResult> {
       }
     }
   }
+}
 
-  // 2. Active cards -> refresh status (cheap; keeps the in-progress view live)
-  const active = await monday.listActive();
-  for (const card of active) {
-    const companyId = matchCompany({ clientName: card.clientName, email: card.email }, companies);
-    if (!companyId) continue;
-    const existing = await repo.getJob(card.ref);
-    if (card.status === READY_STATUS) continue; // handled above
-    seen.push({ ref: card.ref, status: card.status });
-    const clientRef = existing
-      ? existing.clientRef ?? null
-      : (await repo.getSetting<{ ref?: string }>(`clientref:${card.itemId}`))?.ref || null;
-    await repo.upsertJob({
-      ref: card.ref, companyId, mondayItemId: card.itemId,
-      address: card.address, description: card.description, mondayStatus: card.status,
-      surveyor: surveyorFor(card.peopleText, card.status) || existing?.surveyor || null,
-      clientRef,
-      fileCount: existing?.fileCount || 0, issuedAt: existing?.issuedAt || null,
-      receivedAt: existing?.receivedAt || card.createdAt || null,
-      firstDownloadedAt: existing?.firstDownloadedAt || null,
-      lastSyncedAt: now, storagePrefix: existing?.storagePrefix || `issued/${card.ref}`,
-      sourceFolder: existing?.sourceFolder || null,
-    }, await repo.jobFiles(card.ref));
-    res.jobsUpserted++;
-  }
-
-  // 3. The with-the-client clock. A job's "Day N" must not run while we are
-  //    waiting on the client, so every card's current status is folded into
-  //    its pause record here.
-  res.pausesUpdated = await trackClientPauses(seen, nowDate);
-
-  // 4. Client-visible updates -> messages
-  res.messagesPulled = await pullMessages(active, companies);
-
-  // 5. Retention. We tell clients the download stays available for a set
-  //    window; that has to be true, not just hidden from the UI.
-  res.filesPurged = await purgeExpired();
-
-  // 6. Close out the watch list. A job the client has downloaded is a job
-  //    nothing was wrong with, whatever we were worried about along the way —
-  //    and a worry with no job behind it any more is noise.
-  try {
-    const refs = new Set([
-      ...Object.keys(watch.stuckSince),
-      ...Object.keys(watch.emailFailed),
-      ...Object.keys(watch.boardFailed),
-    ]);
-    for (const ref of refs) {
-      const j = await repo.getJob(ref);
-      if (!j || j.firstDownloadedAt) repo.clearWatch(watch, ref);
-    }
-    await repo.setWatch(watch);
-  } catch (e) {
-    console.warn("sync: could not update the watch list:", (e as Error).message);
-  }
-
-  // Persist a health record so /admin can show sync freshness and the list of
-  // Monday cards that matched no client (otherwise invisible: their jobs never
-  // appear and their messages never deliver).
-  try {
-    await repo.setSetting("last_sync", {
-      at: now, ok: true,
-      issuedSeen: res.issuedSeen, filesCopied: res.filesCopied,
-      jobsUpserted: res.jobsUpserted, messagesPulled: res.messagesPulled,
-      filesPurged: res.filesPurged, unmatched: res.unmatched,
-      issuedNoFiles: res.issuedNoFiles, stillSyncing: res.stillSyncing,
-      holding: res.holding,
-      emailsSent: res.emailsSent, emailFails: res.emailFails,
-      boardWriteFails: res.boardWriteFails,
-      pausesUpdated: res.pausesUpdated,
-    });
-  } catch (e) {
-    console.warn("sync: could not persist health record:", (e as Error).message);
-  }
-
-  return res;
+/** One active (not-yet-issued) card: keep its status and details current. */
+async function refreshActiveCard(
+  card: monday.MondayCard,
+  companies: Awaited<ReturnType<typeof repo.companiesForMatch>>,
+  now: string,
+  seen: { ref: string; status: string }[],
+  res: SyncResult,
+) {
+  const companyId = matchCompany({ clientName: card.clientName, email: card.email }, companies);
+  if (!companyId) return;
+  if (card.status === READY_STATUS) return; // handled in step 1
+  const existing = await repo.getJob(card.ref);
+  seen.push({ ref: card.ref, status: card.status });
+  const clientRef = existing
+    ? existing.clientRef ?? null
+    : (await repo.getSetting<{ ref?: string }>(`clientref:${card.itemId}`))?.ref || null;
+  await repo.upsertJob({
+    ref: card.ref, companyId, mondayItemId: card.itemId,
+    address: card.address, description: card.description, mondayStatus: card.status,
+    surveyor: surveyorFor(card.peopleText, card.status) || existing?.surveyor || null,
+    clientRef,
+    fileCount: existing?.fileCount || 0, issuedAt: existing?.issuedAt || null,
+    receivedAt: existing?.receivedAt || card.createdAt || null,
+    firstDownloadedAt: existing?.firstDownloadedAt || null,
+    lastSyncedAt: now, storagePrefix: existing?.storagePrefix || `issued/${card.ref}`,
+    sourceFolder: existing?.sourceFolder || null,
+  }, await repo.jobFiles(card.ref));
+  res.jobsUpserted++;
 }
 
 /**
@@ -408,8 +456,10 @@ async function pullMessages(
   }
   if (byItem.size === 0) return 0;
 
-  const seen = await repo.knownMondayUpdateIds();
   const updates = await monday.listUpdates([...byItem.keys()]);
+  // Asked about exactly these updates, not "everything we've ever mirrored" —
+  // see repo.knownMondayUpdateIds for why that distinction matters.
+  const seen = await repo.knownMondayUpdateIds(updates.map((u) => u.id));
   let n = 0;
   for (const u of updates) {
     if (seen.has(u.id)) continue;
@@ -419,10 +469,18 @@ async function pullMessages(
     const target = byItem.get(u.itemId);
     if (!target) continue;
     const body = text.slice(prefix.length).trim();
-    await repo.addMessage({
-      ref: target.ref, companyId: target.companyId, from: "cfba",
-      body, createdAt: u.createdAt, mondayUpdateId: u.id, files: [],
-    });
+    try {
+      await repo.addMessage({
+        ref: target.ref, companyId: target.companyId, from: "cfba",
+        body, createdAt: u.createdAt, mondayUpdateId: u.id, files: [],
+      });
+    } catch (e) {
+      // One message the store wouldn't take must not cost every client behind
+      // it in this list their messages, nor the retention sweep that follows.
+      console.warn(`sync: could not save update ${u.id} for ${target.ref}:`, (e as Error).message);
+      continue;
+    }
+    seen.add(u.id);
     n++;
 
     // Tell the client. A portal nobody is told about is a portal nobody reads,

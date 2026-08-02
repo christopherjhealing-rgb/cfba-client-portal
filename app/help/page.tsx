@@ -91,7 +91,13 @@ export default async function Help() {
           <p className="mt-3 text-[13px] leading-relaxed text-ink/55">
             Got a question that isn&apos;t about a job you&apos;ve lodged — a quote,
             a fee, or whether you need a CDC at all?{" "}
-            <Link href="/messages?ref=GENERAL"
+            {/* prefetch={false} for the same reason the thread links on
+                /messages carry it: rendering that page marks the thread read,
+                and a prefetch would clear the unread badge on a reply nobody
+                opened. Today's Next only prefetches the static shell of a
+                force-dynamic route, so this isn't currently live — it's one
+                version bump away from being. */}
+            <Link href="/messages?ref=GENERAL" prefetch={false}
               className="font-medium text-seal underline underline-offset-2">
               Message us about something else</Link>{" "}
             and we&apos;ll answer in the portal and by email.

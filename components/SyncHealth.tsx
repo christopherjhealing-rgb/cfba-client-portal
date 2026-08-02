@@ -8,6 +8,7 @@ interface LastSync {
   unmatched?: { ref: string; client: string }[];
   issuedNoFiles?: string[]; stillSyncing?: string[]; holding?: string[];
   emailsSent?: number; emailFails?: string[]; boardWriteFails?: string[];
+  cardFails?: string[];
 }
 
 function ago(iso?: string): string {
@@ -102,6 +103,15 @@ export function SyncHealth({
           <span className="font-mono">{last?.issuedNoFiles?.join(", ")}</span>.
           Put the package in the job&apos;s SharePoint folder; the next sync picks
           it up and sends the email.
+        </div>
+      )}
+
+      {(last?.cardFails?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-flag/40 bg-[#FBECEC] px-4 py-3 text-[13px] text-flag">
+          <strong>Jobs This Sync Couldn&apos;t Finish</strong> — the rest of the run
+          carried on without them, so nothing else is held up, but the portal
+          hasn&apos;t got these: {last?.cardFails?.join("; ")}. Check the job&apos;s
+          Issued folder — a locked, empty or unreadable file is the usual cause.
         </div>
       )}
 
