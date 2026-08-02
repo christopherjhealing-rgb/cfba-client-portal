@@ -18,15 +18,36 @@
 }
 
 /* ---------- footer breathing room ----------
-   The footer was sitting hard against the last line of content on a full
-   page. .content is the flex child that grows, so its bottom padding is the
-   gap above the footer band: give it room, and give the band itself a little
-   more height so the rule reads as a margin rather than a lid. */
+   On a full page the last line of content was landing about 9mm above the
+   footer band, which reads as crowding. .content is the flex child that
+   grows, so its bottom padding IS the gap above the band: 9mm -> 15mm.
+   The band's own height is deliberately left alone — a taller band would
+   spend the same vertical budget without opening up the gap, and on the
+   notes that already fill the page there is none to spare. */
 .content { padding-bottom: 15mm; }
-.foot { padding: 6.5mm 14mm; }
 
 /* A trailing callout or list still keeps its own space above the footer. */
 .content > *:last-child { margin-bottom: 0; }
+
+/* The 6mm the footer gap costs has to come from somewhere, or the fullest
+   notes grow a second page carrying three lines. It comes off the cover band
+   and the section rhythm — the two least information-dense parts of the
+   sheet — rather than out of the body leading, and it comes off all 14
+   equally so the notes stay identical to each other. */
+.band.photo { padding-bottom: 7mm; }
+.sec { margin-top: 6mm; }
+
+/* ---------- cover titles ----------
+   The mark sits absolutely positioned in the top right of the band, over the
+   h1's line box — so a title long enough to reach it runs underneath it.
+   Reserve its column and the title can never collide.
+
+   Within that width every title sits on ONE line: a second line costs ~10mm
+   of band, which the fuller notes cannot afford. Where 26pt doesn't fit,
+   step down. Two steps cover all 14 — set the class, re-render, check. */
+.band h1 { padding-right: 26mm; }
+.band h1.fit  { font-size: 24pt; }   /* notes 05, 06 */
+.band h1.long { font-size: 20pt; }   /* notes 02, 14 — the longest titles */
 
 /* ---------- running head for continuation pages ----------
    Same band, same position, same identity as the cover — just the height of a
@@ -50,6 +71,11 @@
 /* ---------- ✗ lists ("common reasons we come back") ---------- */
 .check.cross li::before { content: "✗"; color: var(--cross); font-weight: 700; }
 
+/* A short list set across two columns, so a run of one-line items doesn't
+   eat a third of the page. Items never split across the column break. */
+.check.two { column-count: 2; column-gap: 9mm; }
+.check.two li { break-inside: avoid; }
+
 /* ---------- □ lists (lodging checklist) ----------
    Drawn rather than typed, so the box never depends on a font having ☐. */
 .check.box li { padding-left: 6.5mm; }
@@ -63,7 +89,7 @@
    how notes 01, 04 and 05 have always presented them. */
 .figure {
   background: var(--wash); border: .35mm solid var(--rule);
-  border-radius: 2.5mm; padding: 5mm 5mm 4mm; margin-top: 1mm;
+  border-radius: 2.5mm; padding: 4mm 4mm 3.5mm; margin-top: 1mm;
 }
 .figure img { display: block; width: 100%; height: auto; }
 .figure .key { margin-top: 4mm; padding-top: 3.5mm; border-top: .3mm solid var(--rule); }
@@ -78,6 +104,12 @@
   font-size: 7pt; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
+
+/* ---------- numbered steps (note 06) ----------
+   The brand sheet's step rhythm is set for a full A4 of steps; on a note the
+   steps share the page with the lists above them, so they sit a little
+   closer together. */
+.steps li { padding: 2.6mm 0; }
 
 /* ---------- sub-heading inside a column (note 07's grouped checklists) ---------- */
 .subhead {
