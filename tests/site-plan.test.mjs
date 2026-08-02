@@ -10,6 +10,11 @@ import {
   rectLotPts, RECT_FRONTAGE, lotPts, lotFrontage, lotEdges, edgeLabels,
   polygonCentroid, closestOnSegment, pointToSegment, minDistPolyToSegment,
   polygonContains, polygonInside, lotSetbacks, sanitiseLot,
+  lotOrigin, nextLotOrigin, boundaryRow, boundaryFooter, lotOriginNote, fmtDate,
+  LOT_ALIGN_M, LOT_SQUARE_TOL_DEG, reanchorLot, isRectLot, cornerAlign,
+  squareCorner, moveLotCorner, moveLotEdge, addLotCorner, removeLotCorner,
+  frontageFacingStreet, lotRingFromPts, holdUnderlayAnchor, applyLotEdit,
+  pushHistory,
   MERCATOR_M_PER_PX_Z0, UNDERLAY_DEFAULT_OPACITY, UNDERLAY_MAX_ZOOM,
   metresPerPixel, zoomForMetresPerPixel, underlayZoom, underlayScale,
   rotationCoverScale, underlayMapSize, groundToPlanVector, planToGroundVector,
@@ -408,6 +413,7 @@ test("sanitiseLot: a design saved before the cadastre existed loads as a rectang
   const blank = {
     kind: "rect", pts: [], ring: [], frontage: 0, north: 0, anchor: null,
     lat: null, lng: null, source: "", fetched: "", lotId: "", address: "",
+    origin: "typed",
   };
   assert.deepEqual(sanitiseLot(undefined), blank);
   assert.deepEqual(sanitiseLot(null), blank);
@@ -701,4 +707,453 @@ test("sanitiseUnderlay keeps a real alignment and defaults to locked", () => {
   assert.equal(sanitiseUnderlay({ lat: 99, lng: 115.86 }).lat, null);
   assert.equal(sanitiseUnderlay({ lat: PERTH_LAT, lng: 900 }).lng, null);
   assert.equal(sanitiseUnderlay({ lat: PERTH_LAT, lng: 115.86, zoom: 99 }).zoom, UNDERLAY_MAX_ZOOM);
+});
+
+// ---------------------------------------------------------------------------
+// Provenance. The part that isn't negotiable: a boundary somebody drew by
+// hand must never read as if it came from the State's records.
+// ---------------------------------------------------------------------------
+
+const CAD = {
+  kind: "poly", pts: rectLotPts(19, 40), ring: [], frontage: 2, north: 0,
+  anchor: null, lat: null, lng: null,
+  source: "Landgate cadastre (SLIP)", fetched: "2026-08-02",
+  lotId: "Lot 214 on Plan 78123", address: "", origin: "cadastre",
+};
+
+test("fmtDate reads a stored ISO date the way a builder would, in UTC", () => {
+  assert.equal(fmtDate("2026-08-02"), "2 August 2026");
+  assert.equal(fmtDate("2026-12-25T03:00:00Z"), "25 December 2026");
+  // Unparseable comes back as it went in, never as "Invalid Date".
+  assert.equal(fmtDate("sometime"), "sometime");
+  assert.equal(fmtDate(""), "");
+  assert.equal(fmtDate(undefined), "");
+});
+
+test("lotOrigin reads old designs honestly: no origin field is not a claim", () => {
+  // Every design saved before provenance existed.
+  assert.equal(lotOrigin(undefined), "typed");
+  assert.equal(lotOrigin(sanitiseLot(undefined)), "typed");
+  assert.equal(lotOrigin({ kind: "rect" }), "typed");
+  // A polygon that names a source could only have come from the cadastre.
+  assert.equal(lotOrigin({ kind: "poly", source: "Landgate cadastre (SLIP)" }), "cadastre");
+  // A polygon with no source was drawn by hand.
+  assert.equal(lotOrigin({ kind: "poly", source: "" }), "traced");
+  // A recorded origin is kept; nonsense and "typed" on a polygon are not.
+  assert.equal(lotOrigin({ kind: "poly", origin: "cadastre-adjusted", source: "x" }), "cadastre-adjusted");
+  assert.equal(lotOrigin({ kind: "poly", origin: "surveyed", source: "" }), "traced");
+  assert.equal(lotOrigin({ kind: "poly", origin: "typed", source: "" }), "traced");
+});
+
+test("a hand on the boundary changes what it is, and never back again", () => {
+  assert.equal(nextLotOrigin("typed"), "traced");
+  assert.equal(nextLotOrigin("traced"), "traced");
+  assert.equal(nextLotOrigin("cadastre"), "cadastre-adjusted");
+  assert.equal(nextLotOrigin("cadastre-adjusted"), "cadastre-adjusted");
+});
+
+test("the printed footer says exactly where the boundary came from", () => {
+  const typed = boundaryFooter(sanitiseLot(undefined));
+  const traced = boundaryFooter({ ...CAD, source: "", fetched: "", lotId: "", origin: "traced" });
+  const cad = boundaryFooter(CAD);
+  const adj = boundaryFooter({ ...CAD, origin: "cadastre-adjusted" });
+
+  // Typed is word for word what the sheet said before the cadastre existed.
+  assert.equal(typed,
+    "Prepared by the applicant using the CFBA plan tool — boundaries and " +
+    "dimensions as entered by the applicant. Not a certified document and not " +
+    "a survey.");
+  // Cadastre is word for word what it said after.
+  assert.equal(cad,
+    "Prepared by the applicant using the CFBA plan tool. The lot boundary is " +
+    "taken from Landgate cadastre (SLIP) on 2 August 2026: cadastral " +
+    "boundaries are indicative and can sit a metre or more from the surveyed " +
+    "pegs. Structures, dimensions and the nominated frontage are as entered " +
+    "by the applicant. Not a certified document and not a survey.");
+
+  // Neither hand-made boundary may name a source or a retrieval date.
+  for (const s of [typed, traced]) {
+    assert.ok(!/Landgate/.test(s), "a hand boundary never names the cadastre");
+    assert.ok(!/cadastr/i.test(s), "nor the word");
+    assert.ok(/not a survey\.$/.test(s));
+  }
+  assert.ok(/drawn by hand by the applicant/.test(traced));
+  assert.ok(/not taken from a survey or from any land record/.test(traced));
+
+  // The adjusted one names the source AND says plainly it has been moved.
+  assert.ok(/Landgate cadastre \(SLIP\)/.test(adj));
+  assert.ok(/on 2 August 2026/.test(adj));
+  assert.ok(/adjusted by hand by the applicant/.test(adj));
+  assert.ok(/no longer that record/.test(adj));
+  assert.ok(/applicant's own measurement/.test(adj));
+  // And it never uses the untouched wording.
+  assert.ok(!/boundary is taken from/.test(adj));
+  assert.notEqual(adj, cad);
+});
+
+test("the printed Lot boundary row matches the footer's story", () => {
+  assert.equal(boundaryRow(sanitiseLot(undefined)), "");
+  assert.equal(boundaryRow({ ...CAD, source: "", fetched: "", lotId: "", origin: "traced" }),
+    "Drawn by hand by the applicant — not a surveyed boundary");
+  assert.equal(boundaryRow(CAD),
+    "Lot 214 on Plan 78123 — Landgate cadastre (SLIP), retrieved 2 August 2026");
+  assert.equal(boundaryRow({ ...CAD, origin: "cadastre-adjusted" }),
+    "Lot 214 on Plan 78123 — Landgate cadastre (SLIP), retrieved 2 August 2026; " +
+    "adjusted by hand by the applicant");
+  // A fetched lot the service didn't name still says what it is.
+  assert.equal(boundaryRow({ ...CAD, source: "", lotId: "" }),
+    "the State's cadastre, retrieved 2 August 2026");
+});
+
+test("the on-screen note tells the same four stories", () => {
+  assert.match(lotOriginNote(sanitiseLot(undefined)), /typed rectangle/i);
+  assert.match(lotOriginNote({ ...CAD, source: "", origin: "traced" }), /your own measurement/i);
+  assert.match(lotOriginNote(CAD), /Landgate cadastre \(SLIP\), fetched 2 August 2026/);
+  assert.match(lotOriginNote({ ...CAD, origin: "cadastre-adjusted" }),
+    /isn't what the State holds any more/);
+});
+
+// ---------------------------------------------------------------------------
+// Editing the boundary by hand.
+// ---------------------------------------------------------------------------
+
+const RECT = rectLotPts(19, 40);
+
+test("reanchorLot puts an edited outline back on the origin and reports the shift", () => {
+  const grown = [{ x: -2, y: -1.5 }, { x: 19, y: 0 }, { x: 19, y: 40 }, { x: 0, y: 40 }];
+  const re = reanchorLot(grown);
+  assert.deepEqual(re.pts[0], { x: 0, y: 0 });
+  assert.equal(re.dx, 2);
+  assert.equal(re.dy, 1.5);
+  assert.equal(re.w, 21);
+  assert.equal(re.d, 41.5);
+  // Every corner moved by the same shift — the outline itself is unchanged.
+  grown.forEach((p, i) => {
+    close(re.pts[i].x, p.x + re.dx, 1e-9);
+    close(re.pts[i].y, p.y + re.dy, 1e-9);
+  });
+});
+
+test("isRectLot knows the typed rectangle from everything else", () => {
+  assert.ok(isRectLot(RECT));
+  assert.ok(isRectLot(rectLotPts(1.5, 2)));
+  // A corner moved: not the rectangle the width and depth fields describe.
+  assert.ok(!isRectLot([{ x: 0, y: 0 }, { x: 19, y: 0.4 }, { x: 19, y: 40 }, { x: 0, y: 40 }]));
+  // Right shape, wrong winding — the tool's rectangle starts at the top-left.
+  assert.ok(!isRectLot([{ x: 0, y: 40 }, { x: 0, y: 0 }, { x: 19, y: 0 }, { x: 19, y: 40 }]));
+  assert.ok(!isRectLot([{ x: 0, y: 0 }, { x: 19, y: 0 }, { x: 19, y: 40 }]));
+  assert.ok(!isRectLot(RECT.map((p) => ({ x: p.x + 3, y: p.y }))));   // off the origin
+});
+
+test("a dragged corner snaps to 0.1 m and pulls level with the other corners", () => {
+  // Drag the top-right corner of a 19 x 40 rectangle a long way in, to a
+  // point no other corner is anywhere near.
+  const far = moveLotCorner(RECT, 1, 14.437, 6.22);
+  assert.equal(far.pts[1].x, 14.4);       // snapped to the tenth
+  assert.equal(far.pts[1].y, 6.2);
+  assert.equal(far.guides.length, 0);
+  // The other three corners never move.
+  for (const i of [0, 2, 3]) assert.deepEqual(far.pts[i], RECT[i]);
+
+  // Now a small, sloppy drag: within 0.3 m of the corner below it in x and
+  // the corner beside it in y, so it pulls level with both and reports a
+  // dashed guide for each.
+  const near = moveLotCorner(RECT, 1, 18.82, 0.17);
+  assert.deepEqual(near.pts[1], { x: 19, y: 0 });
+  assert.equal(near.guides.length, 2);
+  assert.deepEqual(near.guides.find((g) => g.axis === "x"),
+    { axis: "x", at: 19, from: 0, to: 40 });
+  assert.deepEqual(near.guides.find((g) => g.axis === "y"),
+    { axis: "y", at: 0, from: 0, to: 19 });
+  // Which is exactly the rectangle back — an accidental nudge heals itself.
+  assert.ok(isRectLot(near.pts));
+});
+
+test("Alt turns every bit of the snapping off", () => {
+  const free = moveLotCorner(RECT, 1, 18.817, 0.174, { snap: false });
+  assert.deepEqual(free.pts[1], { x: 18.817, y: 0.174 });
+  assert.equal(free.guides.length, 0);
+  assert.equal(free.squared, false);
+});
+
+test("right-angle assist squares a corner that landed nearly square", () => {
+  // A four-sided lot with the top-left corner pulled well off, so no other
+  // corner is within alignment range: the only aid in play is squaring.
+  const lot = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 30 }, { x: 0, y: 30 }];
+  // Aim corner 1 at a point where the angle 0–1–2 is about 91°: near enough
+  // to square that a builder meant it to be square.
+  const off = { x: 20.3, y: 0.6 };
+  const res = moveLotCorner(lot, 1, off.x, off.y, { threshold: 0 });
+  assert.ok(res.squared, "a near-square corner gets squared");
+  const p = res.pts[1];
+  const u = { x: lot[0].x - p.x, y: lot[0].y - p.y };
+  const v = { x: lot[2].x - p.x, y: lot[2].y - p.y };
+  const deg = (Math.acos((u.x * v.x + u.y * v.y) /
+    (Math.hypot(u.x, u.y) * Math.hypot(v.x, v.y))) * 180) / Math.PI;
+  // Square to a tenth of a millimetre, which is where the corner is stored.
+  close(deg, 90, 0.01);
+  // A corner nowhere near square is left exactly where the finger put it.
+  const skew = moveLotCorner(lot, 1, 12, 9, { threshold: 0 });
+  assert.equal(skew.squared, false);
+  assert.deepEqual(skew.pts[1], { x: 12, y: 9 });
+});
+
+test("squareCorner only fires inside its tolerance", () => {
+  const lot = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 30 }, { x: 0, y: 30 }];
+  assert.equal(squareCorner(lot, 1, { x: 20, y: 0 }, LOT_SQUARE_TOL_DEG) !== null, true);
+  assert.equal(squareCorner(lot, 1, { x: 10, y: 10 }, LOT_SQUARE_TOL_DEG), null);
+  // Already exactly square: the push onto the circle is a no-op.
+  const p = squareCorner(lot, 1, { x: 20, y: 0 }, LOT_SQUARE_TOL_DEG);
+  close(p.x, 20, 1e-9);
+  close(p.y, 0, 1e-9);
+});
+
+test("a dragged edge moves whole and stays straight", () => {
+  // The right-hand boundary of the rectangle, dragged out to 21.4 m.
+  const res = moveLotEdge(RECT, 1, 21.37, 12);
+  assert.deepEqual(res.pts, [
+    { x: 0, y: 0 }, { x: 21.4, y: 0 }, { x: 21.4, y: 40 }, { x: 0, y: 40 },
+  ]);
+  assert.ok(isRectLot(res.pts), "a rectangle dragged by an edge is still a rectangle");
+  // Dragging along the edge rather than across it does nothing: an edge
+  // travels on its own normal, so it can never turn.
+  const along = moveLotEdge(RECT, 1, 19, 3);
+  assert.deepEqual(along.pts, RECT);
+
+  // A slanted boundary keeps its bearing exactly.
+  const skew = [{ x: 0, y: 0 }, { x: 20, y: 4 }, { x: 20, y: 34 }, { x: 0, y: 30 }];
+  const moved = moveLotEdge(skew, 0, 6, -2);
+  const bearing = (a, b) => Math.atan2(b.y - a.y, b.x - a.x);
+  close(bearing(moved.pts[0], moved.pts[1]), bearing(skew[0], skew[1]), 1e-9);
+  // Both ends travelled by the same vector.
+  close(moved.pts[0].x - skew[0].x, moved.pts[1].x - skew[1].x, 1e-6);
+  close(moved.pts[0].y - skew[0].y, moved.pts[1].y - skew[1].y, 1e-6);
+  // And the two boundaries either side stretched to meet it.
+  assert.deepEqual(moved.pts[2], skew[2]);
+  assert.deepEqual(moved.pts[3], skew[3]);
+});
+
+test("an edge drag stays inside the canvas it was dragged on", () => {
+  const bounds = { minX: -2, minY: -2, maxX: 24, maxY: 45 };
+  const res = moveLotEdge(RECT, 1, 900, 12, { bounds });
+  assert.equal(res.pts[1].x, 24);
+  assert.equal(res.pts[2].x, 24);
+});
+
+test("a fold is refused and the outline that was there stands", () => {
+  // Drag the top-right corner across to the far side of the lot: the sides
+  // would cross, so the move never happens.
+  assert.equal(moveLotCorner(RECT, 1, -3, 20, { snap: false }), null);
+  // A bowtie can't be applied either.
+  assert.equal(applyLotEdit(sanitiseLot(undefined),
+    [{ x: 0, y: 0 }, { x: 2, y: 2 }, { x: 2, y: 0 }, { x: 0, y: 2 }]), null);
+  // And a legitimate big move still goes through.
+  assert.ok(moveLotCorner(RECT, 1, 8, 12, { snap: false }));
+});
+
+test("adding a corner splits the boundary and carries the frontage with it", () => {
+  const add = addLotCorner(RECT, 0, null, 2);
+  assert.equal(add.pts.length, 5);
+  assert.deepEqual(add.pts[1], { x: 9.5, y: 0 });          // the midpoint
+  assert.equal(add.frontage, 3, "the street was boundary 2 and is now 3");
+  // Adding after the frontage leaves it where it is.
+  assert.equal(addLotCorner(RECT, 3, null, 2).frontage, 2);
+  // A corner asked for at a point lands on that boundary, not off it…
+  const at = addLotCorner(RECT, 2, { x: 6, y: 55 }, 2);
+  close(at.pts[3].y, 40, 1e-9);   // pulled back onto the boundary itself
+  close(at.pts[3].x, 6, 1e-9);
+  // …and never on top of an end, where it could never be grabbed again.
+  const end = addLotCorner(RECT, 0, { x: 0, y: 0 }, 2);
+  assert.ok(end.pts[1].x >= 19 * 0.2 - 1e-9);
+  // The outline stays honest.
+  assert.ok(isSimplePolygon(add.pts));
+});
+
+test("removing a corner merges its two boundaries, and three is the floor", () => {
+  const five = addLotCorner(RECT, 0, null, 2).pts;         // 5 corners
+  const back = removeLotCorner(five, 1, 3);
+  assert.equal(back.pts.length, 4);
+  assert.deepEqual(back.pts, RECT);
+  assert.equal(back.frontage, 2, "the street came back to boundary 2");
+  // Taking out the frontage corner itself lands the street on the merge.
+  assert.equal(removeLotCorner(five, 3, 3).frontage, 2);
+  // Never below three — the caller says so gently, it isn't done silently.
+  const tri = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 8 }];
+  assert.equal(removeLotCorner(tri, 0, 0), null);
+});
+
+test("a rectangle only becomes a polygon when it stops being a rectangle", () => {
+  const blank = sanitiseLot(undefined);
+  // An edge drag keeps it a rectangle: still typed, still the numeric fields.
+  const wider = applyLotEdit(blank, moveLotEdge(RECT, 1, 21.4, 12).pts);
+  assert.equal(wider.lot.kind, "rect");
+  assert.equal(lotOrigin(wider.lot), "typed");
+  assert.equal(wider.lotW, 21.4);
+  assert.equal(wider.lotD, 40);
+
+  // A corner drag does not: it becomes a polygon lot, drawn by hand.
+  const bent = applyLotEdit(blank, moveLotCorner(RECT, 1, 15, 3, { snap: false }).pts);
+  assert.equal(bent.lot.kind, "poly");
+  assert.equal(lotOrigin(bent.lot), "traced");
+  assert.equal(bent.lot.pts.length, 4);
+  assert.equal(bent.lot.frontage, 2, "the street is still the boundary it was");
+  assert.equal(bent.lot.source, "");
+  assert.equal(bent.lot.fetched, "");
+
+  // Dragged back into a rectangle, it goes back to being one.
+  const flat = applyLotEdit(bent.lot, RECT);
+  assert.equal(flat.lot.kind, "poly", "hand-drawn stays hand-drawn");
+  const fromTyped = applyLotEdit(blank, RECT);
+  assert.equal(fromTyped.lot.kind, "rect");
+});
+
+test("an adjusted cadastre lot keeps its identity and loses its claim", () => {
+  const lot = sanitiseLot({
+    ...CAD, pts: rectLotPts(19, 40), anchor: { x: 9.5, y: 20 },
+    lat: -32.3, lng: 115.84,
+  });
+  assert.equal(lotOrigin(lot), "cadastre");
+  const moved = moveLotCorner(lot.pts, 1, 17.6, 1.2, { snap: false });
+  const out = applyLotEdit(lot, moved.pts);
+  assert.equal(out.lot.kind, "poly");
+  assert.equal(lotOrigin(out.lot), "cadastre-adjusted");
+  // The record it came from is still named — that's the point of the wording.
+  assert.equal(out.lot.source, "Landgate cadastre (SLIP)");
+  assert.equal(out.lot.fetched, "2026-08-02");
+  assert.equal(out.lot.lotId, "Lot 214 on Plan 78123");
+  // The ground ring is re-derived from what is actually drawn, so choosing a
+  // different frontage later can never put the old shape back.
+  assert.equal(out.lot.ring.length, 4);
+  assert.ok(out.lot.anchor);
+});
+
+test("an edit that grows the lot reports the shift the structures must follow", () => {
+  const blank = sanitiseLot(undefined);
+  // Drag the left-hand boundary 3 m further out.
+  const wider = moveLotEdge(RECT, 3, -3, 20);
+  const out = applyLotEdit(blank, wider.pts);
+  assert.equal(out.shift.dx, 3);
+  assert.equal(out.shift.dy, 0);
+  assert.equal(out.lotW, 22);
+  assert.equal(out.lot.kind, "rect");
+  // A shed 1 m off the old left fence is still 1 m off it afterwards: it sat
+  // at x = 1 and the fence moved, so on the sheet it is now at x = 4.
+  const wasAt = 1;
+  assert.equal(wasAt + out.shift.dx, 4);
+});
+
+test("setbacks, labels, area and north all recompute from an edited outline", () => {
+  const lot = sanitiseLot({
+    kind: "poly", pts: rectLotPts(20, 30), frontage: 2, north: 137.5,
+    source: "Landgate cadastre (SLIP)", fetched: "2026-08-02",
+    anchor: { x: 10, y: 15 }, lat: -32.3, lng: 115.84,
+  });
+  const shed = { x: 8, y: 8, w: 4, d: 3 };
+  const before = lotSetbacks(shed, lot.pts, lot.frontage);
+  assert.equal(polygonArea(lot.pts), 600);
+  assert.deepEqual(edgeLabels(4, lot.frontage), ["Rear", "Side", "Front", "Side"]);
+
+  // Pull the street boundary 5 m towards the shed.
+  const out = applyLotEdit(lot, moveLotEdge(lot.pts, 2, 10, 25).pts);
+  assert.equal(out.lotD, 25);
+  assert.equal(polygonArea(out.lot.pts), 500);
+  const after = lotSetbacks(shed, out.lot.pts, out.lot.frontage);
+  assert.equal(after[2].label, "Front");
+  close(before[2].v, 30 - 11, 1e-9);
+  close(after[2].v, 25 - 11, 1e-9);          // 5 m nearer the street
+  // North is a property of the parcel's bearing and does not move because a
+  // fence did.
+  assert.equal(out.lot.north, 137.5);
+
+  // Add a corner and the labels stop pretending a five-sided lot has a rear.
+  const five = addLotCorner(out.lot.pts, 0, null, out.lot.frontage);
+  const grown = applyLotEdit(out.lot, five.pts, { frontage: five.frontage });
+  assert.equal(grown.lot.pts.length, 5);
+  const names = edgeLabels(5, grown.lot.frontage);
+  assert.equal(names[grown.lot.frontage], "Front");
+  assert.ok(!names.includes("Rear"));
+  assert.equal(lotSetbacks(shed, grown.lot.pts, grown.lot.frontage).length, 5);
+});
+
+test("a traced outline replaces the lot outright — no source travels with it", () => {
+  const cad = sanitiseLot({ ...CAD, anchor: { x: 9.5, y: 20 }, lat: -32.3, lng: 115.84 });
+  const traced = [{ x: 1, y: 2 }, { x: 18, y: 1 }, { x: 19, y: 36 }, { x: 2, y: 38 }];
+  const out = applyLotEdit(cad, traced, {
+    origin: "traced", frontage: frontageFacingStreet(traced), reset: true,
+  });
+  assert.equal(lotOrigin(out.lot), "traced");
+  assert.equal(out.lot.source, "");
+  assert.equal(out.lot.fetched, "");
+  assert.equal(out.lot.lotId, "");
+  assert.equal(out.lot.lat, null);
+  assert.equal(out.lot.ring.length, 0);
+  assert.equal(boundaryRow(out.lot), "Drawn by hand by the applicant — not a surveyed boundary");
+  // Anchored at the origin, with the shift the caller has to apply reported.
+  assert.deepEqual(out.lot.pts[0], { x: 0, y: 1 });
+  assert.equal(out.shift.dx, -1);
+  assert.equal(out.shift.dy, -1);
+});
+
+test("a hand-traced lot puts the street on the boundary nearest the road", () => {
+  // Drawn with the street at the bottom of the sheet, as the tool draws it.
+  const traced = [{ x: 0, y: 0 }, { x: 18, y: 1 }, { x: 19, y: 36 }, { x: 1, y: 38 }];
+  assert.equal(frontageFacingStreet(traced), 2, "the bottom boundary");
+  // A battleaxe whose leg runs down to the road: the leg's end is lowest.
+  const flag = [
+    { x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 24 }, { x: 12, y: 24 },
+    { x: 12, y: 40 }, { x: 8, y: 40 }, { x: 8, y: 24 }, { x: 0, y: 24 },
+  ];
+  assert.equal(frontageFacingStreet(flag), 4);
+});
+
+test("lotRingFromPts inverts the layout, so an adjusted lot can still be turned", () => {
+  const lot = {
+    kind: "poly", pts: rectLotPts(20, 30), north: 137.5,
+    anchor: { x: 10, y: 15 }, lat: -32.3, lng: 115.84,
+  };
+  const ring = lotRingFromPts(lot);
+  assert.equal(ring.length, 4);
+  // Read the ring back into plan metres through the same anchor and bearing.
+  for (let i = 0; i < ring.length; i++) {
+    const g = metresBetween({ lat: lot.lat, lng: lot.lng }, { lat: ring[i][0], lng: ring[i][1] });
+    const p = groundToPlanVector(g.east, g.north, lot.north);
+    close(lot.anchor.x + p.dx, lot.pts[i].x, 1e-6);
+    close(lot.anchor.y + p.dy, lot.pts[i].y, 1e-6);
+  }
+  // No known ground point, no ring — which is every freehand lot.
+  assert.deepEqual(lotRingFromPts({ ...lot, anchor: null }), []);
+  assert.deepEqual(lotRingFromPts({ ...lot, lat: null }), []);
+  assert.deepEqual(lotRingFromPts({ pts: [] }), []);
+});
+
+test("the aerial holds still while the lot changes shape around it", () => {
+  const u = { offsetX: 0.4, offsetY: -1.2 };
+  // No lot anchor: the photo hangs off the middle of the lot, so widening it
+  // by 4 m would slide the imagery 2 m unless the offset takes it up.
+  const held = holdUnderlayAnchor(u, { lotW: 19, lotD: 40 }, { lotW: 23, lotD: 40 }, { dx: 4, dy: 0 });
+  const was = underlayAnchor(19, 40, u.offsetX, u.offsetY);
+  const now = underlayAnchor(23, 40, held.offsetX, held.offsetY);
+  close(now.x, was.x + 4, 1e-9);
+  close(now.y, was.y, 1e-9);
+  // A lot-anchored photo hangs off the parcel's own point, which travels with
+  // the shift — so nothing needs to change at all.
+  const cad = holdUnderlayAnchor(u,
+    { lotW: 19, lotD: 40, base: { x: 9.5, y: 20 } },
+    { lotW: 23, lotD: 40, base: { x: 13.5, y: 20 } }, { dx: 4, dy: 0 });
+  assert.deepEqual(cad, { offsetX: 0.4, offsetY: -1.2 });
+});
+
+test("pushHistory keeps a short stack and drops the oldest", () => {
+  let h = [];
+  for (let i = 0; i < 5; i++) h = pushHistory(h, i, 3);
+  assert.deepEqual(h, [2, 3, 4]);
+  assert.deepEqual(pushHistory(undefined, "a", 3), ["a"]);
+  assert.equal(pushHistory([], "a", 0).length, 1);
+});
+
+test("cornerAlign never matches a corner against itself", () => {
+  const res = cornerAlign(RECT, 1, 19, 0, LOT_ALIGN_M);
+  // Corner 1 is at (19, 0); corner 2 shares its x and corner 0 its y.
+  assert.deepEqual({ x: res.x, y: res.y }, { x: 19, y: 0 });
+  assert.equal(res.guides.length, 2);
 });

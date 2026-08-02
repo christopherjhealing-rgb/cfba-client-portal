@@ -77,6 +77,13 @@ export function rotateStructure(
 export function rectLotPts(lotW: number, lotD: number): Pt[];
 export const RECT_FRONTAGE: number;
 
+/** Where a boundary came from. `cadastre-adjusted` is a fetched boundary that
+ *  has since been moved by hand — it is never allowed to read as the State's
+ *  record, on screen or on the printed sheet. */
+export type LotOrigin = "typed" | "traced" | "cadastre" | "cadastre-adjusted";
+export const LOT_ORIGINS: LotOrigin[];
+export const LOT_INDICATIVE: string;
+
 /** The lot as it is stored on a design. `kind: "rect"` is the default and is
  *  every design saved before the cadastre existed. */
 export interface Lot {
@@ -100,7 +107,71 @@ export interface Lot {
   fetched: string;
   lotId: string;
   address: string;
+  /** What this boundary actually is. Printed on the sheet, always. */
+  origin: LotOrigin;
 }
+
+export function fmtDate(iso: string | null | undefined): string;
+export function lotOrigin(lot: unknown): LotOrigin;
+export function nextLotOrigin(origin: LotOrigin | string): LotOrigin;
+export function boundaryRow(lot: unknown): string;
+export function boundaryFooter(lot: unknown): string;
+export function lotOriginNote(lot: unknown): string;
+
+// --- editing the boundary by hand ------------------------------------------
+
+export const LOT_STEP_M: number;
+export const LOT_ALIGN_M: number;
+export const LOT_SQUARE_TOL_DEG: number;
+export const LOT_MIN_CORNERS: number;
+
+export interface LotBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+export function reanchorLot(
+  pts: Pt[],
+): { pts: Pt[]; dx: number; dy: number; w: number; d: number };
+export function isRectLot(pts: Pt[], tol?: number): boolean;
+export function cornerAlign(
+  pts: Pt[], i: number, x: number, y: number, threshold?: number,
+): { x: number; y: number; guides: AlignGuide[] };
+export function squareCorner(
+  pts: Pt[], i: number, p: Pt, tolDeg?: number,
+): Pt | null;
+export function moveLotCorner(
+  pts: Pt[], i: number, x: number, y: number,
+  opts?: {
+    snap?: boolean; step?: number; threshold?: number;
+    squareTol?: number; bounds?: LotBounds | null;
+  },
+): { pts: Pt[]; guides: AlignGuide[]; squared: boolean } | null;
+export function moveLotEdge(
+  pts: Pt[], i: number, x: number, y: number,
+  opts?: { snap?: boolean; step?: number; bounds?: LotBounds | null },
+): { pts: Pt[]; offset: number } | null;
+export function addLotCorner(
+  pts: Pt[], edge: number, at?: Pt | null, frontage?: number,
+): { pts: Pt[]; frontage: number } | null;
+export function removeLotCorner(
+  pts: Pt[], i: number, frontage?: number,
+): { pts: Pt[]; frontage: number } | null;
+export function frontageFacingStreet(pts: Pt[]): number;
+export function lotRingFromPts(lot: unknown): [number, number][];
+export function holdUnderlayAnchor(
+  u: { offsetX: number; offsetY: number } | null | undefined,
+  before: { lotW: number; lotD: number; base?: Pt | null },
+  after: { lotW: number; lotD: number; base?: Pt | null },
+  shift?: { dx: number; dy: number },
+): { offsetX: number; offsetY: number };
+export function applyLotEdit(
+  lot: Lot | null | undefined, pts: Pt[],
+  opts?: { origin?: LotOrigin | null; frontage?: number | null; reset?: boolean },
+): { lot: Lot; lotW: number; lotD: number; shift: { dx: number; dy: number } } | null;
+export function pushHistory<T>(stack: T[], entry: T, cap?: number): T[];
 
 export function lotPts(lot: Lot | null | undefined, lotW: number, lotD: number): Pt[];
 export function lotFrontage(lot: Lot | null | undefined): number;

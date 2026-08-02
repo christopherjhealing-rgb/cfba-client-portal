@@ -6,16 +6,22 @@
 // pointers and SVG. The tool measures and labels — it never judges.
 import { useEffect, useRef, useState } from "react";
 import {
-  DRAW_MARGIN_MM, STRUCTURE_PRESETS, UNDERLAY_MAX_ROT, UNDERLAY_MIN_OPACITY,
-  alignSnap, boundsOf, clampToLot, clampUnderlayOpacity, clampUnderlayRot,
-  defaultPlacement, deriveStreet, edgeLabels, fitScale, fmtM, fmtM2, footprint,
-  isSimplePolygon, lotEdges, lotFrontage, lotPts, lotSetbacks, mToMmOnPaper,
-  mmOnPaperToM, normalisePts, parseMetres, polyBounds, polyFromFootprint,
-  polygonArea, polygonCentroid, polygonInside, resizeBounds, rotateStructure,
+  DRAW_MARGIN_MM, LOT_INDICATIVE, LOT_MIN_CORNERS, STRUCTURE_PRESETS,
+  UNDERLAY_MAX_ROT, UNDERLAY_MIN_OPACITY,
+  addLotCorner, alignSnap, applyLotEdit, boundaryFooter, boundaryRow, boundsOf,
+  clampToLot, clampUnderlayOpacity, clampUnderlayRot,
+  defaultPlacement, deriveStreet, edgeLabels, fitScale, fmtDate, fmtM, fmtM2,
+  footprint, frontageFacingStreet, holdUnderlayAnchor,
+  isSimplePolygon, lotEdges, lotFrontage, lotOrigin, lotOriginNote, lotPts,
+  lotSetbacks, mToMmOnPaper,
+  mmOnPaperToM, moveLotCorner, moveLotEdge, normalisePts, parseMetres,
+  polyBounds, polyFromFootprint,
+  polygonArea, polygonCentroid, polygonInside, pushHistory, rectLotPts,
+  removeLotCorner, resizeBounds, rotateStructure,
   sanitiseLot,
   sanitiseUnderlay, scaleBarMetres, setbackMarks, setbacks, snap,
   structureArea, underlayAnchor, underlayCentre, underlayMapSize,
-  underlayScale, underlayZoom, type Lot, type Underlay,
+  underlayScale, underlayZoom, type Lot, type LotOrigin, type Underlay,
 } from "@/lib/site-plan.mjs";
 import { buildLot, reorientLot } from "@/lib/cadastre.mjs";
 import { WA_BOUNDS } from "@/lib/address.mjs";
@@ -86,12 +92,26 @@ const LOT_MISS =
   "over the aerial photo, or type the dimensions in.";
 const LOT_NO_ADDRESS =
   "Pop the site address in above and we'll go looking for your lot.";
-/** Said on screen and, in longer form, on the printed sheet. Warm, short,
- *  and never a judgement about whether anything complies. */
-const LOT_INDICATIVE =
-  "Boundaries from the State's cadastre are indicative — the shape is right, " +
-  "but they can sit a metre or so off the pegs. Check anything tight against " +
-  "your survey.";
+
+// ---------------------------------------------------------------------------
+// Moving the boundary by hand.
+//
+// The cadastre has the lot when it has it, and a typed 19 × 40 is nobody's
+// real block. So the outline is editable the same way the structures already
+// are: square handles on the corners, handles on the edges, drag them. Two
+// ways in — drag what's there, or tap the corners out over the aerial — and
+// one way back, which is undo, because an accidental drag on a phone had no
+// way back at all.
+//
+// The geometry is all in lib/site-plan.mjs and tested there. What lives here
+// is the pointer wiring, and one promise the wiring has to keep: an edited
+// boundary is the client's own measurement, and the printed sheet says so.
+// ---------------------------------------------------------------------------
+
+const LOT_FOLD =
+  "That would fold the lot over itself — try a smaller move.";
+const LOT_TOO_FEW =
+  `A lot needs at least ${LOT_MIN_CORNERS} corners, so this one has to stay.`;
 
 /** Alignment buttons get pressed with a thumb, on site, in the sun: 40 px
  *  minimum on both axes and a press you can see. */
@@ -144,6 +164,18 @@ interface Guide {
   to: number;
 }
 
+/** One step back from a boundary edit. The structures are held by id and by
+ *  position only, so undoing a drag never un-adds a shed placed since. */
+interface LotSnapshot {
+  lot: Lot;
+  lotW: number;
+  lotD: number;
+  north: number;
+  at: Record<string, Pt>;
+  offsetX: number;
+  offsetY: number;
+}
+
 const BLANK: Design = {
   address: "", street: "", lotW: 20, lotD: 40, north: 0, structures: [],
   underlay: sanitiseUnderlay(undefined),
@@ -170,15 +202,6 @@ const KINDS: { kind: string; name: string; fill: string; dark?: boolean }[] = [
   { kind: "custom", name: "Custom shape", fill: "#E3DFEA" },
 ];
 const FILL: Record<string, string> = Object.fromEntries(KINDS.map((k) => [k.kind, k.fill]));
-
-/** A stored ISO date as a builder would read it. Anything unparseable comes
- *  back as it went in rather than as "Invalid Date". */
-const fmtDate = (iso: string) => {
-  const t = Date.parse(iso);
-  return Number.isFinite(t)
-    ? new Date(t).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })
-    : iso;
-};
 
 const uid = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -290,6 +313,15 @@ export function SitePlanBuilder(
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
   const [pxPerM, setPxPerM] = useState(30);
+  /** Boundary editing: whether the handles are out, which corner or edge is
+   *  picked up, the outline being traced from scratch, what to say when a
+   *  move is refused, and the way back. */
+  const [lotEdit, setLotEdit] = useState(false);
+  const [lotSel, setLotSel] = useState<{ kind: "corner" | "edge"; i: number } | null>(null);
+  const [trace, setTrace] = useState<{ pts: Pt[]; hint: string } | null>(null);
+  const [lotNudge, setLotNudge] = useState("");
+  const [lotDrag, setLotDrag] = useState<{ kind: "corner" | "edge"; i: number } | null>(null);
+  const [history, setHistory] = useState<LotSnapshot[]>([]);
   /** Aerial: what the geocoder is doing, what the map really zoomed to, and
    *  whether a map element exists at all. All three stay false-y when there's
    *  no key, so nothing below this line ever renders. */
@@ -310,6 +342,18 @@ export function SitePlanBuilder(
   const buildingRef = useRef(false);
   const dragRef = useRef<{ id: string; dx: number; dy: number } | null>(null);
   const resizeRef = useRef<{ id: string; handle?: string; vertex?: number } | null>(null);
+  /** A boundary drag, captured whole at pointer-down: the outline as it was,
+   *  where the finger started, and what it took hold of. Everything is worked
+   *  out from that rather than from the last frame, so a dropped move can
+   *  never leave the boundary lagging behind the finger. */
+  const lotDragRef = useRef<{
+    kind: "corner" | "edge"; i: number; pts: Pt[]; start: Pt; from: Pt;
+    bounds: { minX: number; minY: number; maxX: number; maxY: number };
+    base: LotSnapshot; banked: boolean;
+  } | null>(null);
+  /** Long-press on a boundary adds a corner, which is how a thumb does what a
+   *  mouse does with a double-click. */
+  const pressRef = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
   /** Live pointers on the alignment overlay, so one finger drags the photo
    *  and two fingers also turn it. Pinching deliberately does nothing: the
    *  photo's size is what keeps it true to scale. */
@@ -391,6 +435,10 @@ export function SitePlanBuilder(
   const vbW = lotW + mL + mR, vbH = lotD + mT + mB;
   const viewBox = `${-mL} ${-mT} ${vbW} ${vbH}`;
   const sel = design.structures.find((s) => s.id === selected) ?? null;
+  /** Boundary handles are out. Mutually exclusive with both drawing modes —
+   *  one gesture means one thing at a time. */
+  const editing = lotEdit && !draw && !trace;
+  const origin = lotOrigin(design.lot);
 
   // Screen pixels per drawing metre — resize handles size their touch
   // targets from this so a fingertip always has ≥ 32 px to land on,
@@ -658,6 +706,209 @@ export function SitePlanBuilder(
     }));
   }
 
+  // ---- moving the boundary by hand ---------------------------------------
+
+  /** How far a corner may be dragged: the canvas, which is the lot plus the
+   *  annotation margins. Growing further is another drag — and the margins
+   *  grow with the lot, so it is never a wall. */
+  const lotBounds = () => ({ minX: -mL, minY: -mT, maxX: lotW + mR, maxY: lotD + mB });
+
+  /** Is the photo hanging off this lot's own ground point? Mirrors the test
+   *  the underlay itself makes, for a lot that doesn't exist yet. */
+  const anchoredTo = (l: Lot) =>
+    l.kind === "poly" && l.anchor !== null && l.lat !== null &&
+    under.lat === l.lat && under.lng === l.lng;
+
+  const takeSnapshot = (): LotSnapshot => ({
+    lot: design.lot, lotW, lotD, north,
+    at: Object.fromEntries(design.structures.map((s) => [s.id, { x: s.x, y: s.y }])),
+    offsetX: under.offsetX, offsetY: under.offsetY,
+  });
+  /** Bank the way back, and hand the caller the state the edit is reckoned
+   *  from — a drag re-reckons from this on every single move, so a hundred
+   *  moves land in exactly the same place one move would. */
+  function remember(): LotSnapshot {
+    const snap = takeSnapshot();
+    setHistory((h) => pushHistory(h, snap));
+    return snap;
+  }
+
+  /** One step back. Structures are restored by id, so a shed added since the
+   *  drag stays exactly where it was put. */
+  function undoLot() {
+    setHistory((h) => {
+      const prev = h[h.length - 1];
+      if (!prev) return h;
+      setDesign((p) => ({
+        ...p,
+        lot: prev.lot, lotW: prev.lotW, lotD: prev.lotD, north: prev.north,
+        structures: p.structures.map((s) =>
+          (prev.at[s.id] ? { ...s, ...prev.at[s.id] } : s)),
+        underlay: { ...p.underlay, offsetX: prev.offsetX, offsetY: prev.offsetY },
+      }));
+      return h.slice(0, -1);
+    });
+    setLotNudge("");
+    setLotSel(null);
+  }
+
+  /**
+   * Put an edited outline on the design.
+   *
+   * Three things move together or the drawing tells a lie: the lot, the
+   * structures (an edit that grows the block upward or leftward shifts the
+   * whole coordinate space, and they have to travel with it), and the aerial
+   * (which hangs off one ground point and would otherwise slide off the very
+   * boundary it was just matched to).
+   */
+  function commitLotPts(
+    pts: Pt[],
+    from: LotSnapshot,
+    opts: { origin?: LotOrigin | null; frontage?: number | null; reset?: boolean } = {},
+  ) {
+    const res = applyLotEdit(from.lot, pts, opts);
+    if (!res) { setLotNudge(LOT_FOLD); return false; }
+    // A traced outline throws the old record away, so the sheet's north — set
+    // by hand or derived from a parcel — is what the new lot carries.
+    const lot: Lot = opts.reset && res.lot.kind === "poly"
+      ? { ...res.lot, north: from.north } : res.lot;
+    const hold = holdUnderlayAnchor(
+      { offsetX: from.offsetX, offsetY: from.offsetY },
+      { lotW: from.lotW, lotD: from.lotD, base: anchoredTo(from.lot) ? from.lot.anchor : null },
+      { lotW: res.lotW, lotD: res.lotD, base: anchoredTo(lot) ? lot.anchor : null },
+      res.shift,
+    );
+    setDesign((p) => ({
+      ...p,
+      lot, lotW: res.lotW, lotD: res.lotD,
+      structures: p.structures.map((s) => {
+        const was = from.at[s.id];
+        if (!was) return s;
+        const b = boundsOf(s);
+        return {
+          ...s,
+          ...clampToLot(
+            Math.round((was.x + res.shift.dx) * 100) / 100,
+            Math.round((was.y + res.shift.dy) * 100) / 100,
+            b.w, b.d, res.lotW, res.lotD,
+          ),
+        };
+      }),
+      underlay: sited ? { ...p.underlay, ...hold } : p.underlay,
+    }));
+    setLotNudge("");
+    return true;
+  }
+
+  function startLotEdit() {
+    setLotEdit(true);
+    setTrace(null);
+    setDraw(null);
+    setSelected(null);
+    setLotSel(null);
+    setLotNudge("");
+    // Handles get grabbed on the plan, so the photo has to stop taking drags.
+    if (aligning) patchUnderlay({ locked: true });
+    canvasRef.current?.focus({ preventScroll: true });
+  }
+
+  function stopLotEdit() {
+    setLotEdit(false);
+    setLotSel(null);
+    setLotDrag(null);
+    setGuides([]);
+    setLotNudge("");
+  }
+
+  /** A long press is how a thumb does what a mouse does with a double-click.
+   *  It's armed on pointer-down, and any real movement calls it a drag
+   *  instead and lets go of it. */
+  const clearPress = () => {
+    if (pressRef.current) { clearTimeout(pressRef.current.timer); pressRef.current = null; }
+  };
+  const armPress = (e: React.PointerEvent, run: () => void) => {
+    clearPress();
+    pressRef.current = {
+      x: e.clientX, y: e.clientY,
+      timer: setTimeout(() => { pressRef.current = null; run(); }, 500),
+    };
+  };
+  const checkPress = (e: React.PointerEvent) => {
+    const pr = pressRef.current;
+    if (pr && Math.hypot(e.clientX - pr.x, e.clientY - pr.y) > 8) clearPress();
+  };
+
+  /** Put a corner on a boundary — the midpoint, or wherever it was tapped. */
+  function addCornerOn(edge: number, at: Pt | null = null) {
+    const res = addLotCorner(lotOutline, edge, at, frontage);
+    if (!res) { setLotNudge(LOT_FOLD); return; }
+    if (commitLotPts(res.pts, remember(), { frontage: res.frontage })) {
+      setLotSel({ kind: "corner", i: edge + 1 });
+    }
+  }
+
+  /** Take a corner out. Never below three, and it says so rather than just
+   *  ignoring the tap. */
+  function removeCorner(i: number) {
+    const res = removeLotCorner(lotOutline, i, frontage);
+    if (!res) { setLotNudge(LOT_TOO_FEW); return; }
+    if (commitLotPts(res.pts, remember(), { frontage: res.frontage })) setLotSel(null);
+  }
+
+  // ---- tracing the lot over the aerial -------------------------------------
+
+  function startTrace() {
+    setTrace({ pts: [], hint: "" });
+    setLotEdit(false);
+    setLotSel(null);
+    setDraw(null);
+    setSelected(null);
+    setLotNudge("");
+    if (aligning) patchUnderlay({ locked: true });
+    canvasRef.current?.focus({ preventScroll: true });
+  }
+
+  function addTracePoint(e: { clientX: number; clientY: number }) {
+    if (!trace) return;
+    const b = lotBounds();
+    const p = toM(e);
+    const x = Math.min(Math.max(snap(p.x, 0.1), b.minX), b.maxX);
+    const y = Math.min(Math.max(snap(p.y, 0.1), b.minY), b.maxY);
+    const pts = trace.pts;
+    // Tapping the first corner again closes the outline.
+    if (pts.length >= 3 &&
+        Math.hypot(x - pts[0].x, y - pts[0].y) <= Math.max(0.3, 20 / pxPerM)) {
+      finishTrace(pts);
+      return;
+    }
+    const last = pts[pts.length - 1];
+    if (last && last.x === x && last.y === y) return;
+    setTrace({ pts: [...pts, { x, y }], hint: "" });
+  }
+
+  function finishTrace(from?: Pt[]) {
+    const pts = from ?? trace?.pts;
+    if (!pts) return;
+    if (pts.length < 3) {
+      setTrace({ pts, hint: `Three corners minimum — keep tapping.` });
+      return;
+    }
+    if (!isSimplePolygon(pts)) {
+      setTrace({
+        pts,
+        hint: "That outline crosses itself — move the last corner so no sides overlap, or start again.",
+      });
+      return;
+    }
+    const ok = commitLotPts(pts, remember(), {
+      origin: "traced", frontage: frontageFacingStreet(pts), reset: true,
+    });
+    if (!ok) { setTrace({ pts, hint: LOT_FOLD }); return; }
+    setTrace(null);
+    setLotEdit(true);
+    canvasRef.current?.focus({ preventScroll: true });
+  }
+
   const nudgeUnderlay = (dx: number, dy: number) =>
     patchUnderlay((u) => ({
       offsetX: Math.round((u.offsetX + dx) * 1000) / 1000,
@@ -834,9 +1085,49 @@ export function SitePlanBuilder(
   };
 
   function onKeyDown(e: React.KeyboardEvent) {
+    // Undo is the way back from a boundary drag, wherever you are.
+    if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+      e.preventDefault();
+      undoLot();
+      return;
+    }
+    if (trace) {
+      if (e.key === "Escape") { e.preventDefault(); setTrace(null); }
+      if (e.key === "Enter") { e.preventDefault(); finishTrace(); }
+      return;
+    }
     if (draw) {
       if (e.key === "Escape") { e.preventDefault(); setDraw(null); }
       if (e.key === "Enter") { e.preventDefault(); finishDraw(); }
+      return;
+    }
+    if (editing) {
+      if (e.key === "Escape") { e.preventDefault(); stopLotEdit(); return; }
+      if ((e.key === "Delete" || e.key === "Backspace") && lotSel?.kind === "corner") {
+        e.preventDefault();
+        removeCorner(lotSel.i);
+        return;
+      }
+      if (e.key === "+" && lotSel?.kind === "edge") {
+        e.preventDefault();
+        addCornerOn(lotSel.i, null);
+        return;
+      }
+      if (lotSel?.kind === "corner") {
+        const d = ARROWS[e.key];
+        if (d) {
+          e.preventDefault();
+          const step = e.shiftKey ? 1 : 0.1;
+          const p = lotOutline[lotSel.i];
+          const res = moveLotCorner(
+            lotOutline, lotSel.i, p.x + d[0] * step, p.y + d[1] * step,
+            // Nudging is the precise path, exactly as it is for a structure.
+            { snap: false },
+          );
+          if (!res) { setLotNudge(LOT_FOLD); return; }
+          commitLotPts(res.pts, remember());
+        }
+      }
       return;
     }
     // While the photo is being lined up it owns the arrow keys — that's the
@@ -1001,6 +1292,180 @@ export function SitePlanBuilder(
             onPointerDown={(ev) => { ev.stopPropagation(); setFrontage(i); }}>
             <title>{`Make this the street frontage — ${edgeNames[i]}, ${fmtM(e.length)} m`}</title>
           </line>
+        ))}
+      </g>
+    );
+  }
+
+  /** In editing, the same fat lines pick a boundary instead of the frontage —
+   *  and a double-tap or a long press puts a new corner on it, right where
+   *  the finger landed. */
+  function lotEdgeTargets() {
+    const grab = Math.max(22 / pxPerM, mm(3.2));
+    return (
+      <g>
+        {edges.map((e, i) => (
+          <line key={i} x1={e.a.x} y1={e.a.y} x2={e.b.x} y2={e.b.y}
+            stroke="transparent" strokeWidth={grab} pointerEvents="stroke"
+            style={{ cursor: "pointer" }}
+            onPointerDown={(ev) => {
+              ev.stopPropagation();
+              setLotSel({ kind: "edge", i });
+              setLotNudge("");
+              canvasRef.current?.focus({ preventScroll: true });
+              const at = toM(ev);
+              armPress(ev, () => addCornerOn(i, at));
+            }}
+            onPointerMove={checkPress}
+            onPointerUp={clearPress}
+            onPointerCancel={clearPress}
+            onDoubleClick={(ev) => { ev.stopPropagation(); addCornerOn(i, toM(ev)); }}>
+            <title>{`${edgeNames[i]} — ${fmtM(e.length)} m. Double-tap or hold to add a corner.`}</title>
+          </line>
+        ))}
+      </g>
+    );
+  }
+
+  /**
+   * The boundary's own handles: a square on every corner, a smaller one in
+   * the middle of every boundary. Same shape, same colour and same feel as
+   * the resize handles on a structure, because it is the same gesture — the
+   * only difference is that this one is the lot.
+   *
+   * Every handle carries an invisible pad of at least 40 px across, whatever
+   * the plan's scale, because this gets done on a phone standing in a
+   * driveway.
+   */
+  function lotHandleNodes() {
+    const hitR = Math.max(20 / pxPerM, mm(2));
+    const vis = mm(1.3), midVis = mm(1);
+    const bounds = lotBounds();
+
+    const begin = (kind: "corner" | "edge", i: number, e: React.PointerEvent) => {
+      e.stopPropagation();
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      const from = kind === "corner" ? lotOutline[i] : edges[i].mid;
+      // The way back is banked on the first move that actually lands, not
+      // here — picking a corner up and putting it down again is not an edit,
+      // and shouldn't cost an undo.
+      lotDragRef.current = {
+        kind, i, pts: lotOutline, start: toM(e), from, bounds,
+        base: takeSnapshot(), banked: false,
+      };
+      setLotSel({ kind, i });
+      setLotDrag({ kind, i });
+      setLotNudge("");
+      canvasRef.current?.focus({ preventScroll: true });
+    };
+    const end = () => {
+      lotDragRef.current = null;
+      setLotDrag(null);
+      setGuides([]);
+    };
+    const move = (e: React.PointerEvent) => {
+      const g = lotDragRef.current;
+      if (!g) return;
+      const p = toM(e);
+      // Alt is a free hand: no grid, no lining up with the other corners, no
+      // squaring — the same key that frees a structure drag.
+      const opts = { snap: !e.altKey, bounds: g.bounds };
+      const bank = () => {
+        if (g.banked) return;
+        g.banked = true;
+        setHistory((h) => pushHistory(h, g.base));
+      };
+      if (g.kind === "corner") {
+        const res = moveLotCorner(g.pts, g.i, p.x, p.y, opts);
+        if (!res) { setLotNudge(LOT_FOLD); return; }
+        setGuides(res.guides as Guide[]);
+        bank();
+        commitLotPts(res.pts, g.base);
+      } else {
+        const res = moveLotEdge(
+          g.pts, g.i, g.from.x + (p.x - g.start.x), g.from.y + (p.y - g.start.y), opts,
+        );
+        if (!res) { setLotNudge(LOT_FOLD); return; }
+        bank();
+        commitLotPts(res.pts, g.base);
+      }
+    };
+
+    const pad = (
+      key: string, x: number, y: number, r: number, cursor: string,
+      kind: "corner" | "edge", i: number, node: React.ReactNode, label: string,
+    ) => (
+      <g key={key} style={{ cursor }}
+        onPointerDown={(e) => {
+          begin(kind, i, e);
+          // The middle of a boundary is exactly where a thumb lands to add a
+          // corner, and it is also the handle that shifts the whole boundary.
+          // Holding still says corner; moving says shift.
+          if (kind === "edge") {
+            armPress(e, () => {
+              lotDragRef.current = null;
+              setLotDrag(null);
+              setGuides([]);
+              addCornerOn(i, null);
+            });
+          }
+        }}
+        onPointerMove={(e) => { checkPress(e); move(e); }}
+        onPointerUp={() => { clearPress(); end(); }}
+        onPointerCancel={() => { clearPress(); end(); }}
+        onDoubleClick={kind === "edge"
+          ? (e) => { e.stopPropagation(); addCornerOn(i, null); } : undefined}>
+        <circle cx={x} cy={y} r={r} fill="transparent" />
+        {node}
+        <title>{label}</title>
+      </g>
+    );
+
+    return (
+      <g>
+        {/* Boundary middles first, so a corner always wins a shared tap. */}
+        {edges.map((e, i) => {
+          const picked = lotSel?.kind === "edge" && lotSel.i === i;
+          return e.length < 0.4 ? null : pad(
+            `e${i}`, e.mid.x, e.mid.y, hitR,
+            Math.abs(e.nx) > Math.abs(e.ny) ? "ew-resize" : "ns-resize", "edge", i,
+            <rect x={e.mid.x - midVis} y={e.mid.y - midVis}
+              width={midVis * 2} height={midVis * 2}
+              transform={`rotate(45 ${e.mid.x} ${e.mid.y})`}
+              fill={picked ? BRASS : "#fff"} stroke={BRASS} strokeWidth={mm(0.3)} />,
+            `Drag to move this whole boundary — ${edgeNames[i]}, ${fmtM(e.length)} m. Double-tap to add a corner.`,
+          );
+        })}
+        {lotOutline.map((p, i) => {
+          const picked = lotSel?.kind === "corner" && lotSel.i === i;
+          return pad(
+            `c${i}`, p.x, p.y, hitR, "grab", "corner", i,
+            <rect x={p.x - vis} y={p.y - vis} width={vis * 2} height={vis * 2}
+              fill={picked ? BRASS : "#fff"} stroke={BRASS}
+              strokeWidth={picked ? mm(0.5) : mm(0.35)} />,
+            `Corner ${i + 1} of ${lotOutline.length} — drag to move it`,
+          );
+        })}
+      </g>
+    );
+  }
+
+  /** What the boundary measures, while it is being moved. The figures a
+   *  builder is actually watching: the two boundaries either side of the
+   *  corner in hand, or the length of the edge being shifted. */
+  function lotDragReadout() {
+    if (!lotDrag) return null;
+    const show = lotDrag.kind === "corner"
+      ? [edges[(lotDrag.i - 1 + edges.length) % edges.length], edges[lotDrag.i]]
+      : [edges[lotDrag.i]];
+    return (
+      <g pointerEvents="none">
+        {show.map((e) => (
+          <text key={e.i} x={e.mid.x + e.nx * mm(2.4)} y={e.mid.y + e.ny * mm(2.4) + mm(0.9)}
+            textAnchor="middle" fontFamily={FONT_NUM} fontSize={mm(3)}
+            fontWeight={700} fill={BRASS} style={halo}>
+            {fmtM2(e.length)} m
+          </text>
         ))}
       </g>
     );
@@ -1227,19 +1692,22 @@ export function SitePlanBuilder(
           <>
             <polygon points={lotOutline.map((p) => `${p.x},${p.y}`).join(" ")}
               fill="#FFFFFF" fillOpacity={seeThrough ? 0 : 1}
-              stroke={INK} strokeWidth={mm(0.5)} strokeLinejoin="round" />
-            {interactive && !draw && edgeTargets()}
+              stroke={INK} strokeWidth={interactive && editing ? mm(0.75) : mm(0.5)}
+              strokeLinejoin="round" />
+            {interactive && !draw && !trace && (editing ? lotEdgeTargets() : edgeTargets())}
             {boundaryTexts()}
           </>
         ) : (
           <>
             <rect x={0} y={0} width={lotW} height={lotD} fill="#FFFFFF"
-              fillOpacity={seeThrough ? 0 : 1} stroke={INK} strokeWidth={mm(0.5)} />
+              fillOpacity={seeThrough ? 0 : 1} stroke={INK}
+              strokeWidth={interactive && editing ? mm(0.75) : mm(0.5)} />
+            {interactive && editing && !draw && !trace && lotEdgeTargets()}
             {dimTexts()}
           </>
         )}
         {sel && setbackLines(sel)}
-        {design.structures.map((s) => structureNode(s, interactive && !draw))}
+        {design.structures.map((s) => structureNode(s, interactive && !draw && !trace && !editing))}
         {/* alignment guides while a drag is snapped */}
         {interactive && guides.map((g, i) => (
           <line key={i}
@@ -1250,6 +1718,23 @@ export function SitePlanBuilder(
             stroke="#2E7D5B" strokeWidth={mm(0.3)}
             strokeDasharray={`${mm(1.2)} ${mm(1)}`} pointerEvents="none" />
         ))}
+        {/* the boundary's handles, and what it measures while it moves */}
+        {interactive && editing && !draw && !trace && lotHandleNodes()}
+        {interactive && lotDragReadout()}
+        {/* the lot outline being traced over the photo */}
+        {interactive && trace && (
+          <g pointerEvents="none">
+            {trace.pts.length > 1 && (
+              <polyline points={trace.pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none" stroke={BRASS} strokeWidth={mm(0.55)}
+                strokeDasharray={`${mm(1.8)} ${mm(1.1)}`} />
+            )}
+            {trace.pts.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={i === 0 ? mm(1.8) : mm(1.1)}
+                fill={i === 0 ? "#fff" : BRASS} stroke={BRASS} strokeWidth={mm(0.4)} />
+            ))}
+          </g>
+        )}
         {/* the outline being drawn */}
         {interactive && draw && (
           <g pointerEvents="none">
@@ -1350,21 +1835,34 @@ export function SitePlanBuilder(
               className="btn-ghost min-h-[40px] !py-2">
               {finding ? "Looking…" : sited ? "Find this site again" : "Show the aerial photo"}
             </button>
+            {/* With the photo down, matching the boundary to it is the whole
+                job — so the way in sits right here rather than three cards
+                further down the page. */}
+            {sited && (
+              <button type="button" onClick={startTrace}
+                className={`min-h-[40px] rounded-md border px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
+                  trace ? "border-seal bg-wash text-seal" : "border-brass bg-[#F6EEDA] text-brass-deep hover:bg-[#F1E6CE]"
+                }`}>
+                Trace the lot on the photo
+              </button>
+            )}
             <p className={`min-w-[200px] flex-1 text-[12.5px] leading-snug ${lotNote || aerialNote ? "text-brass-deep" : "text-ink/55"}`}>
               {lotNote || aerialNote || (isPoly
-                ? LOT_INDICATIVE
-                : cadastre
+                ? origin === "cadastre" ? LOT_INDICATIVE : lotOriginNote(boundary)
+                : cadastre && !sited
                   ? "We'll look your lot up on the State's records and draw the real boundary — shape, dimensions and all."
                   : sited
-                    ? "Line the photo up with your lot, then lock it and draw over the top."
+                    ? "Drag the lot's corners to match the photo, or tap them out with Trace. The photo is a guide — it's never printed."
                     : "Puts an aerial photo of the site behind your plan to trace over. It never appears on the printed plan.")}
             </p>
           </div>
         )}
         <p className="mt-2.5 text-[12.5px] text-ink/50">
-          {isPoly
-            ? "This is the lot as the State records it. Tap any boundary on the plan to make it the street frontage — the labels and the north arrow follow it."
-            : "Type the lot size here, or set it out yourself — street frontage runs along the bottom. Structures can be rectangles, L-shapes, or any outline you draw."}
+          {origin === "cadastre"
+            ? "This is the lot as the State records it. Tap any boundary on the plan to make it the street frontage, or hit Adjust the boundary and drag a corner if it doesn't match what's on the ground."
+            : isPoly
+              ? "This boundary is your own — drag any corner to fix it, add or remove corners, and tap a boundary to make it the street frontage."
+              : "Type the lot size here, or take hold of it on the plan: Adjust the boundary puts handles on the corners and edges. Street frontage runs along the bottom."}
           {" "}The street name fills itself from the address; type over it if
           your frontage is a different street. Your design saves automatically
           in this browser, per address.
@@ -1374,27 +1872,98 @@ export function SitePlanBuilder(
       <div className="grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]">
         {/* toolbox + selected structure */}
         <div className="space-y-5">
-          {/* The lot boundary — only once there's a real one to talk about. */}
-          {isPoly && (
-            <div className="card p-4">
-              <h2 className="sectionhead !mb-2">Lot boundary</h2>
-              <dl className="space-y-1 font-mono text-[12.5px] text-ink/75">
-                {boundary.lotId && (
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-ink/50">Lot</dt>
-                    <dd className="text-right">{boundary.lotId}</dd>
-                  </div>
-                )}
+          {/* The lot boundary. Always here now: a typed rectangle is a lot
+              boundary too, and the whole point of this card is that you can
+              take hold of it. */}
+          <div className="card p-4">
+            <h2 className="sectionhead !mb-2">Lot boundary</h2>
+            <dl className="space-y-1 font-mono text-[12.5px] text-ink/75">
+              {boundary.lotId && (
                 <div className="flex justify-between gap-2">
-                  <dt className="text-ink/50">Area</dt>
-                  <dd>{fmtM(lotArea)} m²</dd>
+                  <dt className="text-ink/50">Lot</dt>
+                  <dd className="text-right">{boundary.lotId}</dd>
                 </div>
+              )}
+              <div className="flex justify-between gap-2">
+                <dt className="text-ink/50">Area</dt>
+                <dd>{fmtM(lotArea)} m²</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-ink/50">Corners</dt>
+                <dd>{lotOutline.length}</dd>
+              </div>
+              {isPoly && (
                 <div className="flex justify-between gap-2">
                   <dt className="text-ink/50">North</dt>
                   <dd>{Math.round(north)}° on this sheet</dd>
                 </div>
-              </dl>
+              )}
+            </dl>
 
+            <div className="mt-3 flex gap-2">
+              <button type="button"
+                onClick={() => (editing ? stopLotEdit() : startLotEdit())}
+                aria-pressed={editing}
+                className={`min-h-[40px] flex-1 rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
+                  editing ? "border-brass bg-[#F6EEDA] text-brass-deep" : "border-rule bg-white text-ink hover:bg-wash"
+                }`}>
+                {editing ? "Done adjusting" : "Adjust the boundary"}
+              </button>
+              <button type="button" onClick={startTrace}
+                className={`min-h-[40px] flex-1 rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
+                  trace ? "border-seal bg-wash text-seal" : "border-rule bg-white text-ink hover:bg-wash"
+                }`}>
+                Trace the lot
+              </button>
+            </div>
+            <button type="button" onClick={undoLot} disabled={history.length === 0}
+              className="btn-ghost mt-2 min-h-[40px] w-full !py-2 disabled:opacity-40">
+              Undo the last boundary change{history.length > 1 ? ` (${history.length})` : ""}
+            </button>
+
+            {/* What's picked up, and what can be done to it. Both controls are
+                here as well as on the plan, because a corner is a fiddly thing
+                to hold on to and then reach for a key with. */}
+            {editing && (
+              <div className="mt-3 rounded-md border border-brass/40 bg-[#FBF7EE] p-2.5">
+                {lotSel?.kind === "corner" ? (
+                  <>
+                    <p className="text-[12.5px] font-medium text-ink/75">
+                      Corner {lotSel.i + 1} of {lotOutline.length}
+                    </p>
+                    <button type="button" onClick={() => removeCorner(lotSel.i)}
+                      className="btn-ghost mt-2 min-h-[40px] w-full !py-2 !text-flag hover:!border-flag/40">
+                      Remove this corner
+                    </button>
+                  </>
+                ) : lotSel?.kind === "edge" ? (
+                  <>
+                    <p className="text-[12.5px] font-medium text-ink/75">
+                      {edgeNames[lotSel.i]} — {fmtM(edges[lotSel.i].length)} m
+                    </p>
+                    <button type="button" onClick={() => addCornerOn(lotSel.i, null)}
+                      className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
+                      Add a corner here
+                    </button>
+                    {isPoly && lotSel.i !== frontage && (
+                      <button type="button" onClick={() => setFrontage(lotSel.i)}
+                        className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
+                        Make this the street frontage
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[12.5px] leading-snug text-ink/65">
+                    Tap a corner or a boundary on the plan to pick it up.
+                  </p>
+                )}
+              </div>
+            )}
+            {lotNudge && (
+              <p className="mt-2 text-[12.5px] leading-snug text-brass-deep">{lotNudge}</p>
+            )}
+
+            {isPoly && (
               <div className="mt-3">
                 <span className="label">Boundaries — tap to set the frontage</span>
                 <div className="space-y-1">
@@ -1414,19 +1983,20 @@ export function SitePlanBuilder(
                   ))}
                 </div>
               </div>
+            )}
 
+            {isPoly && (
               <button type="button" onClick={clearLot}
                 className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
                 Type the dimensions instead
               </button>
-              <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
-                {boundary.source
-                  ? `${boundary.source}${boundary.fetched ? `, fetched ${fmtDate(boundary.fetched)}` : ""}. `
-                  : ""}
-                {LOT_INDICATIVE}
-              </p>
-            </div>
-          )}
+            )}
+            {/* Where this boundary came from, in the same words the printed
+                sheet uses. Never a claim the boundary can't keep. */}
+            <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+              {lotOriginNote(boundary)}
+            </p>
+          </div>
 
           {/* Aerial alignment — only once there's a photo to line up. */}
           {sited && (
@@ -1615,6 +2185,7 @@ export function SitePlanBuilder(
                 pull in line with neighbours; hold Alt to drag free), drag the
                 square handles to resize, R to rotate, arrow keys to nudge
                 (hold Shift for 1&nbsp;m steps), Delete to remove.
+                {editing && " The boundary handles are out at the moment, so the structures are on hold — hit Done adjusting to get them back."}
               </p>
             )}
           </div>
@@ -1661,6 +2232,44 @@ export function SitePlanBuilder(
 
         {/* the canvas */}
         <div className="card p-4">
+          {/* Tracing the lot out over the photo — the same tap-the-corners
+              gesture the odd-shape tool uses, pointed at the boundary. */}
+          {trace && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-brass/50 bg-[#FBF7EE] px-3 py-2">
+              <p className={`min-w-[180px] flex-1 text-[12.5px] leading-snug ${trace.hint ? "text-brass-deep" : "text-ink/70"}`}>
+                {trace.hint || (
+                  trace.pts.length === 0
+                    ? "Tap each corner of your lot on the photo. Start anywhere and go round — if the lot runs off the edge, bump the width or depth up first to make room."
+                    : trace.pts.length < 3
+                      ? `${trace.pts.length} corner${trace.pts.length === 1 ? "" : "s"} placed — keep going round.`
+                      : `${trace.pts.length} corners placed — tap the first one again, or Done, to close the lot.`
+                )}
+              </p>
+              <div className="flex gap-2">
+                <button type="button" className="btn min-h-[40px] !px-3 !py-1.5"
+                  onClick={() => finishTrace()}>Done</button>
+                <button type="button" className="btn-ghost min-h-[40px] !px-3 !py-1.5"
+                  onClick={() => setTrace(null)}>Cancel</button>
+              </div>
+            </div>
+          )}
+          {editing && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-brass/50 bg-[#FBF7EE] px-3 py-2">
+              <p className={`min-w-[180px] flex-1 text-[12.5px] leading-snug ${lotNudge ? "text-brass-deep" : "text-ink/70"}`}>
+                {lotNudge || (lotDrag
+                  ? (lotDrag.kind === "corner"
+                    ? "Moving a corner — it lines up with your other corners and squares itself off when it's close."
+                    : "Moving a whole boundary — it stays straight and keeps its bearing.")
+                  : "Drag the square handles to move a corner, or the diamonds to shift a whole boundary. Double-tap or hold a boundary to add a corner. Hold Alt to turn the snapping off. A drag reaches as far as you can see — drag again to keep going.")}
+              </p>
+              <div className="flex gap-2">
+                <button type="button" className="btn-ghost min-h-[40px] !px-3 !py-1.5"
+                  onClick={undoLot} disabled={history.length === 0}>Undo</button>
+                <button type="button" className="btn min-h-[40px] !px-3 !py-1.5"
+                  onClick={stopLotEdit}>Done</button>
+              </div>
+            </div>
+          )}
           {draw && (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-seal/30 bg-wash px-3 py-2">
               <p className={`min-w-[180px] flex-1 text-[12.5px] leading-snug ${draw.hint ? "text-brass-deep" : "text-ink/65"}`}>
@@ -1707,10 +2316,12 @@ export function SitePlanBuilder(
               style={{
                 width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`,
                 display: "block", touchAction: "none", position: "relative", zIndex: 1,
-                cursor: draw ? "crosshair" : undefined,
+                cursor: draw || trace ? "crosshair" : undefined,
               }}
               onPointerDown={(e) => {
+                if (trace) { addTracePoint(e); return; }
                 if (draw) { addDrawPoint(e); return; }
+                if (editing) { setLotSel(null); return; }
                 setSelected(null);
               }}>
               {plan(true, tracing)}
@@ -1744,7 +2355,11 @@ export function SitePlanBuilder(
           <p className="mt-2 text-center text-[12px] text-ink/50">
             {aligning
               ? "Drag the photo until it sits under your lot, then lock it — the plan is on hold until you do."
-              : "Select the proposed structure before printing to include its boundary distances on the sheet."}
+              : editing
+                ? "Drag a corner to move it, or a boundary to shift it whole. Everything measures as you go, and Undo puts it back."
+                : trace
+                  ? "Tap your lot's corners on the photo. The photo is only a guide and won't be printed — what you draw is your own measurement, not a survey."
+                  : "Select the proposed structure before printing to include its boundary distances on the sheet."}
           </p>
         </div>
       </div>
@@ -1777,40 +2392,31 @@ export function SitePlanBuilder(
               </div>
             ))}
           </div>
-          {/* Where the boundary came from and when. A plan that draws the
-              State's cadastre must say so on its face: the reader has to be
-              able to tell a fetched boundary from a measured one without
-              being told, and to know how old it is. */}
-          {isPoly && boundary.source && (
+          {/* Where the boundary came from and when.
+              The reader of this sheet has to be able to tell a boundary
+              fetched from the State's records from one somebody drew over a
+              photograph — without being told and without asking. So the row
+              names the source and the date when there is one, and says
+              plainly when there isn't. A boundary that was fetched and then
+              moved by hand says both: where it came from, and that it has
+              since been moved. It is never allowed to read as the State's
+              own record. */}
+          {boundaryRow(boundary) && (
             <div style={{ padding: "2mm 3.5mm", borderTop: "0.3mm solid #2B3A31" }}>
               <div style={{ fontSize: "2.3mm", textTransform: "uppercase", letterSpacing: "0.4mm", opacity: 0.55 }}>
                 Lot boundary
               </div>
-              <div style={{ fontSize: "2.9mm", fontFamily: FONT_NUM }} data-cadastre-source="1">
-                {boundary.lotId ? `${boundary.lotId} — ` : ""}{boundary.source}
-                {boundary.fetched ? `, retrieved ${fmtDate(boundary.fetched)}` : ""}
+              <div style={{ fontSize: "2.9mm", fontFamily: FONT_NUM }}
+                data-lot-origin={origin}
+                data-cadastre-source={origin.startsWith("cadastre") ? "1" : undefined}>
+                {boundaryRow(boundary)}
               </div>
             </div>
           )}
         </div>
-        <p style={{ marginTop: "3mm", fontSize: "2.6mm", lineHeight: 1.5, color: INK, opacity: 0.75, fontFamily: FONT_LAB }}>
-          {isPoly && boundary.source ? (
-            <>
-              Prepared by the applicant using the CFBA plan tool. The lot
-              boundary is taken from {boundary.source}
-              {boundary.fetched ? ` on ${fmtDate(boundary.fetched)}` : ""}:
-              cadastral boundaries are indicative and can sit a metre or more
-              from the surveyed pegs. Structures, dimensions and the nominated
-              frontage are as entered by the applicant. Not a certified
-              document and not a survey.
-            </>
-          ) : (
-            <>
-              Prepared by the applicant using the CFBA plan tool — boundaries
-              and dimensions as entered by the applicant. Not a certified
-              document and not a survey.
-            </>
-          )}
+        <p data-lot-footer={origin}
+          style={{ marginTop: "3mm", fontSize: "2.6mm", lineHeight: 1.5, color: INK, opacity: 0.75, fontFamily: FONT_LAB }}>
+          {boundaryFooter(boundary)}
         </p>
       </div>
 

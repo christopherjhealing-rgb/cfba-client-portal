@@ -69,6 +69,17 @@ export default async function SitePlan() {
           </p>
         )}
         <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
+          If the boundary isn&apos;t right, take hold of it: <strong className="font-semibold">Adjust
+          the boundary</strong> puts handles on every corner and every edge —
+          drag a corner, drag a whole boundary, add one or take one out.{" "}
+          <strong className="font-semibold">Trace the lot</strong>{" "}
+          lays a new outline out corner by corner over the photo. Corners line up with
+          each other and square themselves off as you go; hold Alt if
+          you&apos;d rather they didn&apos;t, and Undo is always there. A
+          boundary you draw or move is your own measurement rather than a
+          survey, and the printed plan says exactly that.
+        </p>
+        <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
           Printed your plan? It goes in the drawings bucket when you{" "}
           <Link href="/submit" className="font-medium text-seal underline underline-offset-2">
             lodge a job</Link>.

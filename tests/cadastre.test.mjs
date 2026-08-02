@@ -7,6 +7,7 @@ import {
 import {
   edgeLabels, groundToPlanVector, lotEdges, lotSetbacks, metresBetween,
   polyBounds, polygonArea, polygonInside, underlayAnchor,
+  applyLotEdit, lotOrigin, lotRingFromPts, moveLotCorner,
 } from "../lib/site-plan.mjs";
 import {
   SUBURBAN, SUBURBAN_RING, SUBURBAN_STREET, SUBURBAN_ESRI,
@@ -432,4 +433,56 @@ test("a structure in the leg of a battleaxe measures to the leg, not the block",
   close(byI[1], 0.5, MM5);                      // to one side of the leg
   close(byI[7], 0.5, MM5);                      // to the other
   assert.equal(sb[0].label, "Front");
+});
+
+// ---------------------------------------------------------------------------
+// A fetched lot that has since been adjusted by hand.
+// ---------------------------------------------------------------------------
+
+test("lotRingFromPts exactly reverses the layout of a real parcel", () => {
+  for (const [name, fx, street] of [
+    ["suburban", SUBURBAN, SUBURBAN_STREET],
+    ["corner", CORNER, CORNER_STREET],
+    ["battleaxe", BATTLEAXE, BATTLEAXE_STREET],
+    ["irregular", IRREGULAR, IRREGULAR_STREET],
+  ]) {
+    const lot = buildLot(parseParcel(fx), street, { source: "s", fetched: "2026-08-02" });
+    const back = lotRingFromPts(lot);
+    assert.equal(back.length, lot.ring.length, name);
+    // A millimetre, over a whole lot, through a tangent plane and back.
+    for (let i = 0; i < back.length; i++) {
+      const off = metresBetween(
+        { lat: lot.ring[i][0], lng: lot.ring[i][1] },
+        { lat: back[i][0], lng: back[i][1] },
+      );
+      assert.ok(Math.hypot(off.east, off.north) < 1e-3, `${name} corner ${i}`);
+    }
+  }
+});
+
+test("an adjusted lot can still be turned onto another frontage, edit and all", () => {
+  const lot = buildLot(parseParcel(SUBURBAN), SUBURBAN_STREET,
+    { source: "Landgate cadastre (SLIP)", fetched: "2026-08-02" });
+  // Pull one corner two metres off where the State put it, as somebody
+  // matching the aerial would.
+  const moved = moveLotCorner(lot.pts, 1, lot.pts[1].x - 2, lot.pts[1].y + 1, { snap: false });
+  const out = applyLotEdit(lot, moved.pts);
+  assert.equal(lotOrigin(out.lot), "cadastre-adjusted");
+  const areaAfter = polygonArea(out.lot.pts);
+  assert.ok(Math.abs(areaAfter - polygonArea(lot.pts)) > 0.5, "the edit really changed the lot");
+
+  // Now make another boundary the street. The lot turns, north follows — and
+  // the shape that comes back is the ADJUSTED one, not the record it came
+  // from, because the ring was re-derived from what is drawn.
+  const turned = reorientLot(out.lot, 1);
+  assert.equal(turned.frontage, 1);
+  close(polygonArea(turned.pts), areaAfter, 1e-3);
+  assert.notEqual(turned.north, out.lot.north);
+  // Its new frontage lies along the bottom of the sheet.
+  const maxY = Math.max(...turned.pts.map((q) => q.y));
+  close(turned.pts[1].y, maxY, MM5);
+  close(turned.pts[2].y, maxY, MM5);
+  // And it still says where it came from, and that it has been moved.
+  assert.equal(turned.source, "Landgate cadastre (SLIP)");
+  assert.equal(lotOrigin(turned), "cadastre-adjusted");
 });
