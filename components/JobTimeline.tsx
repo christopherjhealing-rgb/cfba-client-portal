@@ -15,7 +15,7 @@ const DOT: Record<State, string> = {
 const LABEL: Record<State, string> = {
   done: "text-ink/55",
   current: "text-ink font-semibold",
-  waiting: "text-brass font-semibold",
+  waiting: "text-brass-deep font-semibold",
   paused: "text-ink/50 font-semibold",
   skipped: "text-ink/30",
   pending: "text-ink/35",

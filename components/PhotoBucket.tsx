@@ -83,8 +83,9 @@ export function PhotoBucket({
             Site photos (optional)
           </p>
           <p className="mt-0.5 text-[12px] leading-snug text-ink/55">
-            Straight from your phone is fine — we&apos;ll bundle them into one PDF.
-            Up to {MAX_PHOTOS}, or drag them onto this box.
+            JPEG or PNG photos straight from your phone — we&apos;ll bundle them
+            into one PDF for the surveyor. Up to {MAX_PHOTOS}, or drag them onto
+            this box.
           </p>
         </div>
         <button type="button" onClick={() => input.current?.click()}

@@ -76,6 +76,9 @@ body {
 /* Motion layer — the portal breathes. CSS-only, and switched off entirely
    for users who ask the OS for reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
+  /* In-page jumps (e.g. the FIR banner's "Reply now" anchor) glide. */
+  html { scroll-behavior: smooth; }
+
   main { animation: pagein 0.4s ease both; }
   @keyframes pagein { from { opacity: 0; transform: translateY(10px); } }
 

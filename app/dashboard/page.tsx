@@ -125,11 +125,14 @@ export default async function Dashboard() {
                     <JobArt description={j.description as string} />
                     <div className="min-w-0 flex-1">
                       <JobLink refNo={j.ref as string} address={j.address as string} />
-                      <div className="mt-0.5 text-[13px] text-ink/55">{j.description}</div>
+                      <div className="mt-0.5 break-words text-[13px] text-ink/55">
+                        {j.description}
+                        {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
+                      </div>
                       <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-seal">
                         <Icon name="check" size={13} />
                         <span className="font-medium">Permit issued</span>
-                        <span className="text-ink/45">{fmtDate(j.issuedAt)}</span>
+                        <span className="text-ink/55">{fmtDate(j.issuedAt)}</span>
                       </div>
                     </div>
                     <DownloadButton href={`/api/jobs/${encodeURIComponent(j.ref)}/download`} />
@@ -149,13 +152,16 @@ export default async function Dashboard() {
                       <JobArt description={j.description as string} tone="amber" />
                       <div className="min-w-0 flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} tone="amber" />
-                        <div className="mt-0.5 text-[13px] text-ink/55">{j.description}</div>
+                        <div className="mt-0.5 break-words text-[13px] text-ink/55">
+                        {j.description}
+                        {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
+                      </div>
                         {(() => {
                           const at = askedAt(j.ref as string);
                           const d = at ? businessDaysSince(at) : null;
                           if (!at) return null;
                           return (
-                            <p className="mt-1.5 text-[13px] font-medium text-brass">
+                            <p className="mt-1.5 text-[13px] font-medium text-brass-deep">
                               With you since {fmtDate(at)}
                               {d !== null && d > 0 &&
                                 ` · ${d} business day${d === 1 ? "" : "s"}`}
@@ -202,7 +208,10 @@ export default async function Dashboard() {
                       <JobArt description={j.description as string} />
                       <div className="min-w-0 flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} />
-                        <div className="mt-0.5 text-[13px] text-ink/55">{j.description}</div>
+                        <div className="mt-0.5 break-words text-[13px] text-ink/55">
+                        {j.description}
+                        {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
+                      </div>
                         <span className="chip mt-1.5 inline-block">
                           {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
                         </span>
@@ -237,8 +246,10 @@ export default async function Dashboard() {
                       <JobArt description={j.description as string} />
                       <div className="min-w-0 flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} muted />
-                        <div className="mt-0.5 text-[13px] text-ink/50">
-                          {j.description} · available {r.daysLeft} more day{r.daysLeft === 1 ? "" : "s"}
+                        <div className="mt-0.5 break-words text-[13px] text-ink/50">
+                          {j.description}
+                          {j.clientRef ? <> · your ref {String(j.clientRef)}</> : null}
+                          {" "}· available {r.daysLeft} more day{r.daysLeft === 1 ? "" : "s"}
                         </div>
                       </div>
                       <span className="chip chip-seal shrink-0">Issued</span>
@@ -280,7 +291,7 @@ function JobLink({ refNo, address, tone = "plain", muted = false }: {
   return (
     <Link href={`/jobs/${encodeURIComponent(refNo)}`}
       className="group flex min-w-0 flex-wrap items-baseline gap-2">
-      <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass" : "text-ink/45"}`}>
+      <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/55"}`}>
         {refNo}
       </span>
       <span className={`truncate underline-offset-2 group-hover:text-seal group-hover:underline ${
@@ -309,7 +320,7 @@ function Stat({ href, icon, n, label, note, cta, tone = "plain" }: {
         <span className="mt-0.5 block text-[12px] leading-snug text-ink/50">{note}</span>
       </span>
       <span className={`mt-3 flex items-center gap-1.5 text-[13px] font-medium ${
-        tone === "amber" && n > 0 ? "text-brass" : "text-seal"}`}>
+        tone === "amber" && n > 0 ? "text-brass-deep" : "text-seal"}`}>
         {cta} <Icon name="arrowRight" size={13} />
       </span>
     </Link>

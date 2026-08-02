@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
-import { groupJobs, clientStatusLabel, isClientVisible, needsClientInfo } from "@/lib/core.mjs";
+import {
+  groupJobs, clientStatusLabel, isClientVisible, needsClientInfo,
+  businessDaysSince, PAUSED_STATUSES,
+} from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
@@ -72,6 +75,15 @@ export default async function MyJobs({
 
   const hidden = await disabledPages();
 
+  // Elapsed working days on a running job — context, never a forecast. Not
+  // shown while the job is with the client, paused or cancelled.
+  const typicalDays = String(env.turnaroundDays).replace("-", "–");
+  const elapsedFor = (j: (typeof all)[number]) => {
+    if (needsClientInfo(j) || PAUSED_STATUSES.has(j.mondayStatus as string) ||
+      j.mondayStatus === "Cancelled" || !j.receivedAt) return null;
+    return businessDaysSince(j.receivedAt as string);
+  };
+
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
@@ -135,6 +147,7 @@ export default async function MyJobs({
               ))}
               {rows.map((j) => {
                 const b = bucketOf(j.ref as string);
+                const elapsed = b === "progress" ? elapsedFor(j) : null;
                 return (
                   <tr key={j.ref as string} className={needsClientInfo(j) ? "bg-[#FCF7EC]" : undefined}>
                     <td className="td font-mono text-[12px] text-ink/50">
@@ -145,8 +158,9 @@ export default async function MyJobs({
                     <td className="td">
                       <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} className="group">
                         <div className="font-medium text-ink group-hover:text-seal">{j.address as string}</div>
-                        <div className="mt-0.5 text-[13px] text-ink/55">
+                        <div className="mt-0.5 break-words text-[13px] text-ink/55">
                           {j.description as string}
+                          {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
                           {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
                         </div>
                       </Link>
@@ -155,6 +169,11 @@ export default async function MyJobs({
                       <span className={`chip ${needsClientInfo(j) ? "chip-brass" : b === "ready" ? "chip-seal" : ""}`}>
                         {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
                       </span>
+                      {elapsed !== null && (
+                        <div className="mt-1 text-[11.5px] text-ink/55">
+                          Day {elapsed + 1} · most jobs {typicalDays} business days
+                        </div>
+                      )}
                     </td>
                     <td className="td text-right">
                       {b === "progress" ? (

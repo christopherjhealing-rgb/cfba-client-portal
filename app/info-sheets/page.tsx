@@ -126,7 +126,7 @@ export default async function InfoSheets() {
         </section>
       ))}
 
-      <p className="mt-2 text-[12px] text-ink/45">
+      <p className="mt-2 text-[12px] text-ink/55">
         All {published} notes are available now. If a topic would help that isn&apos;t
         covered here, ask and we&apos;ll write it.
       </p>

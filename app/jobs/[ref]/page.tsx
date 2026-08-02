@@ -4,6 +4,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import {
   isClientVisible, needsClientInfo, clientStatusLabel, jobBucket,
+  businessDaysSince, PAUSED_STATUSES,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -56,6 +57,15 @@ export default async function JobDetail({
   const downloadable = bucket === "ready" || bucket === "downloaded";
   const messagesOff = hidden.has("messages");
 
+  // Elapsed working days since we received the job — context, never a
+  // forecast. Only while the job is genuinely running with us: not while it's
+  // with the client, paused or cancelled.
+  const paused = PAUSED_STATUSES.has(job.mondayStatus as string) ||
+    job.mondayStatus === "Cancelled";
+  const elapsed = bucket === "in_progress" && !needsClientInfo(job) && !paused &&
+    job.receivedAt ? businessDaysSince(job.receivedAt as string) : null;
+  const typicalDays = String(env.turnaroundDays).replace("-", "–");
+
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
@@ -65,17 +75,32 @@ export default async function JobDetail({
       />
 
       {needsClientInfo(job) && (
-        <div className="mb-5 rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-[13.5px] text-brass">
-          <strong>We need something from you</strong> before this can continue —
-          see the messages below and reply with what&apos;s asked.
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-[13.5px] text-brass-deep">
+          <p className="min-w-0">
+            <strong>We need something from you</strong> before this can continue —
+            see the messages below and reply with what&apos;s asked.
+          </p>
+          {!messagesOff && (
+            <a href="#reply"
+              className="shrink-0 font-medium underline underline-offset-2 hover:text-ink">
+              Reply now →
+            </a>
+          )}
         </div>
       )}
 
       <div className="card mb-6 p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <span className={`chip ${needsClientInfo(job) ? "chip-brass" : bucket === "ready" ? "chip-seal" : ""}`}>
-            {clientStatusLabel(job.mondayStatus as string, job.fileCount as number)}
-          </span>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className={`chip ${needsClientInfo(job) ? "chip-brass" : bucket === "ready" ? "chip-seal" : ""}`}>
+              {clientStatusLabel(job.mondayStatus as string, job.fileCount as number)}
+            </span>
+            {elapsed !== null && (
+              <span className="text-[12px] text-ink/55">
+                Day {elapsed + 1} · most jobs {typicalDays} business days
+              </span>
+            )}
+          </div>
           {downloadable && (
             <DownloadButton
               href={`/api/jobs/${encodeURIComponent(ref)}/download`}
@@ -114,7 +139,7 @@ export default async function JobDetail({
                         <span className="text-seal"><Icon name="folder" size={13} /></span>
                         <span className="truncate">{f.name}</span>
                         {f.category && (
-                          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/40">
+                          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/50">
                             {f.category}
                           </span>
                         )}
@@ -125,7 +150,7 @@ export default async function JobDetail({
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[12px] text-ink/45">
+          <p className="mt-2 text-[12px] text-ink/55">
             Files sent with messages appear in the thread below.
           </p>
         </div>
@@ -144,7 +169,7 @@ export default async function JobDetail({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[12px] text-ink/45">Download the package above to save all of these.</p>
+          <p className="mt-2 text-[12px] text-ink/55">Download the package above to save all of these.</p>
         </div>
       )}
 
@@ -168,7 +193,7 @@ export default async function JobDetail({
                 <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                   {m.from === "cfba" ? "CF Building Approvals" : session.companyName}
                 </span>
-                <span className="text-[11px] text-ink/40">{when(m.createdAt)}</span>
+                <span className="text-[11px] text-ink/50">{when(m.createdAt)}</span>
               </div>
               {m.body && (
                 <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">{m.body}</p>
@@ -186,10 +211,21 @@ export default async function JobDetail({
                   ))}
                 </ul>
               )}
+              {/* The Monday update id is set the moment a reply posts to the
+                  card — its presence IS the delivery receipt. No polling. */}
+              {m.from === "client" && m.mondayUpdateId && (
+                <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/45">
+                  <Icon name="check" size={12} /> Delivered to your surveyor
+                </p>
+              )}
             </div>
           ))}
         </div>
-        {!messagesOff && <ReplyBox refNo={ref} />}
+        {!messagesOff && (
+          <div id="reply" className="scroll-mt-6">
+            <ReplyBox refNo={ref} />
+          </div>
+        )}
       </div>
     </AppShell>
   );

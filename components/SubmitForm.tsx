@@ -136,6 +136,9 @@ export function SubmitForm() {
   }
 
   if (done) {
+    // The Monday ref doesn't exist yet at this point — the board assigns it
+    // after the card lands — so the honest link is the jobs list, where the
+    // new job surfaces as soon as it's through. Never a dead end.
     return (
       <div className="card p-8 text-center">
         <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-seal/10 text-seal">
@@ -144,15 +147,22 @@ export function SubmitForm() {
         <h2 className="font-display text-[21px] font-semibold">Job lodged</h2>
         <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-ink/65">
           {instant ? (
-            <>Thanks — it&apos;s gone straight through to the CFBA team and will
-            appear in your job list shortly.</>
+            <>Thanks — it&apos;s on our board. It&apos;ll appear at the top of
+            your jobs within a couple of minutes.</>
           ) : (
             <>Thanks — it&apos;s with the CFBA office for checking. It will show in your
             job list under <span className="font-medium">Waiting to be accepted</span>,
             and once it&apos;s accepted you&apos;ll be able to follow its progress here.</>
           )}
         </p>
-        <a href="/jobs" className="btn mt-6">Back to my jobs</a>
+        {clientRef.trim() && (
+          <p className="mx-auto mt-2.5 max-w-sm text-[13px] text-ink/60">
+            Your ref{" "}
+            <span className="font-mono font-medium text-ink/80">{clientRef.trim()}</span>{" "}
+            is on the job — you&apos;ll see it against this job and in our emails.
+          </p>
+        )}
+        <a href="/jobs" className="btn mt-6">View my jobs</a>
       </div>
     );
   }
@@ -204,7 +214,17 @@ export function SubmitForm() {
                 onChange={(f) => setFiles((prev) => ({ ...prev, [b.key]: f }))} />
 
               {/* The company's saved documents ride along under Engineering:
-                  tick to attach, no re-upload. Saved on the My details page. */}
+                  tick to attach, no re-upload. Saved on the My details page.
+                  First run, before anything is saved, one line sells the
+                  save-for-next-time tick rather than rendering nothing. */}
+              {b.key === "engineering" && library.length === 0 && (
+                <p className="mt-1.5 px-1 text-[12px] leading-snug text-ink/55">
+                  Lodge the same engineering often? Tick{" "}
+                  <span className="font-medium text-ink/70">Save this engineering to My documents</span>{" "}
+                  below once it&apos;s attached, and next time it&apos;s one tick here
+                  instead of another upload.
+                </p>
+              )}
               {b.key === "engineering" && library.length > 0 && (
                 <div className="mt-2 rounded-lg border border-rule bg-white px-4 py-3">
                   <p className="font-display text-[13px] font-semibold text-ink">

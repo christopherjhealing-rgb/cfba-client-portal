@@ -91,7 +91,7 @@ export default async function Messages({
                   className={`block border-b border-rule px-4 py-3.5 transition last:border-b-0 ${
                     active ? "bg-wash" : "hover:bg-wash/60"}`}>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-[12px] text-ink/45">{ref}</span>
+                    <span className="font-mono text-[12px] text-ink/55">{ref}</span>
                     {isUnread(ref) && !active && (
                       <span className="h-1.5 w-1.5 rounded-full bg-brass" aria-label="Unread" />
                     )}
@@ -112,7 +112,7 @@ export default async function Messages({
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-3.5">
               <div className="min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-[12px] text-ink/45">{open}</span>
+                  <span className="font-mono text-[12px] text-ink/55">{open}</span>
                   <span className="truncate font-medium">{job?.address as string}</span>
                 </div>
                 {job && (
@@ -135,7 +135,7 @@ export default async function Messages({
                     <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                       {m.from === "cfba" ? "CF Building Approvals" : session.companyName}
                     </span>
-                    <span className="text-[11px] text-ink/40">{when(m.createdAt)}</span>
+                    <span className="text-[11px] text-ink/50">{when(m.createdAt)}</span>
                   </div>
                   {m.body && (
                     <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">
@@ -158,6 +158,13 @@ export default async function Messages({
                       ))}
                     </ul>
                   )}
+                  {/* The Monday update id is set the moment a reply posts to
+                      the card — its presence IS the delivery receipt. */}
+                  {m.from === "client" && m.mondayUpdateId && (
+                    <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/45">
+                      <Icon name="check" size={12} /> Delivered to your surveyor
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -167,7 +174,7 @@ export default async function Messages({
         </div>
       )}
 
-      <p className="mt-5 flex items-center gap-2 text-[12px] text-ink/45">
+      <p className="mt-5 flex items-center gap-2 text-[12px] text-ink/55">
         <Icon name="inbox" size={13} />
         Replies and attachments go straight onto your job — there&apos;s no need to
         email as well.

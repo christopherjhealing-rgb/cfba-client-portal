@@ -12,7 +12,7 @@ const FILE = path.join(os.tmpdir(), "cfba-portal-demo.json");
 // Bump this whenever seed() changes shape or content. A store written by an
 // older build is thrown away and reseeded rather than being loaded with fields
 // missing — which is what made a new Messages seed look like "no messages".
-const SEED_VERSION = 4;
+const SEED_VERSION = 5;
 
 export interface DemoLogin {
   username: string;
@@ -36,11 +36,14 @@ export interface DemoJob {
   mondayStatus: string;
   fileCount: number;
   issuedAt: string | null;
+  receivedAt?: string | null;
   firstDownloadedAt: string | null;
   lastSyncedAt: string | null;
   storagePrefix: string;
   sourceFolder: string | null;
   firRequest?: string | null;
+  clientRef?: string | null;
+  surveyor?: string | null;
   files: { filename: string; size: number; storagePath: string; contentType: string }[];
 }
 
@@ -137,10 +140,16 @@ function seed(): DemoDB {
      "Issued", 1,
      ["CDC - 1 Test Street.pdf", "Engineering - Test Design.pdf", "Site Plan.pdf"],
      null, "CFBA Test Client/1 Test Street, Greenwood - T-1001/Issued");
+  jobs["T-1001"].clientRef = "PO 7583";
   mk("T-1002", "co_test", "2 Test Street, Greenwood", "Patio — being assessed",
      "To CDC", null, [], null, null);
+  jobs["T-1002"].receivedAt = iso(2);
+  jobs["T-1002"].clientRef = "PO 8112";
+  jobs["T-1002"].surveyor = "Rebecca";
   mk("T-1003", "co_test", "3 Test Street, Greenwood", "Carport — engineering required",
      "FIR", null, [], null, null);
+  jobs["T-1003"].receivedAt = iso(5);
+  jobs["T-1003"].clientRef = "PO 4471";
   jobs["T-1003"].firRequest =
     "We can't finish the assessment without the structural engineering for the " +
     "carport. Please send:\n" +
@@ -150,6 +159,8 @@ function seed(): DemoDB {
     "Guidance note 02 (Engineering certification) sets out everything we look for.";
   mk("T-1004", "co_test", "4 Test Street, Greenwood", "Patio — final review",
      "To Check", null, [], null, null);
+  jobs["T-1004"].receivedAt = iso(1);
+  jobs["T-1004"].surveyor = "Chris";
   mk("T-1005", "co_test", "5 Test Street, Greenwood", "Patio — already downloaded",
      "Issued", 20, ["CDC - 5 Test Street.pdf"], 14,
      "CFBA Test Client/5 Test Street, Greenwood - T-1005/Issued");
@@ -165,8 +176,10 @@ function seed(): DemoDB {
      "Issued", 3, ["CDC 56576 - 21 Creaton Street.pdf", "Engineering.pdf"],
      null, "One Stop Patio Shop/21 Creaton Street, EAST VIC PARK - 56576/Issued");
   mk("56544", "co_adv", "3 Larcom Road, Lakelands", "Patio + carport", "To Check", null, [], null);
+  jobs["56544"].receivedAt = iso(3);
   mk("56512", "co_eod", "18 Corrigan Way, Greenwood", "Retaining wall", "FIR - ENG", null, [], null);
   mk("56590", "co_ppa", "8 Marri Way, Willetton", "Patio", "To Assess", null, [], null);
+  jobs["56590"].receivedAt = iso(0);
   mk("56320", "co_ppa", "5 Banksia Ave, Mandurah", "Patio (issued last month)",
      "Issued", 34, ["CDC - 5 Banksia Ave.pdf"], 30,
      "Perth Patios & Home Improvements/5 Banksia Ave, Mandurah - 56320/Issued");
@@ -215,6 +228,15 @@ function seed(): DemoDB {
         "stating the wind region and terrain category.\n" +
         "2. Footing details — depth, diameter and reinforcement.\n\n" +
         "Guidance note 02 (Engineering certification) sets out everything we look for.",
+    },
+    {
+      // A client reply that reached the Monday card — the update id is what
+      // renders the "Delivered to your surveyor" tick in the thread.
+      id: "msg_seed1r", ref: "T-1003", companyId: "co_test", from: "client",
+      createdAt: iso(2), mondayUpdateId: "demo-update-4471",
+      body:
+        "Thanks — chasing the engineer now. The certification should be with " +
+        "you by Friday; the footing details are coming with it.",
     },
     {
       id: "msg_seed2", ref: "T-1002", companyId: "co_test", from: "cfba",

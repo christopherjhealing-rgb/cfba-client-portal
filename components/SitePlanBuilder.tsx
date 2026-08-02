@@ -497,7 +497,7 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
               {plan(true)}
             </svg>
           </div>
-          <p className="mt-2 text-center text-[12px] text-ink/40">
+          <p className="mt-2 text-center text-[12px] text-ink/50">
             Select the proposed structure before printing to include its boundary distances on the sheet.
           </p>
         </div>

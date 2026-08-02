@@ -20,10 +20,10 @@ export function SectionHead({
 }) {
   return (
     <div className="sectionhead">
-      <span className={tone === "amber" ? "text-brass" : undefined}>{title}</span>
+      <span className={tone === "amber" ? "text-brass-deep" : undefined}>{title}</span>
       <span className="h-px flex-1 bg-rule" />
       {count !== undefined && (
-        <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass" : "text-ink/45"}`}>
+        <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/45"}`}>
           {count}
         </span>
       )}
@@ -51,7 +51,7 @@ export function ReadyRow({
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-mono text-[12px] text-ink/45">{refNo}</span>
+          <span className="font-mono text-[12px] text-ink/55">{refNo}</span>
           <span className="truncate font-medium text-ink">{address}</span>
         </div>
         <div className="mt-0.5 truncate text-[13px] text-ink/55">{meta}</div>

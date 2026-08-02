@@ -92,7 +92,7 @@ export default async function Help() {
         </div>
       </div>
 
-      <p className="mt-6 text-[12px] text-ink/40">
+      <p className="mt-6 text-[12px] text-ink/50">
         Jobs stay downloadable for {env.retentionMonths} months after first download.
       </p>
     </AppShell>

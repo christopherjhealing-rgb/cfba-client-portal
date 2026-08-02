@@ -30,7 +30,7 @@ That company has one job in every state, so you can walk the whole thing:
 
 - `T-1001` — Issued with 3 files → **Ready to download**
 - `T-1002` — To CDC → shows as *Being assessed*
-- `T-1003` — FIR → *Waiting on further information from you*
+- `T-1003` — FIR → *Action required — see the request*
 - `T-1004` — To Check → *In final review*
 - `T-1005` — downloaded a fortnight ago → sits in **Downloaded** with the
   retention countdown
