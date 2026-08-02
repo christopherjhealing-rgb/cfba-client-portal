@@ -175,3 +175,29 @@ export function officeReplyEmail(opts: {
 </div>`.trim();
   return { subject, html };
 }
+
+/** Internal notice to the office when a client cancels a job from the portal.
+ *  The card is already at Cancelled by the time this sends — the portal won't
+ *  tell a client it's done unless the board took it — so this exists to make
+ *  sure a human knows to stop work, and carries the reason they gave. */
+export function officeCancelEmail(opts: {
+  companyName: string; ref: string; address: string; reason: string;
+}): { subject: string; html: string } {
+  const { companyName, ref, address, reason } = opts;
+  const subject = `Portal Cancellation — ${companyName}, Job ${ref}`;
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 12px"><strong>${esc(companyName)}</strong> cancelled job <strong>${esc(ref)}</strong>${address ? ` (${esc(address)})` : ""} through the portal.</p>
+  <p style="margin:0 0 8px;font-size:14px;color:#5B6660">Their reason:</p>
+  <div style="border-left:3px solid #C9A227;background:#FBF4E6;padding:14px 18px;margin:0 0 14px;white-space:pre-line">${esc(reason)}</div>
+  <p style="margin:0 0 14px;font-size:14px">The card is already at <strong>Cancelled</strong> and the reason is posted on it. Nothing further is needed in the portal — this is so somebody knows to stop work.</p>
+  <p style="margin:0 0 18px">
+    <a href="${env.appUrl}/messages?ref=${encodeURIComponent(ref)}"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Open the job
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">If this looks like a mistake, ring the client — they were told the portal can't undo it.</p>
+</div>`.trim();
+  return { subject, html };
+}

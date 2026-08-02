@@ -42,7 +42,12 @@ export function downloadStatusWrite(
 ): StatusWriteDecision;
 export const CANCELLED_STATUS: string;
 export const ISSUED_STATUSES: Set<string>;
-export function canCancel(job: PortalJob | null | undefined): boolean;
+/** All canCancel needs. Both repo.Job and PortalJob satisfy it. */
+export interface CancellableJob {
+  mondayStatus?: string | null;
+  firstDownloadedAt?: string | null;
+}
+export function canCancel(job: CancellableJob | null | undefined): boolean;
 export function addMonths(iso: string, months: number): string | null;
 export function retention(firstDownloadedAt: string | null | undefined, now?: Date | string, months?: number): Retention;
 export function jobBucket(job: PortalJob, now?: Date | string, months?: number): Bucket;

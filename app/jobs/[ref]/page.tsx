@@ -4,7 +4,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import {
   isClientVisible, needsClientInfo, clientStatusLabel, jobBucket,
-  elapsedBusinessDays, PAUSED_STATUSES,
+  elapsedBusinessDays, PAUSED_STATUSES, canCancel, CANCELLED_STATUS,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -12,6 +12,7 @@ import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { JobTimeline } from "@/components/JobTimeline";
 import { DownloadButton } from "@/components/DownloadButton";
 import { ReplyBox } from "@/components/ReplyBox";
+import { CancelJob } from "@/components/CancelJob";
 import { Icon } from "@/components/Icon";
 import { fmtDate } from "@/components/JobBits";
 import { env } from "@/lib/env";
@@ -67,8 +68,8 @@ export default async function JobDetail({
   // Days the job spent waiting on the client come back OUT of the count, so a
   // client who replies after a fortnight doesn't return to a counter that ran
   // the whole time they had it.
-  const paused = PAUSED_STATUSES.has(job.mondayStatus as string) ||
-    job.mondayStatus === "Cancelled";
+  const cancelled = job.mondayStatus === CANCELLED_STATUS;
+  const paused = PAUSED_STATUSES.has(job.mondayStatus as string) || cancelled;
   const elapsed = bucket === "in_progress" && !needsClientInfo(job) && !paused &&
     job.receivedAt
     ? elapsedBusinessDays(job.receivedAt as string, pauses[ref])
@@ -124,7 +125,18 @@ export default async function JobDetail({
             )}
           </div>
         </div>
-        <JobTimeline job={job} />
+        {/* A cancelled job has no progress to show — a stepper sitting at
+            "Received" reads as though it were still moving. */}
+        {cancelled ? (
+          <p className="rounded-lg border border-rule bg-wash px-4 py-3 text-[13.5px] leading-relaxed text-ink/70">
+            This job is cancelled and we&apos;ve stopped work on it. If that
+            wasn&apos;t what you wanted, ring us on{" "}
+            <a href="tel:1300029074" className="font-medium text-seal underline underline-offset-2">1300 029 074</a>{" "}
+            and we&apos;ll pick it back up.
+          </p>
+        ) : (
+          <JobTimeline job={job} />
+        )}
         <p className="mt-4 text-[12.5px] text-ink/50">
           Your surveyor:{" "}
           <span className="font-medium text-ink/70">{job.surveyor || "being allocated"}</span>
@@ -243,6 +255,11 @@ export default async function JobDetail({
           </div>
         )}
       </div>
+
+      {/* Deliberately last and deliberately quiet — a way out, not an action
+          competing with Download. Gone entirely once a job is issued: a
+          certificate isn't something a client can withdraw. */}
+      {canCancel(job) && <CancelJob refNo={ref} />}
     </AppShell>
   );
 }

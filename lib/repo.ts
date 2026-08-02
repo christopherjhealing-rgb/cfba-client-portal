@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { DEMO_MODE, env } from "./env";
-import { aliasKey, normEmail } from "./core.mjs";
+import { aliasKey, normEmail, CANCELLED_STATUS } from "./core.mjs";
 import { normUsername } from "./auth";
 import * as demo from "./demo";
 import type { ClientPause, PortalJob } from "./core.mjs";
@@ -341,6 +341,22 @@ export async function markDownloaded(ref: string, at: string) {
   // purge and the six-month promise to clients quietly stops being true.
   must(await sb().from("jobs").update({ first_downloaded_at: at })
     .eq("ref", ref).is("first_downloaded_at", null));
+}
+
+/** Reflect a cancellation the board has already accepted, so the portal stops
+ *  showing the job as live before the next sync runs. Monday stays the record:
+ *  the sync re-asserts the status from the card on its next pass, and this only
+ *  closes the fifteen-minute window in between. */
+export async function markCancelled(ref: string) {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    if (db.jobs[ref]) {
+      db.jobs[ref].mondayStatus = CANCELLED_STATUS;
+      await demo.save(db);
+    }
+    return;
+  }
+  must(await sb().from("jobs").update({ monday_status: CANCELLED_STATUS }).eq("ref", ref));
 }
 
 export async function upsertJob(job: Job, files: JobFile[]) {

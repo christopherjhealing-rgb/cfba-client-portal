@@ -12,7 +12,7 @@ const FILE = path.join(os.tmpdir(), "cfba-portal-demo.json");
 // Bump this whenever seed() changes shape or content. A store written by an
 // older build is thrown away and reseeded rather than being loaded with fields
 // missing — which is what made a new Messages seed look like "no messages".
-const SEED_VERSION = 5;
+const SEED_VERSION = 6;
 
 export interface DemoLogin {
   username: string;
@@ -168,6 +168,11 @@ function seed(): DemoDB {
   mk("T-1005", "co_test", "5 Test Street, Greenwood", "Patio — already downloaded",
      "Issued", 20, ["CDC - 5 Test Street.pdf"], 14,
      "CFBA Test Client/5 Test Street, Greenwood - T-1005/Issued");
+  // Already cancelled, so a dry run can check the cancel option is gone rather
+  // than only that it appears.
+  mk("T-1006", "co_test", "6 Test Street, Greenwood", "Carport — cancelled by the client",
+     "Cancelled", null, [], null, null);
+  jobs["T-1006"].receivedAt = iso(9);
 
   // --- sample real-world-shaped clients ------------------------------------
   mk("56411", "co_ppa", "32 Elvira St, Palmyra", "Steel patio to rear of dwelling",
