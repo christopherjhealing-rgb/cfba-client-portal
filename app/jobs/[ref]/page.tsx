@@ -59,12 +59,13 @@ export default async function JobDetail({
 
   // Elapsed working days since we received the job — context, never a
   // forecast. Only while the job is genuinely running with us: not while it's
-  // with the client, paused or cancelled.
+  // with the client, paused or cancelled. Just the day count: the published
+  // turnaround belongs where it is a statement of service, not hung off one
+  // job's status line.
   const paused = PAUSED_STATUSES.has(job.mondayStatus as string) ||
     job.mondayStatus === "Cancelled";
   const elapsed = bucket === "in_progress" && !needsClientInfo(job) && !paused &&
     job.receivedAt ? businessDaysSince(job.receivedAt as string) : null;
-  const typicalDays = String(env.turnaroundDays).replace("-", "–");
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
@@ -98,7 +99,7 @@ export default async function JobDetail({
             </span>
             {elapsed !== null && (
               <span className="text-[12px] text-ink/55">
-                Day {elapsed + 1} · most jobs {typicalDays} business days
+                Day {elapsed + 1}
               </span>
             )}
           </div>

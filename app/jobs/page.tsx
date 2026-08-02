@@ -77,8 +77,9 @@ export default async function MyJobs({
   const hidden = await disabledPages();
 
   // Elapsed working days on a running job — context, never a forecast. Not
-  // shown while the job is with the client, paused or cancelled.
-  const typicalDays = String(env.turnaroundDays).replace("-", "–");
+  // shown while the job is with the client, paused or cancelled. Just the day
+  // count: the published turnaround belongs where it is a statement of
+  // service, not hung off one job's status line.
   const elapsedFor = (j: (typeof all)[number]) => {
     if (needsClientInfo(j) || PAUSED_STATUSES.has(j.mondayStatus as string) ||
       j.mondayStatus === "Cancelled" || !j.receivedAt) return null;
@@ -185,7 +186,7 @@ export default async function MyJobs({
                       </span>
                       {elapsed !== null && (
                         <div className="mt-1 text-[11.5px] text-ink/55">
-                          Day {elapsed + 1} · most jobs {typicalDays} business days
+                          Day {elapsed + 1}
                         </div>
                       )}
                     </td>
