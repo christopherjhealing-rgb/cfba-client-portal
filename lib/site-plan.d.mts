@@ -311,6 +311,51 @@ export function parseMetres(s: string | null | undefined): number | null;
 export function fmtM(n: number): string;
 export function fmtM2(n: number): string;
 
+// --- distances between structures -------------------------------------------
+
+/** The shortest distance between two outlines and where it runs. `overlap`
+ *  marks the pair as sharing ground — `d` is 0 for a touch and for an overlap
+ *  alike, and is never negative. */
+export interface Gap {
+  d: number;
+  from: Pt;
+  to: Pt;
+  overlap: boolean;
+}
+export function polyDistance(a: Pt[], b: Pt[]): Gap;
+export function structureGap(s1: StructureShape, s2: StructureShape): Gap;
+
+export const GAP_NEAR_M: number;
+export const GAP_SHOW_LIMIT: number;
+export const GAP_PRINT_LIMIT: number;
+export const PIN_CAP: number;
+
+export interface NearGap extends Gap {
+  /** The other structure. */
+  id: string;
+}
+export function nearbyGaps<T extends StructureShape & { id: string }>(
+  target: (StructureShape & { id: string }) | null | undefined,
+  others: T[],
+  opts?: { limit?: number; within?: number },
+): NearGap[];
+
+/** A pinned pair, stored on the design lowest id first. */
+export type Pin = [string, string];
+export function pairKey(a: unknown, b: unknown): string;
+export function togglePin(pins: unknown, a: string, b: string): Pin[];
+export function isPinned(pins: unknown, a: string, b: string): boolean;
+export function sanitisePins(raw: unknown, ids?: Iterable<string> | null): Pin[];
+
+export interface PrintedGap extends Gap {
+  a: string;
+  b: string;
+  pinned: boolean;
+}
+export function printedGaps<T extends StructureShape & { id: string }>(
+  structures: T[], pins?: unknown, opts?: { limit?: number; within?: number },
+): PrintedGap[];
+
 export const STRUCTURE_STATES: StructureState[];
 export function structureState(s: unknown): StructureState;
 export function toggleState(state: StructureState | string): StructureState;

@@ -12,19 +12,20 @@ import {
   clampToLot, clampUnderlayOpacity, clampUnderlayRot,
   defaultPlacement, deriveStreet, edgeLabels, fitScale, fmtDate, fmtM, fmtM2,
   footprint, frontageFacingStreet, holdUnderlayAnchor,
-  isSimplePolygon, lotEdges, lotFrontage, lotOrigin, lotOriginNote, lotPts,
-  lotSetbacks, mToMmOnPaper,
-  mmOnPaperToM, moveLotCorner, moveLotEdge, normalisePts, parseMetres,
+  isPinned, isSimplePolygon, lotEdges, lotFrontage, lotOrigin, lotOriginNote,
+  lotPts, lotSetbacks, mToMmOnPaper,
+  mmOnPaperToM, moveLotCorner, moveLotEdge, nearbyGaps, normalisePts,
+  pairKey, parseMetres,
   polyBounds, polyFromFootprint,
-  polygonArea, polygonCentroid, polygonInside, pushHistory, rectLotPts,
-  removeLotCorner, resizeBounds, rotateStructure,
-  sanitiseLot,
+  polygonArea, polygonCentroid, polygonInside, printedGaps, pushHistory,
+  rectLotPts, removeLotCorner, resizeBounds, rotateStructure,
+  sanitiseLot, sanitisePins,
   sanitiseUnderlay, scaleBarMetres, setbackMarks, setbacks, snap,
   streetLooksCopied,
-  structureArea, structureState, toggleState,
+  structureArea, structureGap, structureState, togglePin, toggleState,
   underlayAnchor, underlayCentre, underlayMapSize,
   underlayScale, underlayZoom,
-  type Lot, type LotOrigin, type StructureState, type Underlay,
+  type Lot, type LotOrigin, type Pin, type StructureState, type Underlay,
 } from "@/lib/site-plan.mjs";
 import { buildLot, reorientLot } from "@/lib/cadastre.mjs";
 import { WA_BOUNDS } from "@/lib/address.mjs";
@@ -161,6 +162,10 @@ interface Design {
   /** The lot itself: a rectangle unless a real parcel has been loaded, which
    *  is every design saved before the cadastre existed. */
   lot: Lot;
+  /** Distances between structures the client has pinned. An unpinned distance
+   *  is a screen aid; a pinned one is part of the drawing and prints. Every
+   *  design saved before pinning existed has none. */
+  pins: Pin[];
 }
 
 interface Guide {
@@ -168,6 +173,18 @@ interface Guide {
   at: number;
   from: number;
   to: number;
+}
+
+/** One dimension between two structures, ready to draw: which pair, how far,
+ *  where the closest approach runs, and whether it is pinned to the sheet. */
+interface GapRow {
+  a: string;
+  b: string;
+  d: number;
+  from: Pt;
+  to: Pt;
+  overlap: boolean;
+  pinned: boolean;
 }
 
 /** Screen pixels to drawing metres, frozen for the length of one gesture. */
@@ -195,11 +212,13 @@ const BLANK: Design = {
   address: "", street: "", lotW: 20, lotD: 40, north: 0, structures: [],
   underlay: sanitiseUnderlay(undefined),
   lot: sanitiseLot(undefined),
+  pins: [],
 };
 
 const INK = "#101A15";
 const SEAL = "#1E5B3C";
 const BRASS = "#B07A18";
+const FLAG = "#A6222E";
 const FONT_LAB = "Inter, system-ui, sans-serif";
 const FONT_NUM = "'IBM Plex Mono', ui-monospace, monospace";
 
@@ -321,6 +340,8 @@ function sanitise(raw: unknown): Design {
     structures,
     underlay: sanitiseUnderlay(d.underlay),
     lot: sanitiseLot(d.lot),
+    // A pin naming a structure that is no longer on the plan goes with it.
+    pins: sanitisePins(d.pins, structures.map((s) => s.id)),
   };
 }
 
@@ -1082,9 +1103,17 @@ export function SitePlanBuilder(
 
   const removeSelected = () => {
     if (!sel) return;
-    setDesign((prev) => ({ ...prev, structures: prev.structures.filter((s) => s.id !== sel.id) }));
+    setDesign((prev) => {
+      const structures = prev.structures.filter((s) => s.id !== sel.id);
+      return { ...prev, structures, pins: sanitisePins(prev.pins, structures.map((s) => s.id)) };
+    });
     setSelected(null);
   };
+
+  /** Pin a distance between two structures, or take the pin out. Pinned means
+   *  it stays on the plan and goes on the printed sheet. */
+  const pinPair = (a: string, b: string) =>
+    setDesign((p) => ({ ...p, pins: togglePin(p.pins, a, b) }));
 
   const rotateSelected = () => {
     if (!sel) return;
@@ -1321,6 +1350,130 @@ export function SitePlanBuilder(
             </text>
           </g>
         ))}
+      </g>
+    );
+  }
+
+  // ---- distances between structures ---------------------------------------
+  //
+  // Setbacks answer "how far from the fence". These answer "how far from the
+  // house" — separation between buildings, and how far a pool sits from what
+  // is around it. Measurements, both of them. What they mean is assessment's
+  // call and never this file's.
+
+  /** What the selected structure is measured to on screen: its nearest few
+   *  neighbours, plus every distance the client has pinned. */
+  const byId = new Map(design.structures.map((s) => [s.id, s]));
+  const pins = sanitisePins(design.pins, [...byId.keys()]);
+  const screenGaps: GapRow[] = (() => {
+    const rows = new Map<string, GapRow>();
+    for (const [x, y] of pins) {
+      const a = byId.get(x), b = byId.get(y);
+      if (a && b) rows.set(pairKey(x, y), { a: x, b: y, pinned: true, ...structureGap(a, b) });
+    }
+    if (sel) {
+      for (const g of nearbyGaps(sel, design.structures)) {
+        const k = pairKey(sel.id, g.id);
+        if (!rows.has(k)) {
+          rows.set(k, {
+            a: sel.id, b: g.id, pinned: false,
+            d: g.d, from: g.from, to: g.to, overlap: g.overlap,
+          });
+        }
+      }
+    }
+    return [...rows.values()];
+  })();
+  /** What the sheet carries: the pins, plus every proposed structure's
+   *  distance to the existing ones nearest it. Never the whole mesh. */
+  const printGaps: GapRow[] = printedGaps(design.structures, pins);
+  /** The same list the panel reads, so the plan and the panel never disagree. */
+  const nearSel = sel ? nearbyGaps(sel, design.structures) : [];
+  /** Structures sitting on ground another one already occupies. Two things
+   *  cannot be in the same place, so this is a drawing to fix rather than a
+   *  question for assessment — and a 0.00 m figure on its own is easy to miss.
+   *  Said on screen only: the sheet reports the measurement and leaves the
+   *  colour of it alone. */
+  const overlaps = (() => {
+    const out = new Set<string>();
+    const list = design.structures;
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        if (structureGap(list[i], list[j]).overlap) {
+          out.add(list[i].id); out.add(list[j].id);
+        }
+      }
+    }
+    return out;
+  })();
+
+  /**
+   * The dimensions between structures, drawn in the same idiom as the
+   * setbacks — brass, with the figure sitting just off its own line.
+   *
+   * Dashed is a screen aid. Solid, with a tick at each end, is a dimension the
+   * client pinned: it stays put and it prints. That is how a draughtsman keeps
+   * a sheet readable, and it is why this never draws every distance at once.
+   *
+   * Two structures sitting on top of each other measure zero — never a
+   * negative, never the distance between their far outlines — and the sheet
+   * says 0.00 m at the point they share.
+   */
+  function gapLines(rows: GapRow[], live: boolean) {
+    if (rows.length === 0) return null;
+    const tick = mm(1.3);
+    // A number on the plan is a 40 px target, whatever the scale.
+    const padW = Math.max(mm(11), 46 / pxPerM), padH = Math.max(mm(4.6), 42 / pxPerM);
+    return (
+      <g>
+        {rows.map((r) => {
+          const zero = r.overlap || r.d < 0.005;
+          const dx = r.to.x - r.from.x, dy = r.to.y - r.from.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const ux = dx / len, uy = dy / len;
+          // Off to one side of its own line, whichever way that line runs.
+          const ox = -uy * mm(1.6), oy = ux * mm(1.6);
+          const tx = zero ? r.from.x : (r.from.x + r.to.x) / 2 + ox;
+          const ty = (zero ? r.from.y - mm(2.4) : (r.from.y + r.to.y) / 2 + oy) + mm(0.9);
+          const other = byId.get(r.a)?.label ?? "", mate = byId.get(r.b)?.label ?? "";
+          return (
+            <g key={pairKey(r.a, r.b)}>
+              {zero ? (
+                <circle cx={r.from.x} cy={r.from.y} r={mm(1.3)} fill="none"
+                  stroke={r.overlap && live ? FLAG : BRASS} strokeWidth={mm(0.4)} />
+              ) : (
+                <>
+                  <line x1={r.from.x} y1={r.from.y} x2={r.to.x} y2={r.to.y}
+                    stroke={BRASS} strokeWidth={r.pinned ? mm(0.4) : mm(0.3)}
+                    strokeDasharray={r.pinned ? undefined : `${mm(1.8)} ${mm(1.2)}`} />
+                  {r.pinned && [r.from, r.to].map((p, i) => (
+                    <line key={i} x1={p.x - uy * tick} y1={p.y + ux * tick}
+                      x2={p.x + uy * tick} y2={p.y - ux * tick}
+                      stroke={BRASS} strokeWidth={mm(0.35)} />
+                  ))}
+                </>
+              )}
+              <text x={tx} y={ty} textAnchor="middle" fontFamily={FONT_NUM}
+                fontWeight={r.pinned || r.overlap ? 700 : 400} fontSize={mm(2.6)}
+                fill={r.overlap && live ? FLAG : BRASS} style={halo} pointerEvents="none">
+                {fmtM2(r.d)} m{r.overlap ? " — overlapping" : ""}
+              </text>
+              {/* Tap the number to pin it. The line itself stays out of the
+                  way — a fat target along it would swallow taps meant for the
+                  structures either side. */}
+              {live && (
+                <rect x={tx - padW / 2} y={ty - padH + mm(0.9)} width={padW} height={padH}
+                  fill="transparent" style={{ cursor: "pointer" }}
+                  onPointerDown={(e) => { e.stopPropagation(); pinPair(r.a, r.b); }}>
+                  <title>
+                    {`${other} to ${mate} — ${fmtM2(r.d)} m${r.overlap ? " (they overlap)" : ""}. `
+                      + (r.pinned ? "Tap to unpin it from the plan." : "Tap to pin it to the plan and the print.")}
+                  </title>
+                </rect>
+              )}
+            </g>
+          );
+        })}
       </g>
     );
   }
@@ -1640,28 +1793,47 @@ export function SitePlanBuilder(
     );
   }
 
-  /** The hatch pattern, defined once per SVG in the document: the screen
-   *  canvas and the printed sheet are two separate trees and an id may only
-   *  mean one thing in each. */
-  function hatchDefs(id: string) {
+  /**
+   * The hatch on an existing structure: real 45° lines, clipped to the shape.
+   *
+   * An SVG `<pattern>` is the obvious way to do this and it is the wrong one
+   * here. Chrome's PDF printer rasterises a patterned region, and one hatched
+   * structure was enough to turn the whole drawing into a ~90 dpi bitmap on
+   * the sheet that gets lodged — on a plan whose entire claim is that it is
+   * drawn to a stated scale. Lines stay lines, at any zoom and on any printer.
+   *
+   * `id` scopes the clip: the screen canvas and the printed sheet are two
+   * trees in one document, and an id may only mean one thing across both.
+   */
+  function hatchOver(id: string, shape: React.ReactElement, box: {
+    minX: number; minY: number; maxX: number; maxY: number;
+  }) {
     // 2.1 mm apart on paper: open enough that the figures inside a hatched
     // structure still read, close enough to survive a photocopier.
-    const p = mm(2.1);
+    const gap = mm(2.1);
+    const w = box.maxX - box.minX, h = box.maxY - box.minY;
+    if (!(gap > 0) || !(w > 0) || !(h > 0)) return null;
+    // Sweep far enough left that the first line still crosses the shape.
+    const n = Math.min(Math.ceil((w + h) / gap) + 1, 240);
     return (
-      <defs>
-        <pattern id={id} width={p} height={p} patternUnits="userSpaceOnUse"
-          patternTransform="rotate(45)">
-          <line x1={0} y1={0} x2={0} y2={p} stroke={HATCH_INK} strokeOpacity={0.42}
-            strokeWidth={mm(0.22)} />
-        </pattern>
-      </defs>
+      <g key="hatch">
+        <clipPath id={id}>{shape}</clipPath>
+        <g clipPath={`url(#${id})`} stroke={HATCH_INK} strokeOpacity={0.42}
+          strokeWidth={mm(0.22)}>
+          {Array.from({ length: n }, (_, i) => {
+            const x = box.minX - h + i * gap;
+            return <line key={i} x1={x} y1={box.minY} x2={x + h} y2={box.maxY} />;
+          })}
+        </g>
+      </g>
     );
   }
 
-  function structureNode(s: Structure, interactive: boolean, hatch: string) {
+  function structureNode(s: Structure, interactive: boolean, hatch: string, onScreen = false) {
     const isSel = interactive && s.id === selected;
     const dark = s.kind === "retaining";
     const here = structureState(s) === "existing";
+    const clash = onScreen && overlaps.has(s.id);
     const b = boundsOf(s);
     const thin = b.d < mm(9);
     const cx = s.x + b.w / 2;
@@ -1670,8 +1842,9 @@ export function SitePlanBuilder(
     // Proposed is exactly the weight and colour this tool has always drawn —
     // every design already saved is proposed, and none of them changes.
     // Existing steps back: washed out, thinner, dashed, hatched.
-    const stroke = isSel ? BRASS : here ? "#59695E" : dark ? "#12332A" : SEAL;
-    const strokeW = here ? (isSel ? mm(0.4) : mm(0.22)) : (isSel ? mm(0.55) : mm(0.35));
+    const stroke = clash ? FLAG : isSel ? BRASS : here ? "#59695E" : dark ? "#12332A" : SEAL;
+    const strokeW = clash ? mm(0.6)
+      : here ? (isSel ? mm(0.4) : mm(0.22)) : (isSel ? mm(0.55) : mm(0.35));
     const dash = here ? `${mm(1.4)} ${mm(0.9)}` : undefined;
     const fill = here && dark ? EXIST_DARK_FILL : (FILL[s.kind] || "#E7F0EA");
     const fillOp = here && !dark ? EXIST_WASH : 1;
@@ -1723,7 +1896,7 @@ export function SitePlanBuilder(
         onPointerCancel={interactive ? () => { dragRef.current = null; setGuides([]); } : undefined}
       >
         {layer("wash", { fill, fillOpacity: fillOp })}
-        {here && layer("hatch", { fill: `url(#${hatch})` })}
+        {here && hatchOver(`${hatch}-${s.id}`, layer("clip", { fill: "#000" }), polyBounds(footprint(s)))}
         {layer("line", {
           fill: "none", stroke, strokeWidth: strokeW, strokeDasharray: dash,
         })}
@@ -1796,9 +1969,10 @@ export function SitePlanBuilder(
             <g key={st}>
               <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)}
                 fill="#E8ECE6" fillOpacity={here ? EXIST_WASH : 1} />
-              {here && (
-                <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)}
-                  fill={`url(#${hatch})`} />
+              {here && hatchOver(
+                `${hatch}-key`,
+                <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)} />,
+                { minX: bx + pad, minY: y, maxX: bx + pad + sw, maxY: y + swH },
               )}
               <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)} fill="none"
                 stroke={here ? "#59695E" : SEAL} strokeWidth={here ? mm(0.22) : mm(0.35)}
@@ -1848,7 +2022,6 @@ export function SitePlanBuilder(
     const hatch = interactive ? "cfba-hatch-screen" : "cfba-hatch-sheet";
     return (
       <>
-        {hatchDefs(hatch)}
         {/* street along the bottom edge */}
         <rect x={-mL} y={lotD} width={vbW} height={mB} fill="#E9ECE6"
           fillOpacity={seeThrough ? 0.35 : 1} />
@@ -1877,7 +2050,13 @@ export function SitePlanBuilder(
         )}
         {sel && setbackLines(sel)}
         {design.structures.map((s) =>
-          structureNode(s, interactive && !draw && !trace && !editing, hatch))}
+          structureNode(s, interactive && !draw && !trace && !editing, hatch, interactive))}
+        {/* Distances between the structures, over the top of them so the
+            figures always read. On screen: the selected structure's nearest
+            neighbours plus every pinned one. On the sheet: the pins, plus each
+            proposed structure's distance to the existing ones nearest it. */}
+        {gapLines(interactive ? screenGaps : printGaps,
+          interactive && !draw && !trace && !editing)}
         {/* alignment guides while a drag is snapped */}
         {interactive && guides.map((g, i) => (
           <line key={i}
@@ -2372,6 +2551,51 @@ export function SitePlanBuilder(
                     </p>
                   )}
                 </div>
+                {/* Distances to the other structures. Measured outline to
+                    outline at the closest approach — the gap you could walk
+                    through, not the distance between two centres. Reported and
+                    never judged: separation and barrier distances are decided
+                    during assessment, not here. */}
+                <div>
+                  <span className="label">Distance to nearby structures</span>
+                  {nearSel.length === 0 ? (
+                    <p className="text-[12.5px] leading-snug text-ink/55">
+                      Nothing else on the plan to measure to yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {nearSel.map((g) => {
+                        const other = byId.get(g.id);
+                        const on = isPinned(pins, sel.id, g.id);
+                        return (
+                          <div key={g.id} className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink/70">
+                              {other?.label ?? "Structure"}
+                              {g.overlap && <span className="text-brass-deep"> — overlapping</span>}
+                            </span>
+                            <span className="shrink-0 font-mono text-[12.5px] text-ink/75">
+                              {fmtM2(g.d)} m
+                            </span>
+                            <button type="button" aria-pressed={on}
+                              onClick={() => pinPair(sel.id, g.id)}
+                              className={`min-h-[40px] shrink-0 rounded-md border px-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.08em] transition ${
+                                on
+                                  ? "border-brass bg-[#F6EEDA] text-brass-deep"
+                                  : "border-rule bg-white text-ink/60 hover:bg-wash"
+                              }`}>
+                              {on ? "Pinned" : "Pin"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="mt-1.5 text-[12.5px] leading-snug text-ink/55">
+                    Measured outline to outline, at the closest point. Pin one —
+                    here or by tapping the figure on the plan — and it stays on
+                    the drawing and goes on the printed sheet.
+                  </p>
+                </div>
                 <button type="button" onClick={rotateSelected} className="btn-ghost w-full">
                   Rotate 90°{sel.rot ? ` — at ${sel.rot}°` : ""}
                 </button>
@@ -2416,7 +2640,7 @@ export function SitePlanBuilder(
               <button type="button" className="btn-ghost w-full"
                 onClick={() => {
                   if (window.confirm("Clear every structure and start this plan again?")) {
-                    setDesign((p) => ({ ...p, structures: [], north: 0 }));
+                    setDesign((p) => ({ ...p, structures: [], pins: [], north: 0 }));
                     setSelected(null);
                     setDraw(null);
                   }
@@ -2564,7 +2788,7 @@ export function SitePlanBuilder(
                 ? "Drag a corner to move it, or a boundary to shift it whole. Everything measures as you go, and Undo puts it back."
                 : trace
                   ? "Tap your lot's corners on the photo. The photo is only a guide and won't be printed — what you draw is your own measurement, not a survey."
-                  : "Select the proposed structure before printing to include its boundary distances on the sheet."}
+                  : "Select a structure to see its distances to the boundaries and to what's around it. Tap a figure between two structures to pin it — pinned dimensions print, along with each proposed structure's distance to the existing ones nearest it."}
           </p>
         </div>
       </div>

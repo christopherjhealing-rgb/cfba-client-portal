@@ -80,6 +80,18 @@ export default async function SitePlan() {
           survey, and the printed plan says exactly that.
         </p>
         <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
+          Mark each structure{" "}
+          <strong className="font-semibold">existing</strong> or{" "}
+          <strong className="font-semibold">proposed</strong> — the drawing shows
+          the difference in a way that survives a black-and-white printer, and
+          the sheet labels every structure either way. Select one and the tool
+          measures the gap to whatever sits near it, outline to outline. Tap a
+          figure to pin it and it stays on the drawing and prints, alongside each
+          proposed structure&apos;s distance to the existing ones nearest it. The
+          tool measures and labels; whether a distance is enough is judged during
+          assessment.
+        </p>
+        <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
           Printed your plan? It goes in the drawings bucket when you{" "}
           <Link href="/submit" className="font-medium text-seal underline underline-offset-2">
             lodge a job</Link>.

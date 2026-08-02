@@ -4,6 +4,8 @@ import {
   planAreaMm, fitScale, mToMmOnPaper, mmOnPaperToM, scaleBarMetres,
   snap, clampToLot, setbacks, defaultPlacement, parseMetres, fmtM, fmtM2,
   STRUCTURE_PRESETS, STRUCTURE_STATES, structureState, toggleState,
+  polyDistance, structureGap, nearbyGaps, printedGaps,
+  pairKey, togglePin, isPinned, sanitisePins, PIN_CAP,
   deriveStreet, streetLooksCopied,
   normalisePts, rotatePts, polyBounds, lShapePts, shapePts,
   footprint, boundsOf, polygonArea, structureArea, isSimplePolygon,
@@ -1246,4 +1248,227 @@ test("cornerAlign never matches a corner against itself", () => {
   // Corner 1 is at (19, 0); corner 2 shares its x and corner 0 its y.
   assert.deepEqual({ x: res.x, y: res.y }, { x: 19, y: 0 });
   assert.equal(res.guides.length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Distances between structures.
+// ---------------------------------------------------------------------------
+
+const rectPts = (x, y, w, d) =>
+  [{ x, y }, { x: x + w, y }, { x: x + w, y: y + d }, { x, y: y + d }];
+
+test("two rectangles apart report the gap between their faces", () => {
+  // A 4 x 4 at the origin and another 3 m to its right: the gap is 3, not the
+  // 7 m between their centres.
+  const g = polyDistance(rectPts(0, 0, 4, 4), rectPts(7, 0, 4, 4));
+  assert.equal(g.d, 3);
+  assert.equal(g.overlap, false);
+  assert.deepEqual(g.from, { x: 4, y: 0 });
+  assert.deepEqual(g.to, { x: 7, y: 0 });
+  // Diagonally offset: corner to corner, 3-4-5.
+  const diag = polyDistance(rectPts(0, 0, 4, 4), rectPts(7, 8, 4, 4));
+  assert.equal(diag.d, 5);
+  assert.deepEqual(diag.from, { x: 4, y: 4 });
+  assert.deepEqual(diag.to, { x: 7, y: 8 });
+});
+
+test("the closest approach runs face to face, not corner to corner", () => {
+  // Overlapping in y, so the nearest points are on the facing walls and the
+  // dimension line is square to them.
+  const g = polyDistance(rectPts(0, 0, 4, 10), rectPts(6, 3, 4, 4));
+  assert.equal(g.d, 2);
+  close(g.from.y, g.to.y);
+  assert.equal(g.from.x, 4);
+  assert.equal(g.to.x, 6);
+});
+
+test("touching is a gap of nothing, never a negative one", () => {
+  const wall = polyDistance(rectPts(0, 0, 4, 4), rectPts(4, 0, 4, 4));
+  assert.equal(wall.d, 0);
+  // Sharing a wall is not sharing ground.
+  assert.equal(wall.overlap, false);
+  const corner = polyDistance(rectPts(0, 0, 4, 4), rectPts(4, 4, 4, 4));
+  assert.equal(corner.d, 0);
+  assert.equal(corner.overlap, false);
+});
+
+test("overlapping reports 0 m and says so, and the point is on shared ground", () => {
+  const g = polyDistance(rectPts(0, 0, 4, 4), rectPts(3, 3, 4, 4));
+  assert.equal(g.d, 0);
+  assert.equal(g.overlap, true);
+  assert.ok(g.d >= 0);
+  // The dimension is placed where they actually meet, not out on a far corner.
+  assert.ok(g.from.x >= 3 && g.from.x <= 4, `${g.from.x}`);
+  assert.ok(g.from.y >= 3 && g.from.y <= 4, `${g.from.y}`);
+  assert.deepEqual(g.from, g.to);
+});
+
+test("one structure wholly inside another is 0 m, not the gap between outlines", () => {
+  // The outlines are 1 m apart everywhere, but there is no gap to walk
+  // through — this is the case a plain outline-to-outline measure gets wrong.
+  const g = polyDistance(rectPts(0, 0, 10, 10), rectPts(1, 1, 8, 8));
+  assert.equal(g.d, 0);
+  assert.equal(g.overlap, true);
+  // Identical footprints, one exactly on the other.
+  const same = polyDistance(rectPts(0, 0, 4, 4), rectPts(0, 0, 4, 4));
+  assert.equal(same.d, 0);
+  assert.equal(same.overlap, true);
+});
+
+test("a degenerate outline never produces a nonsense distance", () => {
+  assert.deepEqual(polyDistance([], rectPts(0, 0, 4, 4)),
+    { d: 0, from: { x: 0, y: 0 }, to: { x: 0, y: 0 }, overlap: false });
+  assert.equal(polyDistance(rectPts(0, 0, 4, 4), null).d, 0);
+});
+
+test("structureGap measures rotated rectangles, Ls and drawn outlines", () => {
+  // A quarter turn swaps the footprint's width and depth, and the gap follows.
+  const a = { x: 0, y: 0, w: 8, d: 2, rot: 0 };
+  const b = { x: 0, y: 5, w: 8, d: 2, rot: 0 };
+  assert.equal(structureGap(a, b).d, 3);
+  const turned = { x: 0, y: 5, w: 8, d: 2, rot: 90 };   // now 2 wide, 8 deep
+  assert.equal(structureGap(a, turned).d, 3);
+  // Into the notch of an L: the 6 x 4 L has a 3 x 2 corner cut out of its
+  // street-side right corner, so a shed tucked in there is measured to the
+  // inside faces of the notch and not to the L's bounding box.
+  const l = { x: 0, y: 0, w: 6, d: 4, rot: 0, shape: "lshape", notchW: 3, notchD: 2 };
+  const inNotch = { x: 3.5, y: 2.5, w: 2, d: 1, rot: 0 };
+  assert.equal(structureGap(l, inNotch).d, 0.5);
+  // A traced outline is measured on the outline, not on its bounds.
+  const tri = {
+    x: 10, y: 0, w: 4, d: 4, rot: 0, shape: "poly",
+    pts: [{ x: 0, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }],
+  };
+  // The triangle's nearest point to a 6-wide rect at the origin is its
+  // top-left corner, sitting at (10, 0) — 4 m clear of the rect's right face.
+  const rect = { x: 0, y: 0, w: 6, d: 1, rot: 0 };
+  assert.equal(structureGap(rect, tri).d, 4);
+});
+
+test("the gap is symmetric whichever structure is named first", () => {
+  const a = { id: "a", x: 0, y: 0, w: 4, d: 4, rot: 0 };
+  const b = { id: "b", x: 9.5, y: 0, w: 4, d: 4, rot: 0 };
+  assert.equal(structureGap(a, b).d, structureGap(b, a).d);
+  assert.equal(structureGap(a, b).d, 5.5);
+});
+
+// --- which distances get drawn ----------------------------------------------
+
+const S = (id, x, y, w = 2, d = 2, state = "proposed") =>
+  ({ id, x, y, w, d, rot: 0, state });
+
+test("nearbyGaps shows the nearest few, in reach, nearest first", () => {
+  const me = S("me", 0, 0, 2, 2);
+  const others = [
+    S("far", 40, 0), S("near", 5, 0), S("mid", 7, 0), S("close", 3, 0),
+  ];
+  const got = nearbyGaps(me, others);
+  // "far" is 38 m off and stays off the drawing.
+  assert.deepEqual(got.map((g) => [g.id, g.d]), [["close", 1], ["near", 3], ["mid", 5]]);
+  // The cap is the cap: a crowded corner never becomes a mesh.
+  assert.equal(nearbyGaps(me, others, { limit: 2 }).length, 2);
+});
+
+test("nearbyGaps keeps out-of-reach neighbours off the drawing", () => {
+  const me = S("me", 0, 0);
+  // Within reach at 6 m, out of reach past it.
+  assert.deepEqual(nearbyGaps(me, [S("o", 8, 0)]).map((g) => g.d), [6]);
+  assert.deepEqual(nearbyGaps(me, [S("o", 8.5, 0)], { limit: 3, within: 6 }).map((g) => g.d), [6.5]);
+  // …but the single nearest always shows, so selecting a shed on a big block
+  // still answers "what's my closest neighbour" rather than showing nothing.
+  const lonely = nearbyGaps(me, [S("a", 60, 0), S("b", 30, 0)]);
+  assert.deepEqual(lonely.map((g) => g.id), ["b"]);
+  // Nothing else on the lot is nothing to draw.
+  assert.deepEqual(nearbyGaps(me, []), []);
+  assert.deepEqual(nearbyGaps(me, [me]), []);
+  assert.deepEqual(nearbyGaps(null, [S("a", 1, 1)]), []);
+});
+
+test("nearbyGaps orders the same way twice, so the sheet never jitters", () => {
+  const me = S("me", 0, 0);
+  // Two neighbours at exactly the same distance: the id settles it.
+  const got = nearbyGaps(me, [S("zed", 5, 0), S("abe", -5, 0)]);
+  assert.deepEqual(got.map((g) => g.id), ["abe", "zed"]);
+});
+
+test("pins are stored one way round and toggle cleanly", () => {
+  assert.equal(pairKey("b", "a"), pairKey("a", "b"));
+  let pins = togglePin([], "b", "a");
+  assert.deepEqual(pins, [["a", "b"]]);
+  assert.equal(isPinned(pins, "a", "b"), true);
+  assert.equal(isPinned(pins, "b", "a"), true);
+  assert.equal(isPinned(pins, "a", "c"), false);
+  // Naming the same pair the other way round takes the pin out again.
+  pins = togglePin(pins, "b", "a");
+  assert.deepEqual(pins, []);
+  // A structure is never pinned to itself, and junk is simply ignored.
+  assert.deepEqual(togglePin([], "a", "a"), []);
+  assert.deepEqual(togglePin(undefined, "a", ""), []);
+});
+
+test("sanitisePins drops what a design shouldn't carry", () => {
+  // Every design saved before pinning existed.
+  assert.deepEqual(sanitisePins(undefined), []);
+  assert.deepEqual(sanitisePins("nonsense"), []);
+  assert.deepEqual(sanitisePins([["a"], [], null, ["a", "a"], 7]), []);
+  // Duplicates, either way round, collapse to one.
+  assert.deepEqual(sanitisePins([["b", "a"], ["a", "b"]]), [["a", "b"]]);
+  // A pin pointing at a structure that has since been removed goes with it.
+  assert.deepEqual(sanitisePins([["a", "b"], ["a", "gone"]], ["a", "b", "c"]), [["a", "b"]]);
+  // The cap holds.
+  const many = Array.from({ length: PIN_CAP + 6 }, (_, i) => [`a${i}`, `b${i}`]);
+  assert.equal(sanitisePins(many).length, PIN_CAP);
+});
+
+test("the printed sheet carries pins plus proposed-to-existing, never the mesh", () => {
+  const house = S("house", 0, 0, 12, 8, "existing");
+  const pool = S("pool", 0, 12, 6, 3, "existing");
+  const patio = S("patio", 0, 9, 6, 2, "proposed");
+  const shed = S("shed", 0, 30, 3, 3, "proposed");
+  const rows = printedGaps([house, pool, patio, shed], []);
+  const seen = rows.map((r) => [pairKey(r.a, r.b), r.d, r.pinned]).sort();
+  // The patio's two existing neighbours, and — nothing being within reach of
+  // the shed — the shed's single nearest existing. NOT house-to-pool, which is
+  // two existing structures, nor patio-to-shed, which is two proposed ones.
+  assert.deepEqual(seen, [
+    ["house|patio", 1, false],
+    ["patio|pool", 1, false],
+    ["pool|shed", 15, false],
+  ]);
+});
+
+test("a pinned dimension prints whatever the states are", () => {
+  const a = S("a", 0, 0, 2, 2);
+  const b = S("b", 30, 0, 2, 2);
+  // Both proposed and 28 m apart — nothing would draw this automatically.
+  assert.deepEqual(printedGaps([a, b], []), []);
+  const rows = printedGaps([a, b], [["b", "a"]]);
+  assert.deepEqual(rows.map((r) => [pairKey(r.a, r.b), r.d, r.pinned]), [["a|b", 28, true]]);
+  // A pair that would also print automatically is listed once, and pinned.
+  const house = S("house", 0, 0, 4, 4, "existing");
+  const patio = S("patio", 5, 0, 2, 2, "proposed");
+  const both = printedGaps([house, patio], [["house", "patio"]]);
+  assert.equal(both.length, 1);
+  assert.equal(both[0].pinned, true);
+  assert.equal(both[0].d, 1);
+});
+
+test("a design saved before any of this prints exactly what it printed before", () => {
+  // No state on anything, no pins: every structure reads as proposed, there is
+  // no existing structure to measure to, and the sheet gains nothing.
+  const old = [
+    { id: "1", x: 0, y: 0, w: 10, d: 6, rot: 0 },
+    { id: "2", x: 0, y: 8, w: 4, d: 3, rot: 0 },
+  ];
+  assert.deepEqual(printedGaps(old, undefined), []);
+  assert.deepEqual(printedGaps([], []), []);
+});
+
+test("printed rows report 0 m for structures drawn on top of each other", () => {
+  const house = S("house", 0, 0, 10, 8, "existing");
+  const patio = S("patio", 8, 6, 4, 4, "proposed");
+  const rows = printedGaps([house, patio], []);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].d, 0);
+  assert.equal(rows[0].overlap, true);
 });
