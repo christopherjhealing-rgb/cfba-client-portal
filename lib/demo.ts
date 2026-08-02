@@ -12,7 +12,7 @@ const FILE = path.join(os.tmpdir(), "cfba-portal-demo.json");
 // Bump this whenever seed() changes shape or content. A store written by an
 // older build is thrown away and reseeded rather than being loaded with fields
 // missing — which is what made a new Messages seed look like "no messages".
-const SEED_VERSION = 6;
+const SEED_VERSION = 7;
 
 export interface DemoLogin {
   username: string;
@@ -145,6 +145,9 @@ function seed(): DemoDB {
      ["CDC - 1 Test Street.pdf", "Engineering - Test Design.pdf", "Site Plan.pdf"],
      null, "CFBA Test Client/1 Test Street, Greenwood - T-1001/Issued");
   jobs["T-1001"].clientRef = "PO 7583";
+  // An issued job has a certifier by definition. T-1005 deliberately has none,
+  // so a dry run also covers the case where nothing is known.
+  jobs["T-1001"].surveyor = "Chris";
   mk("T-1002", "co_test", "2 Test Street, Greenwood", "Patio — being assessed",
      "To CDC", null, [], null, null);
   jobs["T-1002"].receivedAt = iso(2);

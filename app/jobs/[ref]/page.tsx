@@ -142,11 +142,23 @@ export default async function JobDetail({
         ) : (
           <JobTimeline job={job} />
         )}
-        <p className="mt-4 text-[12.5px] text-ink/50">
-          Your surveyor:{" "}
-          <span className="font-medium text-ink/70">{job.surveyor || "being allocated"}</span>
-          {job.issuedAt ? <> · Issued {fmtDate(job.issuedAt as string)}.</> : null}
-        </p>
+        {/* "being allocated" was printing on issued jobs, which cannot be
+            true — an issued job has a certifier by definition. It was the null
+            fallback showing through on a status where it is unreachable. When
+            no surveyor is known the clause is simply left out: an absent line
+            reads as nothing to say, a wrong one reads as a fault. */}
+        {(job.surveyor || job.issuedAt) && (
+          <p className="mt-4 text-[12.5px] text-ink/50">
+            {job.surveyor ? (
+              <>
+                Your surveyor:{" "}
+                <span className="font-medium text-ink/70">{job.surveyor as string}</span>
+              </>
+            ) : null}
+            {job.surveyor && job.issuedAt ? " · " : null}
+            {job.issuedAt ? <>Issued {fmtDate(job.issuedAt as string)}.</> : null}
+          </p>
+        )}
       </div>
 
       {lodgements.length > 0 && (
