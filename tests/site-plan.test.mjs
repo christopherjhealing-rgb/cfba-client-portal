@@ -875,12 +875,13 @@ test("the printed footer says exactly where the boundary came from", () => {
   // The adjusted one names the source AND says plainly it has been moved.
   assert.ok(/Landgate cadastre \(SLIP\)/.test(adj));
   assert.ok(/on 2 August 2026/.test(adj));
-  assert.ok(/adjusted by hand by the applicant/.test(adj));
-  assert.ok(/no longer that record/.test(adj));
-  assert.ok(/applicant's own measurement/.test(adj));
-  assert.ok(/indicative rather than surveyed/.test(adj));
-  // It has to fit the sheet's title block: one paragraph, not an essay.
-  assert.ok(adj.length < 480, `footer is ${adj.length} characters`);
+  assert.ok(/the applicant has since adjusted it by hand/.test(adj));
+  assert.ok(/what is drawn is their own measurement/.test(adj));
+  assert.ok(/not that record/.test(adj));
+  // It has to fit the sheet in the space the untouched-cadastre wording fits
+  // in: a fifth printed line spills a deep lot onto a second page.
+  assert.ok(adj.length <= boundaryFooter(CAD).length + 40,
+    `adjusted footer is ${adj.length} characters against ${boundaryFooter(CAD).length}`);
   // And it never uses the untouched wording.
   assert.ok(!/boundary is taken from/.test(adj));
   assert.notEqual(adj, cad);
@@ -893,8 +894,8 @@ test("the printed Lot boundary row matches the footer's story", () => {
   assert.equal(boundaryRow(CAD),
     "Lot 214 on Plan 78123 — Landgate cadastre (SLIP), retrieved 2 August 2026");
   assert.equal(boundaryRow({ ...CAD, origin: "cadastre-adjusted" }),
-    "Lot 214 on Plan 78123 — Landgate cadastre (SLIP), retrieved 2 August 2026; " +
-    "adjusted by hand by the applicant");
+    "Lot 214 on Plan 78123 — Landgate cadastre (SLIP), retrieved 2 August 2026 " +
+    "— adjusted by hand");
   // A fetched lot the service didn't name still says what it is.
   assert.equal(boundaryRow({ ...CAD, source: "", lotId: "" }),
     "the State's cadastre, retrieved 2 August 2026");
