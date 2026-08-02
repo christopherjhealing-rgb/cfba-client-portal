@@ -48,7 +48,7 @@ export default async function Resources() {
         </div>
         <p className="mb-3 max-w-2xl text-[13.5px] leading-relaxed text-ink/60">
           You lodge these with your <strong>local government</strong>, together with
-          the certificate CFBA issues. We don&apos;t issue these forms — they&apos;re
+          the CDC Package CFBA issues. We don&apos;t issue these forms — they&apos;re
           the council&apos;s. Always check you have the current version.
         </p>
         <div className="card divide-y divide-rule">
@@ -111,9 +111,10 @@ export default async function Resources() {
           <span className="h-px flex-1 bg-rule" />
         </div>
         <p className="mb-3 max-w-2xl text-[13.5px] leading-relaxed text-ink/60">
-          Where you lodge the building permit once your certificate is ready.
-          The council&apos;s name opens its website; &ldquo;Lodge with
-          council&rdquo; goes to its building application page.
+          Where you apply for your building permit once your CDC Package is ready.
+          The council issues the permit, not us. The council&apos;s name opens its
+          website; &ldquo;Lodge with council&rdquo; goes to its building
+          application page.
         </p>
         {/* 30 councils — two even rows of 15 at sm, three even rows of 10 at lg. */}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

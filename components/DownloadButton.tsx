@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-/** Download the certificate package.
+/** Download the CDC Package.
  *
  *  This used to be a plain link that called `window.location.reload()` on a
  *  2.2 second timer, so the job would move into Downloaded once the server had
@@ -40,7 +40,7 @@ export function DownloadButton({ href, label = "Download" }: { href: string; lab
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = name || "certificate-package.zip";
+      a.download = name || "cdc-package.zip";
       document.body.appendChild(a);
       a.click();
       a.remove();

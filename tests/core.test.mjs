@@ -54,7 +54,7 @@ test("clientStatusLabel never leaks an internal label", () => {
   assert.equal(clientStatusLabel("To CDC"), "Assessed — certificate being written up");
   assert.equal(clientStatusLabel("New Info Received"), "Requested information received — in for re-assessment");
   assert.equal(clientStatusLabel("On Hold"), "The job is currently on hold");
-  assert.equal(clientStatusLabel("Issued"), "Issued — ready to download");
+  assert.equal(clientStatusLabel("Issued"), "CDC Package issued — ready to download");
   assert.equal(clientStatusLabel("Totally Unknown Label"), "In progress");
 });
 

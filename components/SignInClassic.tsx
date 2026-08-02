@@ -4,7 +4,7 @@ import { Icon } from "@/components/Icon";
 
 const POINTS = [
   { icon: "folder", text: "Track Your Jobs" },
-  { icon: "download", text: "Download Certificates & Plans" },
+  { icon: "download", text: "Download Your CDC Package" },
   { icon: "check", text: "Secure, Simple, Reliable" },
 ] as const;
 

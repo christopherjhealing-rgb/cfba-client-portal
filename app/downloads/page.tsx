@@ -41,7 +41,7 @@ export default async function Downloads() {
 
       {g.ready.length + g.downloaded.length === 0 ? (
         <EmptyState title="Nothing to Download Yet"
-          body="As soon as a job is issued, its certificate and stamped plans appear here as a single file." />
+          body="As soon as a job is issued, your CDC Package — the certificate and stamped plans — appears here as a single file." />
       ) : (
         <>
           <section className="mb-8">

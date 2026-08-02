@@ -21,7 +21,7 @@ const FAQ = [
   },
   {
     q: "What's in the download?",
-    a: "One file containing the certificate of design compliance and every supporting drawing and document, each stamped with your job reference.",
+    a: "Your CDC Package — one file containing the certificate of design compliance and every supporting drawing and document, each stamped with your job reference. You lodge it with your council, and the council issues the building permit.",
   },
   {
     q: "You've asked me for further information — what do I do?",
@@ -29,7 +29,7 @@ const FAQ = [
   },
   {
     q: "How long can I download a job for?",
-    a: `${env.retentionMonths} months from the day you first download it. The countdown is shown against each job under Downloads, and turns amber in the last month — so save the package with your job records when you get it.`,
+    a: `${env.retentionMonths} months from the day you first download it. The countdown is shown against each job under Downloads, and turns amber in the last month — so save the CDC Package with your job records when you get it.`,
   },
   {
     q: "Can other people at my company use the portal?",

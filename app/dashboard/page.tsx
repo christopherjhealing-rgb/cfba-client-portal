@@ -30,7 +30,7 @@ function greeting() {
 const QUICK: { href: string; icon: IconName; title: string; sub: string }[] = [
   { href: "/submit", icon: "plus", title: "Lodge Another Job", sub: "Start a new application" },
   { href: "/messages", icon: "mail", title: "Message Your Surveyor", sub: "Send documents or ask a question" },
-  { href: "/downloads", icon: "download", title: "Download Certificates", sub: "Issued permits and plans" },
+  { href: "/downloads", icon: "download", title: "Download Your CDC Package", sub: "Certificates and stamped plans" },
   { href: "/amend", icon: "edit", title: "Amend a Job", sub: "Tell us what's changed" },
   { href: "/info-sheets", icon: "book", title: "Info Sheets", sub: "What we need, and why jobs come back" },
   { href: "/details", icon: "user", title: "My Details", sub: "How your company is recorded" },
@@ -134,7 +134,7 @@ export default async function Dashboard() {
                       </div>
                       <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-seal">
                         <Icon name="check" size={13} />
-                        <span className="font-medium">Permit Issued</span>
+                        <span className="font-medium">CDC Package Issued</span>
                         <span className="text-ink/55">{fmtDate(j.issuedAt)}</span>
                       </div>
                     </div>

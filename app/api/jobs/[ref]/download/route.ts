@@ -51,7 +51,7 @@ export async function GET(
   if (added === 0) {
     console.error(`download ${ref}: nothing readable of ${files.length} file(s) — ${failed.join(" | ")}`);
     return new Response(
-      "We can't put your package together at the moment — the files are listed " +
+      "We can't put your CDC Package together at the moment — the files are listed " +
       "but we can't read them back. We've been told about it; ring us on " +
       "1300 029 074 and we'll email them straight over.",
       { status: 500 }
@@ -68,13 +68,13 @@ export async function GET(
   await repo.logAudit("certificate.download", ref, session.companyName, session.username || "client");
 
   // Download receipt on the Monday card, once, so the office can see the client
-  // has the certificate — kills the "did you get it?" call. Also starts the
+  // has the CDC Package — kills the "did you get it?" call. Also starts the
   // retention clock (markDownloaded), which is why it fires on first download.
   if (firstDownload && job.mondayItemId) {
     try {
       await monday.postUpdate(
         job.mondayItemId,
-        `The client downloaded the certificate package via the portal on ` +
+        `The client downloaded the CDC Package via the portal on ` +
         `${now.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}.`
       );
     } catch (e) {

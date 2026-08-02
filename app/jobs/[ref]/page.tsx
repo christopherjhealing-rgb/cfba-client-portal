@@ -119,7 +119,7 @@ export default async function JobDetail({
             {downloadable && (
               <DownloadButton
                 href={`/api/jobs/${encodeURIComponent(ref)}/download`}
-                label={bucket === "downloaded" ? "Download Again" : "Download Certificate"}
+                label={bucket === "downloaded" ? "Download Again" : "Download CDC Package"}
               />
             )}
           </div>
@@ -185,7 +185,7 @@ export default async function JobDetail({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[12px] text-ink/55">Download the package above to save all of these.</p>
+          <p className="mt-2 text-[12px] text-ink/55">Download the CDC Package above to save all of these.</p>
         </div>
       )}
 

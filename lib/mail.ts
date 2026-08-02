@@ -88,23 +88,23 @@ export function issuedEmail(opts: {
   ref: string; address: string; clientRef?: string;
 }): { subject: string; html: string } {
   const { ref, address, clientRef } = opts;
-  const subject = `Your Certificate Is Ready — Job ${ref}, ${address}${clientRef ? ` (Your Ref ${clientRef})` : ""}`;
+  const subject = `Your CDC Package Is Ready — Job ${ref}, ${address}${clientRef ? ` (Your Ref ${clientRef})` : ""}`;
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
   <p style="margin:0 0 16px">Hello,</p>
   <p style="margin:0 0 16px">
-    Good news — your certificate for job <strong>${esc(ref)}</strong> at ${esc(address)}
+    Good news — the CDC Package for job <strong>${esc(ref)}</strong> at ${esc(address)}
     has been issued and is ready to download from the portal.
   </p>
   ${clientRef ? `<p style="margin:0 0 16px;color:#5B6660;font-size:14px">Your reference: <strong>${esc(clientRef)}</strong></p>` : ""}
   <p style="margin:0 0 22px">
     <a href="${env.appUrl}/downloads"
        style="background:#1E5B3C;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;display:inline-block;font-weight:600">
-      Download your certificate
+      Download your CDC Package
     </a>
   </p>
   <p style="margin:0 0 18px;color:#5B6660;font-size:14px">
-    Next stop is usually the building permit — the BA1 form and every council's link are under Resources in the portal. Anything you're unsure of, just ring — happy to help.
+    Next stop is the building permit, which your council issues — lodge the CDC Package with them along with the BA1 form. The form and every council's link are under Resources in the portal. Anything you're unsure of, just ring — happy to help.
   </p>
   <p style="margin:0;color:#5B6660;font-size:13px">
     CF Building Approvals · 1300 029 074 · admin@cfba.com.au

@@ -43,8 +43,8 @@ export function SignInNew() {
             </h1>
             <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/80 lg:text-[16px]">
               Every job you have with us, in one place — lodge new work, answer a
-              request the moment it lands, and download your certificates the day
-              they&apos;re issued.
+              request the moment it lands, and download your CDC Package the day
+              it&apos;s issued.
             </p>
           </div>
 
