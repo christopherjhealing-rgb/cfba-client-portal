@@ -5,8 +5,13 @@ import { uploadDirect } from "@/lib/upload-client";
 
 const MAX_MB = 25;
 
-export function ReplyBox({ refNo }: { refNo: string }) {
+/** The reply box on a job thread — and, with `general`, the enquiry box for a
+ *  question that isn't about a job. Same pipeline either way; an enquiry adds
+ *  a one-line subject, because "something else" arriving with no subject is
+ *  what makes a shared inbox unusable. */
+export function ReplyBox({ refNo, general }: { refNo: string; general?: boolean }) {
   const [body, setBody] = useState("");
+  const [subject, setSubject] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -14,7 +19,10 @@ export function ReplyBox({ refNo }: { refNo: string }) {
 
   const totalMb = files.reduce((n, f) => n + f.size, 0) / 1_048_576;
   const tooBig = totalMb > MAX_MB;
-  const canSend = (body.trim().length > 0 || files.length > 0) && !tooBig;
+  const hasContent = body.trim().length > 0 || files.length > 0;
+  const canSend = !tooBig && (general
+    ? subject.trim().length > 0 && hasContent
+    : hasContent);
 
   function add(list: FileList | null) {
     if (!list) return;
@@ -44,13 +52,14 @@ export function ReplyBox({ refNo }: { refNo: string }) {
         r = await fetch("/api/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ref: refNo, body, draftId: up.draftId, files: up.names }),
+          body: JSON.stringify({ ref: refNo, subject, body, draftId: up.draftId, files: up.names }),
         });
       }
     }
     if (!r) {
       const fd = new FormData();
       fd.set("ref", refNo);
+      fd.set("subject", subject);
       fd.set("body", body);
       for (const f of files) fd.append("files", f);
       r = await fetch("/api/messages", { method: "POST", body: fd });
@@ -58,18 +67,28 @@ export function ReplyBox({ refNo }: { refNo: string }) {
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Something went wrong at our end — please try again, or ring 1300 029 074 and we'll sort it."); return; }
-    setBody(""); setFiles([]);
+    setBody(""); setSubject(""); setFiles([]);
     window.location.reload();
   }
 
   return (
     <form onSubmit={send} className="border-t border-rule bg-wash p-4">
-      <label className="label" htmlFor="reply">Reply</label>
+      {general && (
+        <div className="mb-3">
+          <label className="label" htmlFor="enquiry-subject">What&apos;s It About?</label>
+          <input id="enquiry-subject" value={subject} maxLength={120}
+            onChange={(e) => setSubject(e.target.value)} className="field"
+            placeholder="A quote, a fee, whether you need a CDC…" />
+        </div>
+      )}
+      <label className="label" htmlFor="reply">{general ? "Your Message" : "Reply"}</label>
       <textarea id="reply" rows={4} value={body} onChange={(e) => setBody(e.target.value)}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) add(e.dataTransfer.files); }}
         className="field resize-y"
-        placeholder="Type your message. It goes straight onto the job — no email needed." />
+        placeholder={general
+          ? "Ask us anything that isn't about a job you've already lodged."
+          : "Type your message. It goes straight onto the job — no email needed."} />
 
       <input ref={input} type="file" multiple accept="application/pdf,.pdf" className="hidden"
         onChange={(e) => add(e.target.files)} />
@@ -95,7 +114,7 @@ export function ReplyBox({ refNo }: { refNo: string }) {
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button className="btn" disabled={busy || !canSend}>
-          {busy ? "Sending…" : "Send Message"}
+          {busy ? "Sending…" : general ? "Send Enquiry" : "Send Message"}
         </button>
         <button type="button" onClick={() => input.current?.click()} className="btn-ghost">
           <Icon name="plus" size={13} /> Attach Files
@@ -110,7 +129,7 @@ export function ReplyBox({ refNo }: { refNo: string }) {
       {tooBig && (
         <p className="mt-3 rounded-sm border-l-[3px] border-flag bg-[#FBECEC] px-3 py-2 text-[13px] text-ink/80">
           That&apos;s over {MAX_MB} MB. Remove the largest file and email it to the
-          office quoting {refNo}.
+          office{general ? "" : ` quoting ${refNo}`}.
         </p>
       )}
       {msg && (

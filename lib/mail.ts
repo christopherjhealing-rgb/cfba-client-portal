@@ -176,6 +176,60 @@ export function officeReplyEmail(opts: {
   return { subject, html };
 }
 
+/** Internal notice to the office when a client sends a general enquiry — one
+ *  that isn't about a job, so there is no Monday card to post it on and no
+ *  sync that will surface it. This email IS the notification: if it doesn't
+ *  send, nobody knows the enquiry exists. */
+export function officeEnquiryEmail(opts: {
+  companyName: string; subject: string; body: string; fileNames: string[];
+}): { subject: string; html: string } {
+  const { companyName, subject: topic, body, fileNames } = opts;
+  const subject = `Portal Enquiry — ${companyName}: ${topic}`;
+  const files = fileNames.length
+    ? `<p style="margin:0 0 12px;font-size:14px"><strong>Attachments:</strong> ${fileNames.map(esc).join(", ")}</p>`
+    : "";
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 12px"><strong>${esc(companyName)}</strong> sent an enquiry through the portal. It isn't about a job, so it isn't on the board:</p>
+  <p style="margin:0 0 8px;font-size:14px;color:#5B6660">About:</p>
+  <div style="border-left:3px solid #C9A227;background:#FBF4E6;padding:14px 18px;margin:0 0 14px"><strong>${esc(topic)}</strong></div>
+  <div style="border-left:3px solid #1E5B3C;background:#F4F8F4;padding:14px 18px;margin:0 0 14px;white-space:pre-line">${esc(body || "(no message — files only)")}</div>
+  ${files}
+  <p style="margin:0 0 18px">
+    <a href="${env.appUrl}/admin/enquiries"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Reply in the portal
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">Replying there puts your answer in their portal and emails them. Replying to this email reaches them too, but the portal thread won't show it.</p>
+</div>`.trim();
+  return { subject, html };
+}
+
+/** What a client gets when the office answers their enquiry. The answer is in
+ *  the body — somebody who asked a question shouldn't have to log in to read
+ *  the reply. */
+export function enquiryReplyEmail(opts: {
+  companyName: string; body: string;
+}): { subject: string; html: string } {
+  const { companyName, body } = opts;
+  const subject = "CF Building Approvals — reply to your enquiry";
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 12px">Hello ${esc(companyName)},</p>
+  <p style="margin:0 0 12px">We've replied to your enquiry:</p>
+  <div style="border-left:3px solid #1E5B3C;background:#F4F8F4;padding:14px 18px;margin:0 0 14px;white-space:pre-line">${esc(body)}</div>
+  <p style="margin:0 0 18px">
+    <a href="${env.appUrl}/messages?ref=GENERAL"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Open the conversation
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">You can reply in the portal, or ring us on 1300 029 074.</p>
+</div>`.trim();
+  return { subject, html };
+}
+
 /** Internal notice to the office when a client cancels a job from the portal.
  *  The card is already at Cancelled by the time this sends — the portal won't
  *  tell a client it's done unless the board took it — so this exists to make

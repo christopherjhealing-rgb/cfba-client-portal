@@ -763,6 +763,22 @@ export async function listMessagesForCompany(companyId: string): Promise<Message
   return (data || []).map(rowToMessage);
 }
 
+/** Every message on one ref, across all companies. Staff-side: it's how the
+ *  enquiry channel is read, since an enquiry has no job and so no client page
+ *  to hang it off. Never reachable from a client context — it deliberately
+ *  doesn't scope to a company. */
+export async function listMessagesByRef(ref: string): Promise<Message[]> {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    return (db.messages || [])
+      .filter((m) => m.ref === ref)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+  const { data } = await sb().from("messages").select("*")
+    .eq("ref", ref).order("created_at");
+  return (data || []).map(rowToMessage);
+}
+
 export async function addMessage(m: Omit<Message, "id">, preId?: string): Promise<Message> {
   const rec: Message = { ...m, id: preId || "msg_" + Math.random().toString(36).slice(2, 10) };
   if (DEMO_MODE) {

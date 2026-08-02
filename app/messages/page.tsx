@@ -2,14 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
-import { isClientVisible, needsClientInfo } from "@/lib/core.mjs";
+import { isClientVisible, needsClientInfo, GENERAL_REF, isGeneralRef } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
 import { ReplyBox } from "@/components/ReplyBox";
 import { Icon } from "@/components/Icon";
-import { EmptyState } from "@/components/JobBits";
 
 export const dynamic = "force-dynamic";
 
@@ -32,16 +31,21 @@ export default async function Messages({
     repo.getReadMarks(session.companyId),
   ]);
 
-  const refs = Array.from(new Set(msgs.map((m) => m.ref)));
+  const refs = Array.from(new Set(msgs.map((m) => m.ref))).filter((r) => !isGeneralRef(r));
   // Honour ?ref= for ANY job this company owns — not only ones that already
   // have a thread. Previously an unknown ref silently fell back to refs[0],
   // so a link to a not-yet-messaged job opened a DIFFERENT job's thread and a
   // reply could post to the wrong Monday card.
   const ownsRef = (r?: string) => !!r && jobs.some((j) => j.ref === r);
-  const open = ownsRef(sp.ref) ? sp.ref : refs[0];
+  const open = isGeneralRef(sp.ref) ? GENERAL_REF
+    : ownsRef(sp.ref) ? sp.ref
+    : refs[0] || GENERAL_REF;
   // Show the opened job in the thread list even if it has no messages yet, so
-  // a deep-linked new conversation has somewhere to live.
-  const listRefs = open && !refs.includes(open) ? [open, ...refs] : refs;
+  // a deep-linked new conversation has somewhere to live. The enquiry thread
+  // sits at the bottom and is always there: a client with a question and no
+  // job to hang it on used to have nowhere to go but the phone.
+  const jobRefs = open && !isGeneralRef(open) && !refs.includes(open) ? [open, ...refs] : refs;
+  const listRefs = [...jobRefs, GENERAL_REF];
 
   // Opening a thread marks it read. Thread links set prefetch={false}: Next
   // prefetches links on hover, and a prefetch would run this render and
@@ -71,36 +75,41 @@ export default async function Messages({
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead hero="/heroes/table.jpg" title="My Messages" sub="Everything we've sent you about a job, and your replies." />
+      <PageHead hero="/heroes/table.jpg" title="My Messages" sub="Everything we've sent you about a job, your replies — and anything else you want to ask." />
 
-      {listRefs.length === 0 ? (
-        <EmptyState
-          title="No Messages"
-          body="When we need something on a job, or have an update worth sending, it appears here."
-        />
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-[280px_1fr] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[280px_1fr] lg:items-start">
           {/* Threads */}
           <div className="card overflow-hidden">
+            {jobRefs.length === 0 && (
+              <p className="border-b border-rule px-4 py-3.5 text-[13px] leading-relaxed text-ink/55">
+                No job messages yet. When we need something on a job, or have an
+                update worth sending, it appears here.
+              </p>
+            )}
             {listRefs.map((ref) => {
+              const isGeneral = isGeneralRef(ref);
               const j = jobFor(ref);
               const last = msgs.filter((m) => m.ref === ref).slice(-1)[0];
               const active = ref === open;
               return (
                 <Link key={ref} href={`/messages?ref=${encodeURIComponent(ref)}`} prefetch={false}
                   className={`block border-b border-rule px-4 py-3.5 transition last:border-b-0 ${
-                    active ? "bg-wash" : "hover:bg-wash/60"}`}>
+                    active ? "bg-wash" : "hover:bg-wash/60"} ${
+                    isGeneral ? "border-t-2 border-t-rule" : ""}`}>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-[12px] text-ink/55">{ref}</span>
+                    <span className="font-mono text-[12px] text-ink/55">
+                      {isGeneral ? "Enquiry" : ref}
+                    </span>
                     {isUnread(ref) && !active && (
                       <span className="h-1.5 w-1.5 rounded-full bg-brass" aria-label="Unread" />
                     )}
                   </div>
                   <div className="mt-0.5 truncate text-[14px] font-medium text-ink">
-                    {j?.address as string || "Job " + ref}
+                    {isGeneral ? "General Enquiry" : (j?.address as string || "Job " + ref)}
                   </div>
                   <div className="mt-0.5 truncate text-[12px] text-ink/50">
-                    {last?.body.split("\n")[0]}
+                    {last?.body.split("\n")[0] ||
+                      (isGeneral ? "Ask us something else" : "")}
                   </div>
                 </Link>
               );
@@ -111,12 +120,24 @@ export default async function Messages({
           <div className="card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-3.5">
               <div className="min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-[12px] text-ink/55">{open}</span>
-                  <span className="truncate font-medium">{job?.address as string}</span>
-                </div>
-                {job && (
-                  <div className="mt-0.5 text-[13px] text-ink/55">{job.description as string}</div>
+                {isGeneralRef(open) ? (
+                  <>
+                    <div className="font-medium">General Enquiry</div>
+                    <div className="mt-0.5 text-[13px] text-ink/55">
+                      Anything that isn&apos;t about a job you&apos;ve lodged — a quote,
+                      a fee, or whether you need a CDC at all.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-mono text-[12px] text-ink/55">{open}</span>
+                      <span className="truncate font-medium">{job?.address as string}</span>
+                    </div>
+                    {job && (
+                      <div className="mt-0.5 text-[13px] text-ink/55">{job.description as string}</div>
+                    )}
+                  </>
                 )}
               </div>
               {job && needsClientInfo(job) && (
@@ -125,6 +146,13 @@ export default async function Messages({
             </div>
 
             <div className="divide-y divide-rule">
+              {thread.length === 0 && isGeneralRef(open) && (
+                <p className="px-4 py-5 text-[14px] leading-relaxed text-ink/60">
+                  Nothing here yet. Ask us anything — we answer in business
+                  hours, and the reply lands here and in your email. If
+                  it&apos;s urgent, ring 1300 029 074.
+                </p>
+              )}
               {thread.map((m) => (
                 <div key={m.id} className="px-4 py-4">
                   <div className="mb-1.5 flex items-center gap-2">
@@ -169,15 +197,15 @@ export default async function Messages({
               ))}
             </div>
 
-            {open && <ReplyBox refNo={open} />}
+            {open && <ReplyBox refNo={open} general={isGeneralRef(open)} />}
           </div>
-        </div>
-      )}
+      </div>
 
       <p className="mt-5 flex items-center gap-2 text-[12px] text-ink/55">
         <Icon name="inbox" size={13} />
-        Replies and attachments go straight onto your job — there&apos;s no need to
-        email as well.
+        {isGeneralRef(open)
+          ? "Enquiries come straight to the office — there's no need to email as well."
+          : "Replies and attachments go straight onto your job — there's no need to email as well."}
       </p>
     </AppShell>
   );

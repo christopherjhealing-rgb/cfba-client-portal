@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   "client.create": "Created Client",
   "certificate.download": "Downloaded Certificate",
   "engineering.settings": "Engineering Checker",
+  "enquiry.reply": "Answered Enquiry",
 };
 
 function when(iso: string) {

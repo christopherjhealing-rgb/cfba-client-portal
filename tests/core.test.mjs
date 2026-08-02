@@ -5,7 +5,7 @@ import {
   addMonths, retention, jobBucket, groupJobs, isClientVisible,
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
-  canCancel, sendColumnWrite, SEND_SENT,
+  canCancel, sendColumnWrite, SEND_SENT, isGeneralRef, GENERAL_REF,
 } from "../lib/core.mjs";
 
 // The labels the live board's status column actually carries, read from
@@ -112,6 +112,25 @@ test("sendColumnWrite leaves a card that already records the client having it", 
   // The office is adding DOWNLOADED to the column. The day it lands, a client
   // re-download must not drag the card back to SENT.
   assert.equal(sendColumnWrite("Downloaded"), "already");
+});
+
+// --- the general enquiry channel -------------------------------------------
+
+test("isGeneralRef picks out the enquiry thread and nothing else", () => {
+  assert.equal(isGeneralRef(GENERAL_REF), true);
+  assert.equal(isGeneralRef("general"), true);   // ?ref= from a hand-typed link
+  assert.equal(isGeneralRef(" General "), true);
+  assert.equal(isGeneralRef("56733"), false);
+  assert.equal(isGeneralRef("E56733-1"), false);
+  assert.equal(isGeneralRef(""), false);
+  assert.equal(isGeneralRef(null), false);
+  assert.equal(isGeneralRef(undefined), false);
+});
+
+test("no board reference can ever collide with the enquiry thread", () => {
+  // A ref is an optional letter and 3-6 digits, so the reserved word is safe.
+  // If that shape ever widens, this fails and the reservation gets rethought.
+  assert.equal(parseRef(`24 Some Street, Tapping WA - ${GENERAL_REF}`), null);
 });
 
 // --- cancelling a job from the portal --------------------------------------

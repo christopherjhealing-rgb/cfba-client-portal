@@ -37,6 +37,8 @@ export const SEND_SENT: string;
 export const SEND_DONE: Set<string>;
 export type SendWriteDecision = "write" | "already";
 export function sendColumnWrite(currentLabel: string | null | undefined): SendWriteDecision;
+export const GENERAL_REF: string;
+export function isGeneralRef(ref: string | null | undefined): boolean;
 export const CANCELLED_STATUS: string;
 export const ISSUED_STATUSES: Set<string>;
 /** All canCancel needs. Both repo.Job and PortalJob satisfy it. */

@@ -3,8 +3,9 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
 import { pageDisabled } from "@/lib/pages";
-import { sendMail, officeReplyEmail } from "@/lib/mail";
+import { sendMail, officeReplyEmail, officeEnquiryEmail } from "@/lib/mail";
 import { env } from "@/lib/env";
+import { isGeneralRef, GENERAL_REF } from "@/lib/core.mjs";
 
 /** Email the office when a client replies. Monday doesn't notify the token
  *  owner of updates posted with its own token, so without this a client's FIR
@@ -19,6 +20,26 @@ async function notifyOffice(
   } catch (e) {
     console.warn(`messages: office notify failed for ${ref}:`, (e as Error).message);
   }
+}
+
+/** The same, for an enquiry that isn't about a job. Different in one way that
+ *  matters: a job reply also lands on the Monday card, so a failed email is a
+ *  delay. An enquiry has no card, so a failed email is a lost enquiry — the
+ *  client is told, rather than left thinking somebody has it. */
+async function notifyOfficeEnquiry(
+  companyName: string, subject: string, body: string, fileNames: string[]
+): Promise<boolean> {
+  if (!env.officeEmail) return false;
+  const mail = officeEnquiryEmail({ companyName, subject, body, fileNames });
+  return sendMail([env.officeEmail], mail.subject, mail.html);
+}
+
+/** The enquiry's "what's it about?" becomes the first line of the message, so
+ *  the thread list and the office email both have something to show without a
+ *  column being added to store it separately. */
+const MAX_SUBJECT = 120;
+function enquiryBody(subject: string, text: string) {
+  return subject ? (text ? `${subject}\n\n${text}` : subject) : text;
 }
 
 export const runtime = "nodejs";
@@ -77,10 +98,18 @@ async function handle(req: Request) {
   const form = await req.formData();
   const jobRef = String(form.get("ref") || "").trim();
   const text = String(form.get("body") || "").trim().slice(0, MAX_TEXT);
+  const subject = String(form.get("subject") || "").trim().slice(0, MAX_SUBJECT);
   const uploads = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const general = isGeneralRef(jobRef);
 
   if (!jobRef) return NextResponse.json({ error: "Choose which job this message is for." }, { status: 400 });
-  if (!text && uploads.length === 0) {
+  if (general && !subject) {
+    return NextResponse.json(
+      { error: "Give us a line on what it's about, so it reaches the right person." },
+      { status: 400 }
+    );
+  }
+  if (!text && uploads.length === 0 && !general) {
     return NextResponse.json(
       { error: "Write a message or attach a file before sending." }, { status: 400 }
     );
@@ -103,17 +132,19 @@ async function handle(req: Request) {
   }
 
   // The job must belong to the signed-in company — never trust the ref alone.
-  const jobs = await repo.listJobsForCompany(session.companyId);
-  const job = jobs.find((j) => j.ref === jobRef);
-  if (!job) return NextResponse.json({ error: "We can't find that job — check the reference, or ring us on 1300 029 074." }, { status: 404 });
+  // An enquiry has no job, so there is nothing to own and nothing to check.
+  const jobs = general ? [] : await repo.listJobsForCompany(session.companyId);
+  const job = general ? undefined : jobs.find((j) => j.ref === jobRef);
+  if (!general && !job) return NextResponse.json({ error: "We can't find that job — check the reference, or ring us on 1300 029 074." }, { status: 404 });
 
   const msgId = "msg_" + Math.random().toString(36).slice(2, 10);
+  const folder = general ? `enquiries/${session.companyId}` : jobRef;
   const stored: repo.MessageFile[] = [];
   const bytesByName = new Map<string, { bytes: Buffer; type: string }>();
   for (const f of uploads) {
     const safe = f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120);
     const bytes = Buffer.from(await f.arrayBuffer());
-    const storagePath = `messages/${jobRef}/${msgId}/${safe}`;
+    const storagePath = `messages/${folder}/${msgId}/${safe}`;
     const contentType = f.type || "application/octet-stream";
     await repo.writeFile(storagePath, bytes, contentType);
     stored.push({ name: safe, size: bytes.length, storagePath, contentType });
@@ -121,7 +152,7 @@ async function handle(req: Request) {
   }
 
   let updateId: string | null = null;
-  if (job.mondayItemId) {
+  if (job?.mondayItemId) {
     try {
       const listed = stored.length
         ? `\n\nAttached: ${stored.map((f) => f.name).join(", ")}`
@@ -144,21 +175,45 @@ async function handle(req: Request) {
     }
   }
 
+  const who = session.displayName
+    ? `${session.displayName}, ${session.companyName}` : session.companyName;
+
   await repo.addMessage({
-    ref: jobRef,
+    ref: general ? GENERAL_REF : jobRef,
     companyId: session.companyId,
     from: "client",
-    body: text,
+    body: general ? enquiryBody(subject, text) : text,
     createdAt: new Date().toISOString(),
     mondayUpdateId: updateId,
     files: stored,
   }, msgId);
 
-  await notifyOffice(
-    session.displayName ? `${session.displayName}, ${session.companyName}` : session.companyName,
-    jobRef, job?.address || "", text, stored.map((f) => f.name));
-  await repo.markThreadRead(session.companyId, jobRef);
+  if (general) {
+    await notifyEnquiry(who, subject, text, stored.map((f) => f.name));
+  } else {
+    await notifyOffice(who, jobRef, job?.address || "", text, stored.map((f) => f.name));
+  }
+  await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
   return NextResponse.json({ ok: true });
+}
+
+/** An enquiry is saved before this runs, and /admin/enquiries lists it whether
+ *  the email goes or not — so a mail outage delays the office seeing it, it
+ *  doesn't lose it. Logged loudly all the same. */
+async function notifyEnquiry(
+  who: string, subject: string, text: string, fileNames: string[]
+) {
+  try {
+    const sent = await notifyOfficeEnquiry(who, subject, text, fileNames);
+    if (!sent) {
+      console.warn(
+        `enquiry from ${who} saved but not emailed — OFFICE_EMAIL or the Graph ` +
+        `mail credentials aren't set. It's waiting on /admin/enquiries.`
+      );
+    }
+  } catch (e) {
+    console.warn(`enquiry from ${who}: office notify failed:`, (e as Error).message);
+  }
 }
 
 /** Metadata-only message whose attachments the browser already PUT into the
@@ -167,22 +222,31 @@ async function handle(req: Request) {
 async function handleDirect(session: Session, body: Record<string, unknown>) {
   const jobRef = String(body.ref || "").trim();
   const text = String(body.body || "").trim().slice(0, MAX_TEXT);
+  const subject = String(body.subject || "").trim().slice(0, MAX_SUBJECT);
   const names: string[] = Array.isArray(body.files)
     ? (body.files as unknown[]).map((n) => String(n || "")).filter(Boolean)
     : [];
+  const general = isGeneralRef(jobRef);
 
   if (!jobRef) return NextResponse.json({ error: "Choose which job this message is for." }, { status: 400 });
-  if (!text && names.length === 0) {
+  if (general && !subject) {
+    return NextResponse.json(
+      { error: "Give us a line on what it's about, so it reaches the right person." },
+      { status: 400 }
+    );
+  }
+  if (!text && names.length === 0 && !general) {
     return NextResponse.json(
       { error: "Write a message or attach a file before sending." }, { status: 400 }
     );
   }
 
-  const jobs = await repo.listJobsForCompany(session.companyId);
-  const job = jobs.find((j) => j.ref === jobRef);
-  if (!job) return NextResponse.json({ error: "We can't find that job — check the reference, or ring us on 1300 029 074." }, { status: 404 });
+  const jobs = general ? [] : await repo.listJobsForCompany(session.companyId);
+  const job = general ? undefined : jobs.find((j) => j.ref === jobRef);
+  if (!general && !job) return NextResponse.json({ error: "We can't find that job — check the reference, or ring us on 1300 029 074." }, { status: 404 });
 
   const msgId = "msg_" + Math.random().toString(36).slice(2, 10);
+  const folder = general ? `enquiries/${session.companyId}` : jobRef;
   const stored: repo.MessageFile[] = [];
 
   if (names.length) {
@@ -216,7 +280,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     }
 
     for (const n of names) {
-      const storagePath = `messages/${jobRef}/${msgId}/${n}`;
+      const storagePath = `messages/${folder}/${msgId}/${n}`;
       await repo.moveFile(`${prefix}/${n}`, storagePath);
       stored.push({
         name: n, size: landed.get(n) || 0, storagePath, contentType: "application/pdf",
@@ -225,7 +289,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   }
 
   let updateId: string | null = null;
-  if (job.mondayItemId) {
+  if (job?.mondayItemId) {
     try {
       const listed = stored.length
         ? `\n\nAttached: ${stored.map((f) => f.name).join(", ")}`
@@ -246,19 +310,24 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     }
   }
 
+  const who = session.displayName
+    ? `${session.displayName}, ${session.companyName}` : session.companyName;
+
   await repo.addMessage({
-    ref: jobRef,
+    ref: general ? GENERAL_REF : jobRef,
     companyId: session.companyId,
     from: "client",
-    body: text,
+    body: general ? enquiryBody(subject, text) : text,
     createdAt: new Date().toISOString(),
     mondayUpdateId: updateId,
     files: stored,
   }, msgId);
 
-  await notifyOffice(
-    session.displayName ? `${session.displayName}, ${session.companyName}` : session.companyName,
-    jobRef, job?.address || "", text, stored.map((f) => f.name));
-  await repo.markThreadRead(session.companyId, jobRef);
+  if (general) {
+    await notifyEnquiry(who, subject, text, stored.map((f) => f.name));
+  } else {
+    await notifyOffice(who, jobRef, job?.address || "", text, stored.map((f) => f.name));
+  }
+  await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
   return NextResponse.json({ ok: true });
 }

@@ -16,6 +16,7 @@ import { PORTAL_FORMS } from "@/lib/resources";
 import { EngineeringControl } from "@/components/EngineeringControl";
 import { listEngSets } from "@/lib/engineering";
 import { LoginDesignToggle } from "@/components/LoginDesignToggle";
+import { GENERAL_REF } from "@/lib/core.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,14 @@ export default async function AdminHome() {
     repo.listFiles("info-sheets").catch(() => []),
     repo.getSetting<Record<string, unknown>>("last_sync").catch(() => null),
   ]);
+  // Enquiries have no card and no sync — the notification email is the only
+  // thing that tells anyone one arrived. This count is the backstop for the
+  // day that email doesn't send.
+  const enquiries = await repo.listMessagesByRef(GENERAL_REF).catch(() => []);
+  const lastByCompany = new Map<string, string>();
+  for (const m of enquiries) lastByCompany.set(m.companyId, m.from);
+  const enquiriesWaiting = [...lastByCompany.values()].filter((f) => f === "client").length;
+
   const uploadedForms = await repo.listFiles("forms").catch(() => []);
   const eng = (await repo.getSetting<{ enabled?: boolean; url?: string }>("engineering").catch(() => null)) || {};
   const loginDesign = (await repo.getSetting<{ design?: string }>("login_design").catch(() => null))?.design;
@@ -50,6 +59,16 @@ export default async function AdminHome() {
             <SyncButton />
           </div>
         </div>
+
+        {enquiriesWaiting > 0 && (
+          <Link href="/admin/enquiries"
+            className="mb-6 block rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-[13px] text-ink/80 transition hover:border-brass">
+            <strong>{enquiriesWaiting}</strong>{" "}
+            {enquiriesWaiting === 1 ? "enquiry is" : "enquiries are"} waiting on an
+            answer — questions that aren&apos;t about a job, so they aren&apos;t on
+            the board. <span className="text-seal underline">Open Enquiries →</span>
+          </Link>
+        )}
 
         <div className="card mb-8 divide-y divide-rule text-[13px]">
           <Row label="Data Store" value={DEMO_MODE ? "Demo (no Supabase configured)" : "Supabase"} warn={DEMO_MODE} />

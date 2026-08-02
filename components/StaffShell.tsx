@@ -3,6 +3,7 @@ import Link from "next/link";
 const NAV = [
   { href: "/admin", label: "Queue" },
   { href: "/admin/clients", label: "Clients" },
+  { href: "/admin/enquiries", label: "Enquiries" },
 ];
 
 export function StaffShell({

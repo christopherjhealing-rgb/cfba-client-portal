@@ -88,6 +88,14 @@ export default async function Help() {
           <p className="mt-4 text-[13px] leading-relaxed text-ink/55">
             Office hours Monday to Friday. Quote your job number and we&apos;ll get to it faster.
           </p>
+          <p className="mt-3 text-[13px] leading-relaxed text-ink/55">
+            Got a question that isn&apos;t about a job you&apos;ve lodged — a quote,
+            a fee, or whether you need a CDC at all?{" "}
+            <Link href="/messages?ref=GENERAL"
+              className="font-medium text-seal underline underline-offset-2">
+              Message us about something else</Link>{" "}
+            and we&apos;ll answer in the portal and by email.
+          </p>
           <Link href="/submit" className="btn mt-5 w-full">Lodge a Job</Link>
         </div>
       </div>
