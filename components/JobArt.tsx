@@ -79,13 +79,32 @@ const ART: Record<ArtKey, React.ReactNode> = {
 };
 
 export function JobArt({
-  description, jobClass, tone = "seal",
+  description, jobClass, tone = "seal", size = "full",
 }: {
   description?: string;
   jobClass?: string;
   tone?: "seal" | "amber";
+  /** "sm" renders just the circular tile at list-row height, no label. */
+  size?: "full" | "sm";
 }) {
   const { key, label } = classifyJob(description, jobClass);
+  if (size === "sm") {
+    return (
+      <div
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border ${
+          tone === "amber"
+            ? "border-[#E9D7AC] bg-[#FBF6EA] text-brass"
+            : "border-rule bg-wash text-seal"
+        }`}
+      >
+        <svg viewBox="0 0 48 48" className="h-[23px] w-[23px]" fill="none"
+          stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
+          strokeLinejoin="round" aria-hidden="true">
+          {ART[key]}
+        </svg>
+      </div>
+    );
+  }
   return (
     <div className="flex w-[86px] shrink-0 flex-col items-center gap-1.5">
       <div

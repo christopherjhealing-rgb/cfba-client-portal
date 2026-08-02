@@ -14,6 +14,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
   { href: "/jobs", label: "My jobs", icon: "list" },
+  { href: "/messages", label: "My messages", icon: "mail" },
   { href: "/submit", label: "Lodge a job", icon: "plus" },
   { href: "/amend", label: "Amend a job", icon: "edit" },
   { href: "/downloads", label: "Downloads", icon: "download" },
@@ -21,7 +22,6 @@ const NAV: NavItem[] = [
   { href: "/resources", label: "Resources", icon: "folder" },
   { href: "/site-plan", label: "Site plan tool", icon: "ruler" },
   { href: "/engineering", label: "Engineering", icon: "beam" },
-  { href: "/messages", label: "Messages", icon: "mail" },
   { href: "/details", label: "My details", icon: "user" },
   { href: "/help", label: "Help & support", icon: "help" },
 ];

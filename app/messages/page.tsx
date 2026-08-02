@@ -71,7 +71,7 @@ export default async function Messages({
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead hero="/heroes/table.jpg" title="Messages" sub="Everything we've sent you about a job, and your replies." />
+      <PageHead hero="/heroes/table.jpg" title="My messages" sub="Everything we've sent you about a job, and your replies." />
 
       {listRefs.length === 0 ? (
         <EmptyState

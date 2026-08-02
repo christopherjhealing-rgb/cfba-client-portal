@@ -12,6 +12,7 @@ import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { DownloadButton } from "@/components/DownloadButton";
 import { Icon } from "@/components/Icon";
+import { JobArt } from "@/components/JobArt";
 import { EmptyState, fmtDate } from "@/components/JobBits";
 
 export const dynamic = "force-dynamic";
@@ -142,8 +143,13 @@ export default async function MyJobs({
                 <tr key={r.id}>
                   <td className="td font-mono text-[12px] text-ink/40">—</td>
                   <td className="td">
-                    <div className="font-medium text-ink">{r.address}</div>
-                    <div className="mt-0.5 text-[13px] text-ink/55">{r.description}</div>
+                    <div className="flex items-center gap-3">
+                      <JobArt description={r.description} size="sm" />
+                      <div className="min-w-0">
+                        <div className="font-medium text-ink">{r.address}</div>
+                        <div className="mt-0.5 text-[13px] text-ink/55">{r.description}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="td"><span className="chip">Received — awaiting CFBA</span></td>
                   <td className="td text-right"><span className="text-[13px] text-ink/35">—</span></td>
@@ -160,12 +166,16 @@ export default async function MyJobs({
                       </Link>
                     </td>
                     <td className="td">
-                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} className="group">
-                        <div className="font-medium text-ink group-hover:text-seal">{j.address as string}</div>
-                        <div className="mt-0.5 break-words text-[13px] text-ink/55">
-                          {j.description as string}
-                          {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
-                          {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
+                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} className="group flex items-center gap-3">
+                        <JobArt description={j.description as string} size="sm"
+                          tone={needsClientInfo(j) ? "amber" : "seal"} />
+                        <div className="min-w-0">
+                          <div className="font-medium text-ink group-hover:text-seal">{j.address as string}</div>
+                          <div className="mt-0.5 break-words text-[13px] text-ink/55">
+                            {j.description as string}
+                            {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
+                            {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
+                          </div>
                         </div>
                       </Link>
                     </td>
