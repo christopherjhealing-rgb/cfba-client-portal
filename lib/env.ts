@@ -13,6 +13,21 @@ export const env = {
   mondayBoardId: process.env.MONDAY_BOARD_ID || "7129862365",
   mondayNewGroup: process.env.MONDAY_NEW_GROUP || "topics",
 
+  // The two rungs of the board's "Send?" column that the portal writes. These
+  // labels are typed onto the board by a human, so their spelling lives here
+  // rather than in code: if the column ends up reading "Ready to Download",
+  // that's a Vercel setting away from working instead of a deploy.
+  sendReadyLabel: process.env.SEND_READY_LABEL || "READY",
+  sendDownloadedLabel: process.env.SEND_DOWNLOADED_LABEL || "DOWNLOADED",
+
+  // The evening report to the office: everything that should have reached a
+  // client today and didn't. Off until DAILY_REPORT_ENABLED=1. Sends to
+  // OFFICE_EMAIL.
+  dailyReportEnabled: process.env.DAILY_REPORT_ENABLED === "1",
+  // A job the client hasn't opened after this many days gets a line in the
+  // report. Not a failure on its own — it's how a dead email address shows up.
+  unopenedAfterDays: Number(process.env.UNOPENED_AFTER_DAYS || "3"),
+
   // Lodgements go straight onto the board (default). Set to 0 to restore the
   // review queue; either way the queue still catches anything that can't
   // reach Monday at lodgement time.

@@ -71,6 +71,9 @@ export async function runSync(): Promise<SyncResult> {
   }
 
   const companies = await repo.companiesForMatch();
+  // The list of things that should have happened and haven't. Loaded once,
+  // amended as we go, written back at the end — see repo.getWatch.
+  const watch = await repo.getWatch().catch(() => repo.EMPTY_WATCH);
   const now = new Date().toISOString();
   const nowDate = new Date(now);
   // Every card that matched a client this cycle, for the with-the-client clock
@@ -191,7 +194,15 @@ export async function runSync(): Promise<SyncResult> {
       }
       }
     }
-    if (files.length === 0 && !settling && !holding) res.issuedNoFiles.push(card.ref);
+    if (files.length === 0 && !settling && !holding) {
+      res.issuedNoFiles.push(card.ref);
+      // Remember WHEN it first went quiet. A sync result lives for one run;
+      // "issued three days ago and the files still aren't here" is the thing
+      // worth saying, and it can only be said if the clock started somewhere.
+      watch.stuckSince[card.ref] ||= now;
+    } else if (files.length > 0) {
+      delete watch.stuckSince[card.ref];
+    }
     if (files.length > 0 && !job.issuedAt) job.issuedAt = now;
     await repo.upsertJob(job, files);
     res.jobsUpserted++;
@@ -205,6 +216,7 @@ export async function runSync(): Promise<SyncResult> {
     const isNewIssue = existing && !existing.issuedAt && files.length > 0;
     if (isNewIssue) {
       let emailed = false;
+      let why = "";
       try {
         const company = await repo.companyById(companyId);
         if (company?.emails?.length) {
@@ -214,23 +226,36 @@ export async function runSync(): Promise<SyncResult> {
           res.emailsSent++;
           emailed = true;
         } else {
-          res.emailFails.push(`${card.ref} — no email recorded on the client`);
+          why = "no email recorded on the client";
+          res.emailFails.push(`${card.ref} — ${why}`);
         }
       } catch (e) {
-        res.emailFails.push(`${card.ref} — ${(e as Error).message}`);
-        console.warn(`sync: could not send issued email for ${card.ref}:`, (e as Error).message);
+        why = (e as Error).message;
+        res.emailFails.push(`${card.ref} — ${why}`);
+        console.warn(`sync: could not send issued email for ${card.ref}:`, why);
       }
 
-      // The board's own record that the package reached the client: "Send?"
-      // to SENT, "Job Sent" to today. Only once the email actually went — a
-      // card marked sent for a client who was never told is the one wrong
-      // answer this column can give. The client downloading marks it too
-      // (app/api/jobs/[ref]/download), so whichever lands first wins and the
-      // second is a no-op.
-      if (emailed) {
-        const r = await monday.markSent(card.itemId);
+      // The issued email fires exactly once, on the transition into issued. If
+      // it fails there is no second attempt and nothing else in the system
+      // knows — so it goes on the watch list, where it stays until the client
+      // downloads or somebody deals with it. This is the failure that used to
+      // vanish with the sync run that found it.
+      if (!emailed) {
+        watch.emailFailed[card.ref] = { at: now, why };
+      } else {
+        delete watch.emailFailed[card.ref];
+
+        // Files are here and the client has been told: "Send?" -> READY, and
+        // "Job Sent" gets today. Only once the email actually went — a card
+        // marked ready for a client who was never told is the one wrong answer
+        // this column can give. DOWNLOADED comes later, from the download
+        // route, and the ladder only ever moves forward.
+        const r = await monday.markReady(card.itemId);
         if (!r.ok && r.reason === "failed") {
           res.boardWriteFails.push(`${card.ref} — ${r.detail}`);
+          watch.boardFailed[card.ref] = { at: now, why: r.detail || "unknown" };
+        } else if (r.ok) {
+          delete watch.boardFailed[card.ref];
         }
       }
     }
@@ -272,6 +297,24 @@ export async function runSync(): Promise<SyncResult> {
   // 5. Retention. We tell clients the download stays available for a set
   //    window; that has to be true, not just hidden from the UI.
   res.filesPurged = await purgeExpired();
+
+  // 6. Close out the watch list. A job the client has downloaded is a job
+  //    nothing was wrong with, whatever we were worried about along the way —
+  //    and a worry with no job behind it any more is noise.
+  try {
+    const refs = new Set([
+      ...Object.keys(watch.stuckSince),
+      ...Object.keys(watch.emailFailed),
+      ...Object.keys(watch.boardFailed),
+    ]);
+    for (const ref of refs) {
+      const j = await repo.getJob(ref);
+      if (!j || j.firstDownloadedAt) repo.clearWatch(watch, ref);
+    }
+    await repo.setWatch(watch);
+  } catch (e) {
+    console.warn("sync: could not update the watch list:", (e as Error).message);
+  }
 
   // Persist a health record so /admin can show sync freshness and the list of
   // Monday cards that matched no client (otherwise invisible: their jobs never

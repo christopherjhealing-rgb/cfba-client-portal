@@ -17,6 +17,7 @@ import { EngineeringControl } from "@/components/EngineeringControl";
 import { listEngSets } from "@/lib/engineering";
 import { LoginDesignToggle } from "@/components/LoginDesignToggle";
 import { GENERAL_REF } from "@/lib/core.mjs";
+import { DailyReportCard } from "@/components/DailyReportCard";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,8 @@ export default async function AdminHome() {
             <SyncButton />
           </div>
         </div>
+
+        <DailyReportCard enabled={env.dailyReportEnabled} to={env.officeEmail} />
 
         {enquiriesWaiting > 0 && (
           <Link href="/admin/enquiries"

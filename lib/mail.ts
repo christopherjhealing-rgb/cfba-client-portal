@@ -176,6 +176,107 @@ export function officeReplyEmail(opts: {
   return { subject, html };
 }
 
+/** The evening report to the office. Everything that should have reached a
+ *  client today and didn't, worst first — and, on a good day, two lines
+ *  saying so. A quiet day has to look quiet rather than look like the report
+ *  stopped working, which is why it sends either way. */
+export function dailyReportEmail(r: {
+  date: string;
+  allClear: boolean;
+  issuedToday: number; readyToday: number; downloadedToday: number;
+  stuck: ReportRow[]; untold: ReportRow[]; unopened: ReportRow[];
+  boardFails: ReportRow[];
+  stuckOlder: number; unopenedOlder: number;
+  enquiriesWaiting: number;
+  syncProblem: string | null;
+}): { subject: string; html: string } {
+  const nice = new Date(`${r.date}T00:00:00`).toLocaleDateString("en-AU", {
+    weekday: "long", day: "numeric", month: "long",
+  });
+
+  const needsYou =
+    r.stuck.length + r.untold.length + r.unopened.length + r.boardFails.length
+    + r.enquiriesWaiting + r.stuckOlder + r.unopenedOlder;
+  const older = (n: number) =>
+    n > 0 ? ` Plus ${n} more over three weeks old, not listed here.` : "";
+  // A broken sync leads, because everything else in here is only as current as
+  // the last run — a tidy "2 to look at" on stale data is a worse lie than no
+  // report at all.
+  const subject = r.allClear
+    ? `CFBA portal — all clear, ${nice}`
+    : r.syncProblem
+      ? `CFBA portal — THE SYNC ISN'T RUNNING, ${nice}`
+      : `CFBA portal — ${needsYou} to look at, ${nice}`;
+
+  const section = (
+    title: string, why: string, rows: ReportRow[], tone: "red" | "amber", olderN = 0
+  ) => {
+    // Rendered when there are only older ones too — a count with no section is
+    // a count nobody sees.
+    if (!rows.length && !olderN) return "";
+    const edge = tone === "red" ? "#B3261E" : "#C9A227";
+    const wash = tone === "red" ? "#FBECEC" : "#FBF4E6";
+    const items = rows.map((x) => `
+      <tr>
+        <td style="padding:7px 12px 7px 0;font-family:ui-monospace,Menlo,monospace;font-size:13px;white-space:nowrap;vertical-align:top">${esc(x.ref)}</td>
+        <td style="padding:7px 12px 7px 0;font-size:14px;vertical-align:top">
+          ${esc(x.address || "—")}${x.company ? `<br><span style="color:#5B6660;font-size:13px">${esc(x.company)}</span>` : ""}
+        </td>
+        <td style="padding:7px 0;font-size:13px;color:#5B6660;vertical-align:top">
+          ${esc(x.detail)}${x.days > 0 ? ` · <strong>${x.days} day${x.days === 1 ? "" : "s"}</strong>` : ""}
+        </td>
+      </tr>`).join("");
+    return `
+  <div style="border-left:3px solid ${edge};background:${wash};padding:14px 18px;margin:0 0 16px">
+    <p style="margin:0 0 4px;font-size:15px"><strong>${esc(title)} (${rows.length + olderN})</strong></p>
+    <p style="margin:0 0 ${rows.length ? "10px" : "0"};font-size:13px;color:#5B6660">${esc(why)}</p>
+    ${rows.length ? `<table style="border-collapse:collapse;width:100%">${items}</table>` : ""}
+  </div>`;
+  };
+
+  const body = r.allClear
+    ? `<p style="margin:0 0 14px;font-size:15px">Nothing needs you. Every job that reached Issued today is in the portal, and every client who should have been told, was.</p>`
+    : [
+        r.syncProblem
+          ? `<div style="border-left:3px solid #B3261E;background:#FBECEC;padding:14px 18px;margin:0 0 16px">
+               <p style="margin:0;font-size:15px"><strong>The sync isn't running properly.</strong></p>
+               <p style="margin:6px 0 0;font-size:13px;color:#5B6660">${esc(r.syncProblem)}</p>
+             </div>`
+          : "",
+        section("Issued but not in the portal", "The board says these are issued. The portal has no files, so the client can't download anything. Check the job's Issued folder." + older(r.stuckOlder), r.stuck, "red", r.stuckOlder),
+        section("In the portal but the client wasn't told", "The files are there and downloadable. The ready email didn't send, and it won't retry — ring or email them.", r.untold, "red"),
+        section("Ready, but nobody's opened it", "Not necessarily wrong. If it keeps appearing, check we have the right email address for them." + older(r.unopenedOlder), r.unopened, "amber", r.unopenedOlder),
+        section("The board wouldn't take a write", "The job is fine for the client. Monday's Send? column just doesn't show where it's up to — set it by hand.", r.boardFails, "amber"),
+        r.enquiriesWaiting > 0
+          ? `<div style="border-left:3px solid #C9A227;background:#FBF4E6;padding:14px 18px;margin:0 0 16px">
+               <p style="margin:0;font-size:15px"><strong>${r.enquiriesWaiting} enquir${r.enquiriesWaiting === 1 ? "y is" : "ies are"} waiting on an answer</strong></p>
+               <p style="margin:6px 0 0;font-size:13px;color:#5B6660">Questions that aren't about a job, so they're not on the board.</p>
+             </div>`
+          : "",
+      ].join("");
+
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:680px">
+  <p style="margin:0 0 4px;font-size:13px;color:#5B6660;text-transform:uppercase;letter-spacing:.08em">CFBA Client Portal</p>
+  <p style="margin:0 0 16px;font-size:19px;font-weight:600">${esc(nice)}</p>
+  ${body}
+  <p style="margin:18px 0 0;padding-top:14px;border-top:1px solid #E3E7E3;font-size:13px;color:#5B6660">
+    Today: <strong>${r.issuedToday}</strong> issued · <strong>${r.readyToday}</strong> reached the portal · <strong>${r.downloadedToday}</strong> downloaded.
+  </p>
+  <p style="margin:14px 0 0">
+    <a href="${env.appUrl}/admin"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Open Portal Admin
+    </a>
+  </p>
+</div>`.trim();
+  return { subject, html };
+}
+
+interface ReportRow {
+  ref: string; address: string; company: string; detail: string; days: number;
+}
+
 /** Internal notice to the office when a client sends a general enquiry — one
  *  that isn't about a job, so there is no Monday card to post it on and no
  *  sync that will surface it. This email IS the notification: if it doesn't

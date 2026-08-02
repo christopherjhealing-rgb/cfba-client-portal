@@ -5,7 +5,8 @@ import {
   addMonths, retention, jobBucket, groupJobs, isClientVisible,
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
-  canCancel, sendColumnWrite, SEND_SENT, isGeneralRef, GENERAL_REF,
+  canCancel, sendColumnWrite, sendLadder, sendRank, SEND_READY, SEND_DOWNLOADED,
+  isGeneralRef, GENERAL_REF,
 } from "../lib/core.mjs";
 
 // The labels the live board's status column actually carries, read from
@@ -93,25 +94,64 @@ test("every label the live board carries reaches the client as words", () => {
   }
 });
 
-test("sendColumnWrite stamps a card the office hasn't marked sent", () => {
-  // The three labels the live "Send?" column carries, read from board
-  // 7129862365 on 2 Aug 2026.
-  assert.equal(sendColumnWrite("NO"), "write");
-  assert.equal(sendColumnWrite("YES"), "write");
-  // Nothing recorded yet is the commonest case of all.
-  assert.equal(sendColumnWrite(""), "write");
-  assert.equal(sendColumnWrite(null), "write");
-  assert.equal(sendColumnWrite(undefined), "write");
+test("the Send? ladder runs in the order the office works in", () => {
+  assert.deepEqual(sendLadder(), ["NO", "YES", "SENT", "READY", "DOWNLOADED"]);
+  // The office types these labels onto the board, so the spelling is settable.
+  assert.deepEqual(
+    sendLadder("Ready to Download", "Downloaded"),
+    ["NO", "YES", "SENT", "Ready to Download", "Downloaded"]);
 });
 
-test("sendColumnWrite leaves a card that already records the client having it", () => {
-  assert.equal(sendColumnWrite(SEND_SENT), "already");
-  assert.equal(sendColumnWrite("SENT"), "already");
+test("sendColumnWrite moves a card forward along the ladder", () => {
+  // The office sets SENT by hand when it issues; the portal takes it from
+  // there. Blank is the commonest starting point of all.
+  assert.equal(sendColumnWrite("", SEND_READY), "write");
+  assert.equal(sendColumnWrite(null, SEND_READY), "write");
+  assert.equal(sendColumnWrite("NO", SEND_READY), "write");
+  assert.equal(sendColumnWrite("YES", SEND_READY), "write");
+  assert.equal(sendColumnWrite("SENT", SEND_READY), "write");
+  assert.equal(sendColumnWrite("READY", SEND_DOWNLOADED), "write");
   // Monday hands back whatever the label reads as, so match on shape not case.
-  assert.equal(sendColumnWrite(" sent "), "already");
-  // The office is adding DOWNLOADED to the column. The day it lands, a client
-  // re-download must not drag the card back to SENT.
-  assert.equal(sendColumnWrite("Downloaded"), "already");
+  assert.equal(sendColumnWrite(" sent ", SEND_READY), "write");
+});
+
+test("sendColumnWrite never drags a card backwards", () => {
+  // The whole safety story. A client re-downloading, a sync re-running, an
+  // office that moved the card on — none of them may undo where it's got to.
+  assert.equal(sendColumnWrite("READY", SEND_READY), "already");
+  assert.equal(sendColumnWrite("DOWNLOADED", SEND_READY), "already");
+  assert.equal(sendColumnWrite("DOWNLOADED", SEND_DOWNLOADED), "already");
+  assert.equal(sendColumnWrite("downloaded", SEND_READY), "already");
+});
+
+test("sendColumnWrite leaves a label it doesn't recognise alone", () => {
+  // Somebody put that there on purpose. That's a decision, not a gap to fill.
+  assert.equal(sendColumnWrite("ON HOLD", SEND_READY), "unknown");
+  assert.equal(sendColumnWrite("Posted", SEND_DOWNLOADED), "unknown");
+});
+
+test("sendColumnWrite refuses a rung that isn't on the ladder", () => {
+  // A caller bug, not a board problem. Refuse rather than guess — and the
+  // board would reject it anyway, since we never create labels.
+  assert.equal(sendColumnWrite("SENT", "POSTED"), "unknown-target");
+  assert.equal(sendColumnWrite("", ""), "unknown-target");
+});
+
+test("sendColumnWrite honours a board that spells the rungs differently", () => {
+  const ladder = sendLadder("Ready to Download", "Downloaded");
+  assert.equal(sendColumnWrite("SENT", "Ready to Download", ladder), "write");
+  assert.equal(sendColumnWrite("Ready to Download", "Ready to Download", ladder), "already");
+  assert.equal(sendColumnWrite("Ready to Download", "Downloaded", ladder), "write");
+  // The default spelling is not on THIS board, so it isn't a rung here.
+  assert.equal(sendColumnWrite("READY", "Downloaded", ladder), "unknown");
+});
+
+test("sendRank places every rung and nothing else", () => {
+  assert.equal(sendRank("NO"), 0);
+  assert.equal(sendRank("SENT"), 2);
+  assert.equal(sendRank("DOWNLOADED"), 4);
+  assert.equal(sendRank(""), -1);
+  assert.equal(sendRank("ON HOLD"), -1);
 });
 
 // --- the general enquiry channel -------------------------------------------

@@ -633,6 +633,60 @@ export async function setSetting(key: string, value: unknown) {
 }
 
 // ---------------------------------------------------------------------------
+// The watch list.
+//
+// Everything else in the portal reacts to something happening. This is the one
+// record of things that should have happened and didn't — a card issued whose
+// files never arrived, a client never told their job was ready, a board write
+// that bounced. Each lives here until it resolves itself, because a sync
+// result lasts one run and the failure it describes can last a week.
+//
+// One settings row, not one per job: nothing here needs indexing, and a single
+// document is a single read in the evening report.
+// ---------------------------------------------------------------------------
+export interface WatchNote { at: string; why: string }
+export interface WatchState {
+  /** ref -> when we first saw it issued with no files in the portal. */
+  stuckSince: Record<string, string>;
+  /** ref -> the client was never told it was ready. */
+  emailFailed: Record<string, WatchNote>;
+  /** ref -> a "Send?" write the board wouldn't take. */
+  boardFailed: Record<string, WatchNote>;
+}
+
+const EMPTY_WATCH: WatchState = { stuckSince: {}, emailFailed: {}, boardFailed: {} };
+
+export async function getWatch(): Promise<WatchState> {
+  const raw = await getSetting<Partial<WatchState>>("watch").catch(() => null);
+  return {
+    stuckSince: raw?.stuckSince || {},
+    emailFailed: raw?.emailFailed || {},
+    boardFailed: raw?.boardFailed || {},
+  };
+}
+
+export async function setWatch(state: WatchState) {
+  await setSetting("watch", state);
+}
+
+/** Record a board write the portal couldn't make. Called from the download
+ *  path, which has no sync result to file it under. */
+export async function noteBoardWriteFail(ref: string, why: string) {
+  const w = await getWatch();
+  w.boardFailed[ref] = { at: new Date().toISOString(), why };
+  await setWatch(w);
+}
+
+/** Everything we were worried about on this job is over. */
+export function clearWatch(w: WatchState, ref: string) {
+  delete w.stuckSince[ref];
+  delete w.emailFailed[ref];
+  delete w.boardFailed[ref];
+}
+
+export { EMPTY_WATCH };
+
+// ---------------------------------------------------------------------------
 // The with-the-client clock. One portal_settings row per job — deliberately,
 // so the feature needs no migration and nobody has to paste SQL to get it.
 // The record's shape is documented above clientPausedDays in core.mjs.

@@ -33,10 +33,17 @@ export const READY_STATUS: string;
 export const HIDDEN_STATUSES: Set<string>;
 export function clientStatusLabel(mondayStatus: string | null | undefined, fileCount?: number): string;
 export function isClientVisible(job: PortalJob): boolean;
-export const SEND_SENT: string;
-export const SEND_DONE: Set<string>;
-export type SendWriteDecision = "write" | "already";
-export function sendColumnWrite(currentLabel: string | null | undefined): SendWriteDecision;
+export const SEND_OFFICE_RUNGS: string[];
+export const SEND_READY: string;
+export const SEND_DOWNLOADED: string;
+export function sendLadder(ready?: string, downloaded?: string): string[];
+export function sendRank(label: string | null | undefined, ladder?: string[]): number;
+export type SendWriteDecision = "write" | "already" | "unknown" | "unknown-target";
+export function sendColumnWrite(
+  currentLabel: string | null | undefined,
+  target: string,
+  ladder?: string[],
+): SendWriteDecision;
 export const GENERAL_REF: string;
 export function isGeneralRef(ref: string | null | undefined): boolean;
 export const CANCELLED_STATUS: string;

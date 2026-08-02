@@ -81,19 +81,20 @@ export async function GET(
       console.warn(`download: could not post receipt for ${ref}:`, (e as Error).message);
     }
 
-    // …and mark the "Send?" column SENT, so the board shows the job has gone
-    // out without anyone having to open the updates to find out. Usually the
-    // issued email got there first and this is a no-op; it fires anyway,
-    // because a job the client downloaded is a job the client has, whatever
-    // happened to the email.
+    // …and move "Send?" to DOWNLOADED — the last rung of the ladder, and the
+    // only one nobody but the portal can see. The board now reads the whole
+    // journey without anyone opening the updates: SENT by hand when the office
+    // issues it, READY when the portal has the files and the client's been
+    // told, DOWNLOADED here.
     //
     // Nothing here may cost the client their files. The zip is already built;
     // a board that is down, slow or shaped differently than we expect is the
-    // office's problem to hear about in the log, not the client's to be told
-    // about at the moment they click Download.
-    const r = await monday.markSent(job.mondayItemId);
+    // office's problem to hear about in the log and the evening report, not
+    // the client's to be told about at the moment they click Download.
+    const r = await monday.markDownloaded(job.mondayItemId);
     if (!r.ok && r.reason === "failed") {
-      console.warn(`download ${ref}: "Send?" not marked SENT — ${r.detail}`);
+      console.warn(`download ${ref}: "Send?" not moved to DOWNLOADED — ${r.detail}`);
+      await repo.noteBoardWriteFail(ref, r.detail || "unknown").catch(() => {});
     }
   }
 

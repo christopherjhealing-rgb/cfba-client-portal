@@ -1,7 +1,7 @@
 // Monday client. Reads the board for status and writes a new card when a
 // portal submission is accepted. Column ids match the live CFBA / EWA board.
 import { env, MONDAY_READY, DEMO_MODE } from "./env";
-import { sendColumnWrite, SEND_SENT } from "./core.mjs";
+import { sendColumnWrite, sendLadder } from "./core.mjs";
 
 const API = "https://api.monday.com/v2";
 
@@ -332,40 +332,55 @@ export async function listUpdates(itemIds: string[]): Promise<MondayUpdate[]> {
   return out;
 }
 
-/** Mark the card as delivered: "Send?" -> SENT and "Job Sent" -> today.
- *
- *  The office tracks delivery in its own pair of columns, separate from the
- *  Status column that follows the assessment. Whichever happens first — the
- *  portal emailing the client that it's ready, or the client downloading it —
- *  is the moment the package reached them, so either can call this. Writing
- *  SENT twice is a no-op.
- *
- *  Never throws: a card that won't take the write must not cost the client
- *  their download or their email. */
 export type SendWrite =
-  | { ok: true; wrote: boolean }
+  | { ok: true; wrote: boolean; skipped?: "already" | "unknown" }
   | { ok: false; reason: "off" | "failed"; detail?: string };
 
+/** The ladder as this deployment's board spells it. See lib/core.mjs. */
+const LADDER = sendLadder(env.sendReadyLabel, env.sendDownloadedLabel);
+
+/** Today, in Perth. Not UTC: before 8am here the UTC date is still yesterday,
+ *  and a board saying a job went out the day before it did is worse than no
+ *  date at all. */
+function perthToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Perth" })
+    .format(new Date());
+}
+
 /**
- * Mark a card as sent on the board's "Send?" column, and stamp "Job Sent".
- *
- * Called from two places — the issued email going out, and the client
- * downloading the package — because either one means the client has it, and
- * whichever happens first should be what the board shows.
+ * Move a card along the "Send?" ladder — forward only, never backwards, never
+ * creating a label the board doesn't already carry.
  *
  * Never throws. Nothing here is worth costing a client their files or an
- * office their sync run: a board that is down is something to read in the log.
+ * office their sync run: a board that is down is something to read in the log
+ * and in the evening report.
  */
-export async function markSent(itemId: string): Promise<SendWrite> {
+async function markSend(
+  itemId: string, target: string, opts: { stampDate?: boolean } = {}
+): Promise<SendWrite> {
   if (!CAN_WRITE) return { ok: false, reason: "off" };
   try {
     const board = env.mondayBoardId;
     const read = `query ($ids: [ID!]) {
-      items (ids: $ids) { column_values (ids: ["${COL.sendStatus}"]) { text } } }`;
+      items (ids: $ids) { column_values (ids: ["${COL.sendStatus}", "${COL.sentDate}"]) { text } } }`;
     const got = await gql<{ items: { column_values: { text: string | null }[] }[] }>(
       read, { ids: [itemId] });
-    const current = got.items?.[0]?.column_values?.[0]?.text || "";
-    if (sendColumnWrite(current) === "already") return { ok: true, wrote: false };
+    const cols = got.items?.[0]?.column_values || [];
+    const current = cols[0]?.text || "";
+    const dateNow = cols[1]?.text || "";
+
+    const decision = sendColumnWrite(current, target, LADDER);
+    if (decision === "already") return { ok: true, wrote: false, skipped: "already" };
+    if (decision === "unknown") {
+      console.info(
+        `monday: ${itemId} "Send?" reads "${current}", which isn't on the ladder ` +
+        `(${LADDER.join(" → ")}) — left as the office has it.`
+      );
+      return { ok: true, wrote: false, skipped: "unknown" };
+    }
+    if (decision === "unknown-target") {
+      return { ok: false, reason: "failed", detail: `"${target}" isn't on the Send? ladder` };
+    }
 
     const q = `
       mutation ($board: ID!, $item: ID!, $col: String!, $val: JSON!) {
@@ -373,27 +388,34 @@ export async function markSent(itemId: string): Promise<SendWrite> {
                             value: $val, create_labels_if_missing: false) { id }
       }`;
     await gql(q, {
-      board, item: itemId, col: COL.sendStatus,
-      val: JSON.stringify({ label: SEND_SENT }),
+      board, item: itemId, col: COL.sendStatus, val: JSON.stringify({ label: target }),
     });
-    // The date is a nicety — if it fails, SENT is still on the board.
-    // Perth, not UTC: before 8am here the UTC date is still yesterday, and a
-    // board that says a job went out the day before it did is worse than no
-    // date at all.
-    try {
-      const today = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Australia/Perth",
-      }).format(new Date());
-      await gql(q, {
-        board, item: itemId, col: COL.sentDate, val: JSON.stringify({ date: today }),
-      });
-    } catch (e) {
-      console.warn(`monday: Job Sent date not written for ${itemId}:`, (e as Error).message);
+
+    // "Job Sent" is the day the client could first get it, so it's stamped
+    // when the portal writes READY — and only if it's empty, because a date
+    // the office typed is theirs, not ours to correct.
+    if (opts.stampDate && !dateNow.trim()) {
+      try {
+        await gql(q, {
+          board, item: itemId, col: COL.sentDate,
+          val: JSON.stringify({ date: perthToday() }),
+        });
+      } catch (e) {
+        console.warn(`monday: Job Sent date not written for ${itemId}:`, (e as Error).message);
+      }
     }
     return { ok: true, wrote: true };
   } catch (e) {
     const detail = (e as Error).message;
-    console.warn(`monday: could not mark ${itemId} SENT:`, detail);
+    console.warn(`monday: could not move ${itemId} to ${target}:`, detail);
     return { ok: false, reason: "failed", detail };
   }
 }
+
+/** The portal has the files and the client has been told. Stamps "Job Sent". */
+export const markReady = (itemId: string) =>
+  markSend(itemId, env.sendReadyLabel, { stampDate: true });
+
+/** The client has actually taken it. */
+export const markDownloaded = (itemId: string) =>
+  markSend(itemId, env.sendDownloadedLabel);
