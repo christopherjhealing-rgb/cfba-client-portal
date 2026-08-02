@@ -111,14 +111,19 @@ export default async function JobDetail({
               </span>
             )}
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* Below lg these stack full width, and column-reverse puts Download
+              on top — it's the reason the page gets opened. Side by side, in
+              source order, from lg up, exactly as it has always been: the
+              overflow this fixes only ever happened on a narrow screen. */}
+          <div className="flex w-full flex-col-reverse gap-2 lg:w-auto lg:shrink-0 lg:flex-row lg:flex-wrap lg:items-center">
             {bucket !== "expired" && !hidden.has("amend") && (
-              <Link href={`/amend?ref=${encodeURIComponent(ref)}`} className="btn-ghost">
+              <Link href={`/amend?ref=${encodeURIComponent(ref)}`}
+                className="btn-ghost w-full lg:w-auto">
                 Amend This Job
               </Link>
             )}
             {downloadable && (
-              <DownloadButton
+              <DownloadButton block
                 href={`/api/jobs/${encodeURIComponent(ref)}/download`}
                 label={bucket === "downloaded" ? "Download Again" : "Download CDC Package"}
               />

@@ -14,7 +14,16 @@ import { useState } from "react";
  *
  *  Now we wait for the bytes, save them, and only then reload. It also means a
  *  server-side failure can be shown to the client instead of vanishing. */
-export function DownloadButton({ href, label = "Download" }: { href: string; label?: string }) {
+export function DownloadButton({
+  href, label = "Download", block = false,
+}: {
+  href: string;
+  label?: string;
+  /** Fill the row below lg. Used where the button shares a line with another
+   *  action and the pair would otherwise run off a phone screen. Desktop is
+   *  unaffected: from lg up the button is exactly the size it always was. */
+  block?: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,12 +63,15 @@ export function DownloadButton({ href, label = "Download" }: { href: string; lab
   }
 
   return (
-    <span className="inline-flex flex-col items-end gap-1.5">
-      <a href={href} onClick={run} className="btn" aria-busy={busy}>
+    <span className={`inline-flex flex-col gap-1.5 ${
+      block ? "w-full items-stretch lg:w-auto lg:items-end" : "items-end"}`}>
+      <a href={href} onClick={run} className={`btn ${block ? "w-full lg:w-auto" : ""}`}
+        aria-busy={busy}>
         {busy ? "Preparing…" : label}
       </a>
       {error && (
-        <span className="max-w-[280px] text-right text-[12.5px] leading-snug text-[#9E2B25]">
+        <span className={`text-[12.5px] leading-snug text-[#9E2B25] ${
+          block ? "lg:max-w-[280px] lg:text-right" : "max-w-[280px] text-right"}`}>
           {error}
         </span>
       )}

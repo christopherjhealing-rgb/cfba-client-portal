@@ -23,6 +23,13 @@ body {
       bg-white px-4 py-2.5 font-display text-[12px] font-semibold uppercase
       tracking-[0.09em] text-ink transition hover:bg-wash disabled:opacity-50;
   }
+  /* Tracked capitals are the brand, and from lg up they are untouched —
+     desktop is the surface this portal is mostly used on and its buttons
+     shouldn't change. Below lg that same tracking is a large part of why a
+     two-word label ran off a 390px screen, so there it tightens. Caps stay. */
+  @media (max-width: 1023.98px) {
+    .btn, .btn-ghost { @apply tracking-[0.02em]; }
+  }
   .field {
     @apply w-full rounded-md border border-rule bg-white px-3 py-2.5 text-[15px]
       text-ink outline-none transition placeholder:text-ink/35
