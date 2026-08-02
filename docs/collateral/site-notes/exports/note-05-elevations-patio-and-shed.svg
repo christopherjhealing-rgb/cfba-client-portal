@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="44.69 222.20 235.41 121.29" width="235.41" height="121.29" role="img">
+  <title>Elevations of an attached patio and a freestanding shed, with the dimensions to be shown, callouts 1-6</title>
+  <defs>
+  <pattern id="pat-Pat13" width="3.457" height="3.457" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="3.457" stroke="#d6dad6" stroke-width="0.98"/></pattern>
+  <pattern id="pat-Pat18" width="3.457" height="3.457" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="3.457" stroke="#d6dad6" stroke-width="0.98"/></pattern>
+  </defs>
+<path d="M 51.690 316.235 L 155.063 316.235 L 155.063 326.014 L 51.690 326.014 Z" fill="url(#pat-Pat13)" stroke="none"/>
+<path d="M 51.690 316.235 L 155.063 316.235" fill="#000000" stroke="none"/>
+<path d="M 51.690 316.235 L 155.063 316.235" fill="none" stroke="#6e7c74" stroke-width="1.048"/>
+<path d="M 55.881 249.182 L 69.850 239.404 L 83.819 249.182" fill="none" stroke="#1e3f2f" stroke-width="0.908"/>
+<path d="M 58.675 249.182 L 81.026 249.182 L 81.026 316.235 L 58.675 316.235 Z" fill="#dce7df" stroke="none"/>
+<path d="M 58.675 249.182 L 81.026 249.182 L 81.026 316.235 L 58.675 316.235 L 58.675 249.182 Z" fill="none" stroke="#1e3f2f" stroke-width="0.908"/>
+<path d="M 81.026 264.549 L 145.284 274.327 L 145.284 277.819 L 81.026 268.041 L 81.026 264.549 Z" fill="#fbf1de" stroke="none"/>
+<path d="M 81.026 264.549 L 145.284 274.327 L 145.284 277.819 L 81.026 268.041 L 81.026 264.549 Z" fill="none" stroke="#8a6d1f" stroke-width="0.838"/>
+<path d="M 141.094 277.121 L 145.284 277.121 L 145.284 316.235 L 141.094 316.235 Z" fill="#cbd9d0" stroke="none"/>
+<path d="M 141.094 277.121 L 145.284 277.121 L 145.284 316.235 L 141.094 316.235 L 141.094 277.121 Z" fill="none" stroke="#1e3f2f" stroke-width="0.838"/>
+<path d="M 152.269 275.724 L 152.269 316.235" fill="#000000" stroke="none"/>
+<path d="M 152.269 275.724 L 152.269 316.235" fill="none" stroke="#2e6b4e" stroke-width="0.698"/>
+<path d="M 153.876 273.279 L 152.269 275.654 L 150.663 273.279 L 153.876 273.279 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 153.876 313.790 L 152.269 316.165 L 150.663 313.790 L 153.876 313.790 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 128.521 281.312 L 128.521 316.235" fill="#000000" stroke="none"/>
+<path d="M 128.521 281.312 L 128.521 316.235" fill="none" stroke="#2e6b4e" stroke-width="0.698"/>
+<path d="M 130.128 278.867 L 128.521 281.242 L 126.915 278.867 L 130.128 278.867 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 130.128 313.790 L 128.521 316.165 L 126.915 313.790 L 130.128 313.790 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 157.158 267.342 C 157.158 270.043 154.969 272.232 152.269 272.232 C 149.569 272.232 147.380 270.043 147.380 267.342 C 147.380 264.642 149.569 262.453 152.269 262.453 C 154.969 262.453 157.158 264.642 157.158 267.342 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 133.411 292.487 C 133.411 295.187 131.222 297.376 128.521 297.376 C 125.821 297.376 123.632 295.187 123.632 292.487 C 123.632 289.787 125.821 287.598 128.521 287.598 C 131.222 287.598 133.411 289.787 133.411 292.487 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 112.457 253.373 C 112.457 256.073 110.268 258.262 107.567 258.262 C 104.867 258.262 102.678 256.073 102.678 253.373 C 102.678 250.673 104.867 248.484 107.567 248.484 C 110.268 248.484 112.457 250.673 112.457 253.373 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 87.312 274.327 C 87.312 277.027 85.123 279.216 82.423 279.216 C 79.722 279.216 77.533 277.027 77.533 274.327 C 77.533 271.627 79.722 269.438 82.423 269.438 C 85.123 269.438 87.312 271.627 87.312 274.327 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 67.755 327.410 C 67.755 330.111 65.566 332.300 62.865 332.300 C 60.165 332.300 57.976 330.111 57.976 327.410 C 57.976 324.710 60.165 322.521 62.865 322.521 C 65.566 322.521 67.755 324.710 67.755 327.410 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 173.223 316.235 L 271.008 316.235 L 271.008 326.014 L 173.223 326.014 Z" fill="url(#pat-Pat18)" stroke="none"/>
+<path d="M 173.223 316.235 L 271.008 316.235" fill="#000000" stroke="none"/>
+<path d="M 173.223 316.235 L 271.008 316.235" fill="none" stroke="#6e7c74" stroke-width="1.048"/>
+<path d="M 183.002 316.235 L 183.002 277.121 L 222.116 257.564 L 261.230 277.121 L 261.230 316.235 L 183.002 316.235 Z" fill="#edf3ee" stroke="none"/>
+<path d="M 183.002 316.235 L 183.002 277.121 L 222.116 257.564 L 261.230 277.121 L 261.230 316.235 L 183.002 316.235 Z" fill="none" stroke="#1e3f2f" stroke-width="0.978"/>
+<path d="M 212.337 293.884 L 231.894 293.884 L 231.894 316.235 L 212.337 316.235 Z" fill="#dce7df" stroke="none"/>
+<path d="M 212.337 293.884 L 231.894 293.884 L 231.894 316.235 L 212.337 316.235 L 212.337 293.884 Z" fill="none" stroke="#1e3f2f" stroke-width="0.768"/>
+<path d="M 268.214 257.564 L 268.214 316.235" fill="#000000" stroke="none"/>
+<path d="M 268.214 257.564 L 268.214 316.235" fill="none" stroke="#2e6b4e" stroke-width="0.698"/>
+<path d="M 269.821 255.119 L 268.214 257.494 L 266.608 255.119 L 269.821 255.119 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 269.821 313.790 L 268.214 316.165 L 266.608 313.790 L 269.821 313.790 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 177.414 277.121 L 177.414 316.235" fill="#000000" stroke="none"/>
+<path d="M 177.414 277.121 L 177.414 316.235" fill="none" stroke="#2e6b4e" stroke-width="0.698"/>
+<path d="M 179.020 274.676 L 177.414 277.051 L 175.807 274.676 L 179.020 274.676 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 179.020 313.790 L 177.414 316.165 L 175.807 313.790 L 179.020 313.790 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 183.002 331.601 L 261.230 331.601" fill="#000000" stroke="none"/>
+<path d="M 183.002 331.601 L 261.230 331.601" fill="none" stroke="#2e6b4e" stroke-width="0.698"/>
+<path d="M 180.557 329.995 L 182.932 331.601 L 180.557 333.208 L 180.557 329.995 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 258.785 329.995 L 261.160 331.601 L 258.785 333.208 L 258.785 329.995 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 273.104 249.182 C 273.104 251.883 270.915 254.072 268.214 254.072 C 265.514 254.072 263.325 251.883 263.325 249.182 C 263.325 246.482 265.514 244.293 268.214 244.293 C 270.915 244.293 273.104 246.482 273.104 249.182 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 182.303 267.342 C 182.303 270.043 180.114 272.232 177.414 272.232 C 174.714 272.232 172.525 270.043 172.525 267.342 C 172.525 264.642 174.714 262.453 177.414 262.453 C 180.114 262.453 182.303 264.642 182.303 267.342 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 227.005 331.601 C 227.005 334.302 224.816 336.491 222.116 336.491 C 219.415 336.491 217.226 334.302 217.226 331.601 C 217.226 328.901 219.415 326.712 222.116 326.712 C 224.816 326.712 227.005 328.901 227.005 331.601 Z" fill="#1e3f2f" stroke="none"/>
+  <text x="83.31" y="233.81" font-size="4.61" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#3a463f">ATTACHED PATIO</text>
+  <text x="59.99" y="285.49" font-size="4.61" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#3a463f">EXISTING</text>
+  <text x="107.83" y="261.75" font-size="4.61" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="400" fill="#7a5e12">fall 2°</text>
+  <text x="150.66" y="269.57" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">1</text>
+  <text x="126.92" y="294.71" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">2</text>
+  <text x="105.96" y="255.61" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">3</text>
+  <text x="80.81" y="276.56" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">6</text>
+  <text x="61.26" y="329.64" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">5</text>
+  <text x="199.35" y="233.81" font-size="4.61" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#3a463f">FREESTANDING SHED</text>
+  <text x="266.61" y="251.41" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">1</text>
+  <text x="175.81" y="269.57" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">2</text>
+  <text x="220.51" y="333.83" font-size="6.34" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">4</text>
+</svg>

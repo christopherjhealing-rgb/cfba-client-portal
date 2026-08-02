@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="54.47 218.50 230.98 139.54" width="230.98" height="139.54" role="img">
+  <title>Retaining wall section: retained height, footing, driveway surcharge and drainage behind the wall, with callouts 1-4</title>
+  <defs>
+  <pattern id="pat-Pat12" width="4.890" height="4.890" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="4.890" stroke="#ccd3cf" stroke-width="1.08"/></pattern>
+  </defs>
+<path d="M 61.469 323.386 L 161.349 323.386 L 161.349 261.921 L 261.230 261.921 L 261.230 351.045 L 61.469 351.045 L 61.469 323.386 Z" fill="url(#pat-Pat12)" stroke="none"/>
+<path d="M 61.469 323.386 L 161.349 323.386" fill="#000000" stroke="none"/>
+<path d="M 61.469 323.386 L 161.349 323.386" fill="none" stroke="#6e7c74" stroke-width="1.229"/>
+<path d="M 161.349 261.921 L 261.230 261.921" fill="#000000" stroke="none"/>
+<path d="M 161.349 261.921 L 261.230 261.921" fill="none" stroke="#6e7c74" stroke-width="1.229"/>
+<path d="M 161.349 258.847 L 172.874 258.847 L 172.874 331.069 L 161.349 331.069 Z" fill="#dce7df" stroke="none"/>
+<path d="M 161.349 258.847 L 172.874 258.847 L 172.874 331.069 L 161.349 331.069 L 161.349 258.847 Z" fill="none" stroke="#1e3f2f" stroke-width="1.152"/>
+<path d="M 153.666 331.069 L 181.325 331.069 L 181.325 341.825 L 153.666 341.825 Z" fill="#cbd9d0" stroke="none"/>
+<path d="M 153.666 331.069 L 181.325 331.069 L 181.325 341.825 L 153.666 341.825 L 153.666 331.069 Z" fill="none" stroke="#1e3f2f" stroke-width="1.076"/>
+<path d="M 185.474 323.386 C 185.474 325.677 183.617 327.535 181.325 327.535 C 179.034 327.535 177.176 325.677 177.176 323.386 C 177.176 321.094 179.034 319.237 181.325 319.237 C 183.617 319.237 185.474 321.094 185.474 323.386 Z" fill="#eaf1ec" stroke="none"/>
+<path d="M 185.474 323.386 C 185.474 325.677 183.617 327.535 181.325 327.535 C 179.034 327.535 177.176 325.677 177.176 323.386 C 177.176 321.094 179.034 319.237 181.325 319.237 C 183.617 319.237 185.474 321.094 185.474 323.386 Z" fill="none" stroke="#2e6b4e" stroke-width="0.922"/>
+<path d="M 185.167 323.386 L 230.497 323.386" fill="#000000" stroke="none"/>
+<path d="M 185.167 323.386 L 230.497 323.386" fill="none" stroke="#2e6b4e" stroke-width="0.922" stroke-dasharray="3.00,2.00"/>
+<path d="M 196.691 243.481 L 250.473 243.481 L 250.473 252.701 L 196.691 252.701 Z" fill="#fbf1de" stroke="none"/>
+<path d="M 196.691 243.481 L 250.473 243.481 L 250.473 252.701 L 196.691 252.701 L 196.691 243.481 Z" fill="none" stroke="#8a6d1f" stroke-width="0.922"/>
+<path d="M 144.446 261.921 L 144.446 323.386" fill="#000000" stroke="none"/>
+<path d="M 144.446 261.921 L 144.446 323.386" fill="none" stroke="#2e6b4e" stroke-width="0.845"/>
+<path d="M 146.390 258.963 L 144.446 261.836 L 142.502 258.963 L 146.390 258.963 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 146.390 320.428 L 144.446 323.301 L 142.502 320.428 L 146.390 320.428 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 144.446 323.386 L 144.446 341.825" fill="#000000" stroke="none"/>
+<path d="M 144.446 323.386 L 144.446 341.825" fill="none" stroke="#2e6b4e" stroke-width="0.845"/>
+<path d="M 146.390 320.428 L 144.446 323.301 L 142.502 320.428 L 146.390 320.428 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 146.390 338.867 L 144.446 341.741 L 142.502 338.867 L 146.390 338.867 Z" fill="#2e6b4e" stroke="none"/>
+<path d="M 136.302 292.653 C 136.302 295.793 133.757 298.339 130.617 298.339 C 127.477 298.339 124.931 295.793 124.931 292.653 C 124.931 289.513 127.477 286.968 130.617 286.968 C 133.757 286.968 136.302 289.513 136.302 292.653 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 136.302 332.605 C 136.302 335.745 133.757 338.291 130.617 338.291 C 127.477 338.291 124.931 335.745 124.931 332.605 C 124.931 329.465 127.477 326.920 130.617 326.920 C 133.757 326.920 136.302 329.465 136.302 332.605 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 229.268 231.188 C 229.268 234.328 226.722 236.874 223.582 236.874 C 220.442 236.874 217.897 234.328 217.897 231.188 C 217.897 228.048 220.442 225.503 223.582 225.503 C 226.722 225.503 229.268 228.048 229.268 231.188 Z" fill="#1e3f2f" stroke="none"/>
+<path d="M 202.377 323.386 C 202.377 326.526 199.832 329.071 196.692 329.071 C 193.551 329.071 191.006 326.526 191.006 323.386 C 191.006 320.246 193.551 317.700 196.692 317.700 C 199.832 317.700 202.377 320.246 202.377 323.386 Z" fill="#1e3f2f" stroke="none"/>
+  <text x="210.61" y="250.39" font-size="5.19" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#3a463f">DRIVEWAY</text>
+  <text x="128.86" y="295.26" font-size="6.92" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">1</text>
+  <text x="128.86" y="335.22" font-size="6.92" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">2</text>
+  <text x="221.82" y="233.79" font-size="6.92" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">3</text>
+  <text x="194.94" y="326.00" font-size="6.92" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#ffffff">4</text>
+  <text x="99.88" y="315.70" font-size="5.19" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#3a463f">EXISTING</text>
+  <text x="99.88" y="324.15" font-size="5.19" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#3a463f">GROUND</text>
+  <text x="236.64" y="274.21" font-size="5.19" font-family='"Segoe UI", Helvetica, Arial, sans-serif' font-weight="700" fill="#3a463f">RETAINED FILL</text>
+</svg>

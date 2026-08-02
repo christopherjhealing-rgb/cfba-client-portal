@@ -1,0 +1,109 @@
+/* CFBA guidance notes — shared house template.
+   Layered over ../style.css, which stays the brand sheet for ALL collateral.
+   Everything here is specific to the 14 client guidance notes, so the notes can
+   be tuned without moving the rest of the suite. Every note links both files,
+   in this order:
+
+     <link rel="stylesheet" href="../style.css">
+     <link rel="stylesheet" href="notes.css">
+
+   House rules the 14 notes share:
+   - page 1 opens with a photo cover band (.band.photo)
+   - continuation pages open with the running head (.band.cont)
+   - every page closes with the same .foot
+   - headings are Title Case; body copy is sentences  */
+
+:root {
+  --cross: #B4703C;   /* the ✗ used on "common reasons we come back" lists */
+}
+
+/* ---------- footer breathing room ----------
+   The footer was sitting hard against the last line of content on a full
+   page. .content is the flex child that grows, so its bottom padding is the
+   gap above the footer band: give it room, and give the band itself a little
+   more height so the rule reads as a margin rather than a lid. */
+.content { padding-bottom: 15mm; }
+.foot { padding: 6.5mm 14mm; }
+
+/* A trailing callout or list still keeps its own space above the footer. */
+.content > *:last-child { margin-bottom: 0; }
+
+/* ---------- running head for continuation pages ----------
+   Same band, same position, same identity as the cover — just the height of a
+   running head instead of a cover. Page 1 of every note carries .band.photo;
+   pages 2+ carry this. */
+.band.cont {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 8mm; padding: 7mm 14mm;
+}
+.band.cont .eyebrow { margin-bottom: 0; flex: 0 0 auto; }
+.band.cont .running {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12pt; font-weight: 700; color: #fff; text-align: right;
+}
+
+/* Keep a hyphenated term whole across a line break — BAL-40, tie-down ratings
+   and the like. The original notes used a non-breaking hyphen character for
+   this; a class does the same job without depending on the font having one. */
+.nb { white-space: nowrap; }
+
+/* ---------- ✗ lists ("common reasons we come back") ---------- */
+.check.cross li::before { content: "✗"; color: var(--cross); font-weight: 700; }
+
+/* ---------- □ lists (lodging checklist) ----------
+   Drawn rather than typed, so the box never depends on a font having ☐. */
+.check.box li { padding-left: 6.5mm; }
+.check.box li::before {
+  content: ""; width: 3.1mm; height: 3.1mm; top: 2.1mm;
+  border: .4mm solid #9AA6A0; border-radius: .6mm; background: var(--white);
+}
+
+/* ---------- figures ----------
+   A drawing sits in a wash panel with its numbered key underneath, which is
+   how notes 01, 04 and 05 have always presented them. */
+.figure {
+  background: var(--wash); border: .35mm solid var(--rule);
+  border-radius: 2.5mm; padding: 5mm 5mm 4mm; margin-top: 1mm;
+}
+.figure img { display: block; width: 100%; height: auto; }
+.figure .key { margin-top: 4mm; padding-top: 3.5mm; border-top: .3mm solid var(--rule); }
+
+.key { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 1.6mm 7mm; }
+.key.one { grid-template-columns: 1fr; }
+.key li { position: relative; padding-left: 7mm; font-size: 9pt; line-height: 1.35; }
+.key li .n {
+  position: absolute; left: 0; top: .1mm;
+  width: 4.8mm; height: 4.8mm; border-radius: 50%;
+  background: var(--green-deep); color: #fff;
+  font-size: 7pt; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ---------- sub-heading inside a column (note 07's grouped checklists) ---------- */
+.subhead {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11pt; font-weight: 700; color: var(--green-deep);
+  margin: 5mm 0 1.5mm;
+}
+.subhead:first-child { margin-top: 0; }
+
+/* ---------- quoted examples (note 02) ---------- */
+.examples {
+  background: var(--wash); border-radius: 2.5mm; padding: 4mm 5mm;
+  list-style: none; font-size: 9.5pt;
+}
+.examples li { padding: 1.4mm 0 1.4mm 5mm; position: relative; }
+.examples li::before {
+  content: "•"; position: absolute; left: 0; top: 1.2mm; color: var(--soft);
+}
+
+/* ---------- two-column note body ----------
+   .cols comes from the brand sheet; on a note the columns are lists that must
+   not be split, so keep them apart a little more and stop the gap collapsing. */
+.cols.lists { gap: 9mm; }
+.cols.lists .sec:first-child { margin-top: 0; }
+
+/* Tables on a note are reference tables, not data — let the first column set
+   the shape of the row rather than sharing the width evenly. */
+table.stack td:first-child { width: 46mm; }
+table.stack.narrow td:first-child { width: 38mm; }

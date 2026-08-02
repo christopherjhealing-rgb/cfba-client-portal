@@ -83,17 +83,22 @@ export function AppShell({
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-start gap-3 px-5 pb-6 pt-6 lg:flex-col lg:items-center lg:gap-0 lg:pt-8">
+        {/* The mark stacks above the name at every size now. At half again the
+            size it can't sit beside the name on a phone — the drawer is 248px
+            wide, which left the company about 90px to live in. Stacked, both
+            get the full width, and the close button lifts out of the flow into
+            the corner so it costs the name nothing. */}
+        <div className="relative flex flex-col items-start px-5 pb-4 pt-5 lg:items-center lg:pb-6 lg:pt-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-white.png"
             alt="CF Building Approvals"
-            className="h-12 w-12 object-contain lg:h-16 lg:w-16"
+            className="h-[72px] w-[72px] object-contain lg:h-24 lg:w-24"
           />
-          <div className="lg:mt-3 lg:text-center">
+          <div className="mt-2.5 w-full lg:mt-3 lg:text-center">
             <div className="font-display text-[13px] font-bold leading-tight tracking-[0.06em] text-white">
               CF BUILDING
-              <br className="hidden lg:block" /> APPROVALS
+              <br /> APPROVALS
             </div>
             <div className="mt-1 font-display text-[9px] uppercase tracking-[0.22em] text-white/45">
               Client Portal
@@ -105,7 +110,7 @@ export function AppShell({
           <button
             onClick={() => setOpen(false)}
             aria-label="Close menu"
-            className="ml-auto grid h-9 w-9 place-items-center rounded-md text-white/70 transition hover:bg-white/10 lg:hidden"
+            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-md text-white/70 transition hover:bg-white/10 lg:hidden"
           >
             <Icon name="close" size={18} />
           </button>

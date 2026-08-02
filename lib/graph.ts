@@ -203,3 +203,84 @@ export async function downloadFile(f: RemoteFile): Promise<Buffer> {
   if (!r.ok) throw new Error(`Download ${f.name} -> ${r.status}`);
   return Buffer.from(await r.arrayBuffer());
 }
+
+// --- Diagnostics -----------------------------------------------------------
+// Used only by the staff SharePoint check in /admin. These answer "what can
+// the portal actually see", which an empty file list never could.
+
+export async function describeDrive(): Promise<{ name: string; webUrl: string }> {
+  const d = await gget(`/drives/${env.graphDriveId}?$select=name,webUrl`);
+  return { name: String(d.name || ""), webUrl: String(d.webUrl || "") };
+}
+
+export async function listClientFolders(): Promise<string[]> {
+  const kids = await childrenAt(env.clientFilesRoot);
+  if (kids === null) throw new Error(`"${env.clientFilesRoot}" not found in this drive`);
+  return kids.filter((k) => k.folder).map((k) => String(k.name || ""));
+}
+
+export async function locateJobFolder(
+  ref: string
+): Promise<{ id: string; name: string; client: string; via: string } | null> {
+  const q = encodeURIComponent(`'${ref}'`);
+  const page = await gget(`/drives/${env.graphDriveId}/root/search(q=${q})?${SELECT}`);
+  const hit = ((page.value as Record<string, unknown>[]) || []).find(
+    (h) => h.folder && folderMatchesRef(String(h.name || ""), ref)
+  );
+  if (hit) {
+    const path = decodeURIComponent(
+      (hit.parentReference as { path?: string })?.path || ""
+    );
+    return {
+      id: String(hit.id), name: String(hit.name || ""),
+      client: path.split("/").filter(Boolean).pop() || "",
+      via: "search",
+    };
+  }
+  const clients = await childrenAt(env.clientFilesRoot);
+  if (clients === null) throw new Error(`"${env.clientFilesRoot}" not found in this drive`);
+  for (const c of clients) {
+    if (!c.folder) continue;
+    const jobs = await childrenOf(String(c.id));
+    const job = jobs.find((j) => j.folder && folderMatchesRef(String(j.name || ""), ref));
+    if (job) {
+      return {
+        id: String(job.id), name: String(job.name || ""),
+        client: String(c.name || ""), via: "folder walk",
+      };
+    }
+  }
+  return null;
+}
+
+export async function inspectIssued(jobFolderId: string): Promise<{
+  issuedFolderFound: boolean;
+  childFolders: string[];
+  usable: { name: string; size: number }[];
+  skipped: { name: string; why: string }[];
+}> {
+  const kids = await childrenOf(jobFolderId);
+  const childFolders = kids.filter((k) => k.folder).map((k) => String(k.name || ""));
+  const issued = kids.find(
+    (k) => k.folder && String(k.name || "").trim().toLowerCase() === "issued"
+  );
+  if (!issued) return { issuedFolderFound: false, childFolders, usable: [], skipped: [] };
+
+  const files = await childrenOf(String(issued.id));
+  const usable: { name: string; size: number }[] = [];
+  const skipped: { name: string; why: string }[] = [];
+  for (const f of files) {
+    const name = String(f.name || "");
+    if (f.folder) { skipped.push({ name, why: "a folder, not a file" }); continue; }
+    if (EXCLUDED_FILE.test(name)) {
+      skipped.push({ name, why: "Word document or temp file — excluded on purpose" });
+      continue;
+    }
+    if (!f["@microsoft.graph.downloadUrl"]) {
+      skipped.push({ name, why: "SharePoint gave no download link (still uploading?)" });
+      continue;
+    }
+    usable.push({ name, size: Number(f.size || 0) });
+  }
+  return { issuedFolderFound: true, childFolders, usable, skipped };
+}
