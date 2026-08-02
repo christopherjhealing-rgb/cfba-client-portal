@@ -233,6 +233,14 @@ export function resizeBounds(
 
 export function deriveStreet(address: string | null | undefined): string;
 
+/** True when a stored street name is really the address copied into the field
+ *  (or still carries a number or a lot/unit marker) rather than a street name
+ *  somebody typed. A genuinely different frontage — a corner lot — is never
+ *  a copy, and is never re-derived over. */
+export function streetLooksCopied(
+  street: string | null | undefined, address: string | null | undefined,
+): boolean;
+
 // --- the aerial underlay (screen only) -------------------------------------
 
 export const MERCATOR_M_PER_PX_Z0: number;

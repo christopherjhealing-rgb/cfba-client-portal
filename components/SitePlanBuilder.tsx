@@ -20,6 +20,7 @@ import {
   removeLotCorner, resizeBounds, rotateStructure,
   sanitiseLot,
   sanitiseUnderlay, scaleBarMetres, setbackMarks, setbacks, snap,
+  streetLooksCopied,
   structureArea, underlayAnchor, underlayCentre, underlayMapSize,
   underlayScale, underlayZoom, type Lot, type LotOrigin, type Underlay,
 } from "@/lib/site-plan.mjs";
@@ -373,6 +374,22 @@ export function SitePlanBuilder(
    *  over the derived one until they clear the field again. */
   const streetEditedRef = useRef(false);
 
+  /**
+   * Read a saved design's street field, and say whether it is the client's own
+   * word or one to derive.
+   *
+   * A design saved before the street was ever derived holds the WHOLE address
+   * in this field, which is why the frontage on the sheet read "24 Narranbee
+   * Ridge" beside a site address of "24 Narranbee Ridge". A copy is corrected
+   * here on the spot; a street the client actually typed — the different
+   * frontage of a corner lot — is kept, and stops the derivation for good.
+   */
+  function readStreet(d: Design): Design {
+    const edited = !!(d.street.trim() && !streetLooksCopied(d.street, d.address));
+    streetEditedRef.current = edited;
+    return edited ? d : { ...d, street: deriveStreet(d.address) };
+  }
+
   // Restore the last design for this company; date is set client-side only so
   // the server render never disagrees with the browser's timezone.
   useEffect(() => {
@@ -380,9 +397,7 @@ export function SitePlanBuilder(
       const last = localStorage.getItem(pointerKey(companyId));
       const raw = last && localStorage.getItem(last);
       if (last && raw) {
-        const d = sanitise(JSON.parse(raw));
-        setDesign(d);
-        streetEditedRef.current = !!(d.street && d.street !== deriveStreet(d.address));
+        setDesign(readStreet(sanitise(JSON.parse(raw))));
         keyRef.current = last;
       } else {
         keyRef.current = designKey(companyId, "");
@@ -414,9 +429,7 @@ export function SitePlanBuilder(
       try {
         const raw = localStorage.getItem(key);
         if (raw) {
-          const restored = { ...sanitise(JSON.parse(raw)), address: design.address };
-          setDesign(restored);
-          streetEditedRef.current = !!(restored.street && restored.street !== deriveStreet(restored.address));
+          setDesign(readStreet({ ...sanitise(JSON.parse(raw)), address: design.address }));
         }
       } catch { /* ignore */ }
     }

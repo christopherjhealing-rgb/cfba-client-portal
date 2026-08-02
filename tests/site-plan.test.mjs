@@ -4,7 +4,8 @@ import {
   planAreaMm, fitScale, mToMmOnPaper, mmOnPaperToM, scaleBarMetres,
   snap, clampToLot, setbacks, defaultPlacement, parseMetres, fmtM, fmtM2,
   STRUCTURE_PRESETS,
-  deriveStreet, normalisePts, rotatePts, polyBounds, lShapePts, shapePts,
+  deriveStreet, streetLooksCopied,
+  normalisePts, rotatePts, polyBounds, lShapePts, shapePts,
   footprint, boundsOf, polygonArea, structureArea, isSimplePolygon,
   polyFromFootprint, rotateStructure, setbackMarks, alignSnap, resizeBounds,
   rectLotPts, RECT_FRONTAGE, lotPts, lotFrontage, lotEdges, edgeLabels,
@@ -160,6 +161,57 @@ test("deriveStreet leaves street-only text alone and never invents one", () => {
   assert.equal(deriveStreet(""), "");
   assert.equal(deriveStreet(null), "");
   assert.equal(deriveStreet(undefined), "");
+});
+
+test("streetLooksCopied catches a street field holding the address", () => {
+  // The reported bug: a design saved before deriveStreet existed put the whole
+  // address in the street field, and it stayed there for good.
+  assert.equal(streetLooksCopied("24 Narranbee Ridge", "24 Narranbee Ridge"), true);
+  // Same, with the suburb still on it, either side or both.
+  assert.equal(
+    streetLooksCopied("24 Narranbee Ridge, Baldivis", "24 Narranbee Ridge, Baldivis"), true);
+  assert.equal(streetLooksCopied("24 Narranbee Ridge", "24 Narranbee Ridge, Baldivis"), true);
+  assert.equal(streetLooksCopied("Narranbee Ridge, Baldivis", "24 Narranbee Ridge, Baldivis"), true);
+  // A lot or unit marker is never part of a street name.
+  assert.equal(streetLooksCopied("Lot 214 Foo Street", "Lot 214 Foo Street"), true);
+  assert.equal(streetLooksCopied("Unit 2/24 Smith St", "Unit 2/24 Smith St, Wanneroo"), true);
+  // Copied and then re-cased or re-spaced is still copied.
+  assert.equal(streetLooksCopied("24  NARRANBEE  RIDGE", "24 Narranbee Ridge"), true);
+});
+
+test("streetLooksCopied leaves a real street name alone", () => {
+  // The derived value: right, and not a copy of anything.
+  assert.equal(streetLooksCopied("Narranbee Ridge", "24 Narranbee Ridge"), false);
+  // THE CASE THAT MUST NOT REGRESS. A corner lot's frontage is a different
+  // street from the one in its address, typed by hand. Re-deriving over it
+  // would throw the client's own word away every time the design loaded.
+  assert.equal(streetLooksCopied("Wandoo Rise", "24 Narranbee Ridge"), false);
+  // Nothing typed is nothing to preserve — the field derives itself.
+  assert.equal(streetLooksCopied("", "24 Narranbee Ridge"), false);
+  assert.equal(streetLooksCopied("   ", "24 Narranbee Ridge"), false);
+  assert.equal(streetLooksCopied(null, "24 Narranbee Ridge"), false);
+  assert.equal(streetLooksCopied(undefined, undefined), false);
+  // A street name with a number in it is still a street name.
+  assert.equal(streetLooksCopied("1st Avenue", "12 1st Avenue, Bassendean"), false);
+  // No address to be a copy of.
+  assert.equal(streetLooksCopied("Wandoo Rise", ""), false);
+});
+
+test("a street the client typed survives the load that re-derives a copied one", () => {
+  // How the builder reads it: only a genuine hand-typed street suppresses
+  // re-derivation, and a copied one is corrected on the spot.
+  const load = (street, address) => {
+    const edited = !!(String(street).trim() && !streetLooksCopied(street, address));
+    return { street: edited ? street : deriveStreet(address), edited };
+  };
+  assert.deepEqual(load("24 Narranbee Ridge", "24 Narranbee Ridge"),
+    { street: "Narranbee Ridge", edited: false });
+  assert.deepEqual(load("Wandoo Rise", "24 Narranbee Ridge"),
+    { street: "Wandoo Rise", edited: true });
+  assert.deepEqual(load("", "24 Narranbee Ridge"),
+    { street: "Narranbee Ridge", edited: false });
+  assert.deepEqual(load("Narranbee Ridge", "24 Narranbee Ridge"),
+    { street: "Narranbee Ridge", edited: true });
 });
 
 // ---------------------------------------------------------------------------
