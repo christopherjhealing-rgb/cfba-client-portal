@@ -362,12 +362,16 @@ async function markSend(
   try {
     const board = env.mondayBoardId;
     const read = `query ($ids: [ID!]) {
-      items (ids: $ids) { column_values (ids: ["${COL.sendStatus}", "${COL.sentDate}"]) { text } } }`;
-    const got = await gql<{ items: { column_values: { text: string | null }[] }[] }>(
+      items (ids: $ids) { column_values (ids: ["${COL.sendStatus}", "${COL.sentDate}"]) { id text } } }`;
+    const got = await gql<{ items: { column_values: { id: string; text: string | null }[] }[] }>(
       read, { ids: [itemId] });
+    // Matched by id, not position: Monday makes no promise that column_values
+    // comes back in the order it was asked for, and reading the date as the
+    // status would strand every card wherever it already sits.
     const cols = got.items?.[0]?.column_values || [];
-    const current = cols[0]?.text || "";
-    const dateNow = cols[1]?.text || "";
+    const at = (id: string) => cols.find((c) => c.id === id)?.text || "";
+    const current = at(COL.sendStatus);
+    const dateNow = at(COL.sentDate);
 
     const decision = sendColumnWrite(current, target, LADDER);
     if (decision === "already") return { ok: true, wrote: false, skipped: "already" };
