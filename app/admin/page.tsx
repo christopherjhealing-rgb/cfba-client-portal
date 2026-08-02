@@ -15,6 +15,7 @@ import { FormManager } from "@/components/FormManager";
 import { PORTAL_FORMS } from "@/lib/resources";
 import { EngineeringControl } from "@/components/EngineeringControl";
 import { listEngSets } from "@/lib/engineering";
+import { LoginDesignToggle } from "@/components/LoginDesignToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function AdminHome() {
   ]);
   const uploadedForms = await repo.listFiles("forms").catch(() => []);
   const eng = (await repo.getSetting<{ enabled?: boolean; url?: string }>("engineering").catch(() => null)) || {};
+  const loginDesign = (await repo.getSetting<{ design?: string }>("login_design").catch(() => null))?.design;
   const engSets = await listEngSets().catch(() => []);
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
@@ -65,6 +67,8 @@ export default async function AdminHome() {
           pages={TOGGLEABLE_PAGES.map((p) => ({ key: p.key, label: p.label }))}
           initialDisabled={[...disabled]}
         />
+
+        <LoginDesignToggle initial={loginDesign === "classic" ? "classic" : "new"} />
 
         <InfoSheetManager
           sheets={PUBLISHED_SHEETS.map((s) => ({ file: s.file, title: s.title }))}
