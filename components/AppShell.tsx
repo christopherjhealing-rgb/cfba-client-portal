@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon, type IconName } from "./Icon";
 
 interface NavItem {
@@ -10,6 +10,51 @@ interface NavItem {
   icon: IconName;
   badge?: number;
 }
+
+// ---------------------------------------------------------------------------
+// The narrow-rail preference. A display choice, not data — it lives in this
+// browser's localStorage and never goes near the server.
+//
+// The switch itself is an attribute on <html>, and everything the rail looks
+// like is CSS hanging off that attribute (RAIL below). Two reasons: BOOT runs
+// before the sidebar is parsed, so a client who chose the rail never sees the
+// full menu flash open first; and the attribute lives on the document rather
+// than in React state, so it survives every page change for free.
+// ---------------------------------------------------------------------------
+const NAV_KEY = "cfba-nav";
+const BOOT =
+  `try{if(localStorage.getItem('${NAV_KEY}')==='collapsed')` +
+  `document.documentElement.dataset.nav='collapsed'}catch(e){}`;
+
+// Only ever from lg up. Below that the sidebar is a drawer and none of this
+// applies — the toggle isn't even rendered there.
+const RAIL = `
+@media (min-width: 1024px) {
+  .shell-aside { transition: width 0.2s ease; }
+  html[data-nav="collapsed"] .shell-aside { width: 72px; overflow-x: hidden; }
+  html[data-nav="collapsed"] .shell-head { padding-left: 0; padding-right: 0; }
+  html[data-nav="collapsed"] .shell-logo { height: 38px; width: 38px; }
+  html[data-nav="collapsed"] .shell-hide { display: none; }
+  html[data-nav="collapsed"] .shell-row {
+    justify-content: center; padding-left: 0; padding-right: 0;
+  }
+  /* The label leaves the page but not the accessible name — the icons stay
+     announced, and a plain hover tooltip names them for everyone else. */
+  html[data-nav="collapsed"] .shell-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
+  }
+  /* Unread messages must still count on the rail — the badge lifts onto the
+     corner of the icon rather than being clipped off the end of the row. */
+  html[data-nav="collapsed"] .shell-badge {
+    position: absolute; top: 4px; right: 9px; height: 17px; min-width: 17px;
+    padding-left: 3px; padding-right: 3px; font-size: 10px;
+  }
+  html[data-nav="collapsed"] .shell-toggle-icon { transform: rotate(180deg); }
+  /* The reclaimed width goes to the page. Tool pages (wide) carry no cap at
+     all and are untouched by this; the reading pages simply breathe wider. */
+  html[data-nav="collapsed"] .shell-main { max-width: 1240px; }
+}`;
 
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -45,7 +90,26 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+
+  // BOOT has already set the attribute; this only brings React's idea of the
+  // state into line with it, for the toggle's label and aria-expanded.
+  useEffect(() => {
+    setCollapsed(document.documentElement.dataset.nav === "collapsed");
+  }, []);
+
+  function toggleRail() {
+    const next = !collapsed;
+    setCollapsed(next);
+    if (next) document.documentElement.dataset.nav = "collapsed";
+    else delete document.documentElement.dataset.nav;
+    try {
+      localStorage.setItem(NAV_KEY, next ? "collapsed" : "expanded");
+    } catch {
+      /* private mode or a full disk — the menu still collapses for this visit */
+    }
+  }
 
   const nav = NAV.filter((n) => !hidden.includes(n.href)).map((n) =>
     n.href === "/messages" && unread > 0 ? { ...n, badge: unread } : n
@@ -53,6 +117,9 @@ export function AppShell({
 
   return (
     <div className="min-h-screen lg:flex">
+      <script dangerouslySetInnerHTML={{ __html: BOOT }} />
+      <style>{RAIL}</style>
+
       {/* Mobile bar — the sidebar is a drawer below lg, because clients open
           this standing on a site with a phone in one hand. */}
       <div className="flex items-center gap-3 border-b border-rule bg-seal-deep px-4 py-3 text-white lg:hidden">
@@ -79,7 +146,7 @@ export function AppShell({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[248px] shrink-0 flex-col bg-seal-deep transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`shell-aside fixed inset-y-0 left-0 z-50 flex w-[248px] shrink-0 flex-col bg-seal-deep transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -88,14 +155,14 @@ export function AppShell({
             wide, which left the company about 90px to live in. Stacked, both
             get the full width, and the close button lifts out of the flow into
             the corner so it costs the name nothing. */}
-        <div className="relative flex flex-col items-start px-5 pb-4 pt-5 lg:items-center lg:pb-6 lg:pt-8">
+        <div className="shell-head relative flex flex-col items-start px-5 pb-4 pt-5 lg:items-center lg:pb-6 lg:pt-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-white.png"
             alt="CF Building Approvals"
-            className="h-[72px] w-[72px] object-contain lg:h-24 lg:w-24"
+            className="shell-logo h-[72px] w-[72px] object-contain lg:h-24 lg:w-24"
           />
-          <div className="mt-2.5 w-full lg:mt-3 lg:text-center">
+          <div className="shell-hide mt-2.5 w-full lg:mt-3 lg:text-center">
             <div className="font-display text-[13px] font-bold leading-tight tracking-[0.06em] text-white">
               CF BUILDING
               <br /> APPROVALS
@@ -116,7 +183,7 @@ export function AppShell({
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        <nav id="shell-nav" className="flex-1 overflow-y-auto px-3 pb-4">
           {nav.map((n) => {
             const active =
               pathname === n.href || pathname.startsWith(n.href + "/");
@@ -126,7 +193,8 @@ export function AppShell({
                 href={n.href}
                 onClick={() => setOpen(false)}
                 aria-current={active ? "page" : undefined}
-                className={`mb-0.5 flex items-center gap-3 rounded-md px-3 py-2.5 text-[14px] transition ${
+                title={collapsed ? n.label : undefined}
+                className={`shell-row relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-2.5 text-[14px] transition ${
                   active
                     ? "bg-white/[0.14] font-semibold text-white"
                     : "text-white/70 hover:bg-white/[0.07] hover:text-white"
@@ -135,9 +203,9 @@ export function AppShell({
                 <span className="shrink-0 opacity-80">
                   <Icon name={n.icon} size={16} />
                 </span>
-                <span className="flex-1">{n.label}</span>
+                <span className="shell-label flex-1">{n.label}</span>
                 {n.badge ? (
-                  <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-brass px-1.5 font-mono text-[11px] font-semibold text-white">
+                  <span className="shell-badge grid h-5 min-w-[20px] place-items-center rounded-full bg-brass px-1.5 font-mono text-[11px] font-semibold text-white">
                     {n.badge}
                   </span>
                 ) : null}
@@ -152,18 +220,23 @@ export function AppShell({
             method="post"
           >
             {impersonated && <input type="hidden" name="stop" value="1" />}
-            <button className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-[14px] text-white/70 transition hover:bg-white/[0.07] hover:text-white">
+            <button
+              title={collapsed ? (impersonated ? "Stop Viewing" : "Sign Out") : undefined}
+              className="shell-row flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-[14px] text-white/70 transition hover:bg-white/[0.07] hover:text-white"
+            >
               <span className="shrink-0 opacity-80">
                 <Icon name="signOut" size={16} />
               </span>
-              {impersonated ? "Stop Viewing" : "Sign Out"}
+              <span className="shell-label">
+                {impersonated ? "Stop Viewing" : "Sign Out"}
+              </span>
             </button>
           </form>
 
           {/* Global search — a plain GET to My jobs, which matches ref, your
               ref, address and description. Works without JS, and rides along
               in the phone drawer. */}
-          <form action="/jobs" method="get" className="mt-3 border-t border-white/10 px-1 pt-4">
+          <form action="/jobs" method="get" className="shell-hide mt-3 border-t border-white/10 px-1 pt-4">
             <label htmlFor="shell-search" className="sr-only">Search your jobs</label>
             <input
               id="shell-search"
@@ -175,7 +248,30 @@ export function AppShell({
           </form>
         </nav>
 
-        <div className="px-5 pb-5 text-[11px] leading-relaxed text-white/30">
+        {/* Collapse control. Never below lg: there the sidebar is a drawer
+            that's already out of the way, and a rail toggle would only be one
+            more thing to get wrong on a phone. Default is expanded — the menu
+            standing there in full is what keeps less confident clients
+            oriented, so the space it costs is worth paying by default. */}
+        <div className="hidden shrink-0 border-t border-white/10 px-3 py-3 lg:block">
+          <button
+            type="button"
+            onClick={toggleRail}
+            aria-expanded={!collapsed}
+            aria-controls="shell-nav"
+            title={collapsed ? "Expand Menu" : "Collapse Menu"}
+            className="shell-row relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] text-white/55 transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <span className="shell-toggle-icon shrink-0 opacity-80">
+              <Icon name="chevronsLeft" size={16} />
+            </span>
+            <span className="shell-label flex-1">
+              {collapsed ? "Expand Menu" : "Collapse Menu"}
+            </span>
+          </button>
+        </div>
+
+        <div className="shell-hide px-5 pb-5 text-[11px] leading-relaxed text-white/30">
           CF Building Approvals · Perth WA
         </div>
       </aside>
@@ -186,7 +282,7 @@ export function AppShell({
             Staff view — you are seeing this portal exactly as {company} sees it
           </div>
         )}
-        <main className={`mx-auto px-5 py-7 lg:px-9 lg:py-9 ${wide ? "max-w-none" : "max-w-[1100px]"}`}>
+        <main className={`mx-auto px-5 py-7 lg:px-9 lg:py-9 ${wide ? "max-w-none" : "shell-main max-w-[1100px]"}`}>
           {children}
         </main>
       </div>
