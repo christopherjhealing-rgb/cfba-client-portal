@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   planAreaMm, fitScale, mToMmOnPaper, mmOnPaperToM, scaleBarMetres,
   snap, clampToLot, setbacks, defaultPlacement, parseMetres, fmtM, fmtM2,
-  STRUCTURE_PRESETS,
+  STRUCTURE_PRESETS, STRUCTURE_STATES, structureState, toggleState,
   deriveStreet, streetLooksCopied,
   normalisePts, rotatePts, polyBounds, lShapePts, shapePts,
   footprint, boundsOf, polygonArea, structureArea, isSimplePolygon,
@@ -135,6 +135,44 @@ test("the six presets are the six from the spec", () => {
     ["dwelling", "patio", "shed", "pool", "carport", "retaining"]);
   const shed = STRUCTURE_PRESETS.find((p) => p.kind === "shed");
   assert.deepEqual({ w: shed.w, d: shed.d }, { w: 3, d: 3 });
+});
+
+// ---------------------------------------------------------------------------
+// Existing or proposed.
+// ---------------------------------------------------------------------------
+
+test("a structure saved before states existed is proposed, and nothing else", () => {
+  // Every design already in a client's browser: no state field at all.
+  assert.equal(structureState({ x: 0, y: 0, w: 3, d: 3 }), "proposed");
+  assert.equal(structureState({ state: "proposed" }), "proposed");
+  assert.equal(structureState({ state: "existing" }), "existing");
+  // Nothing else is ever read as existing — a typo must not quietly demote a
+  // structure the application is actually for.
+  assert.equal(structureState({ state: "EXISTING" }), "proposed");
+  assert.equal(structureState({ state: "" }), "proposed");
+  assert.equal(structureState({ state: 1 }), "proposed");
+  assert.equal(structureState(null), "proposed");
+  assert.equal(structureState(undefined), "proposed");
+});
+
+test("one tap swaps the state", () => {
+  assert.equal(toggleState("proposed"), "existing");
+  assert.equal(toggleState("existing"), "proposed");
+  // A junk state toggles to existing, matching structureState reading it as
+  // proposed — the toggle can never land on the value it started from.
+  assert.equal(toggleState("nonsense"), "existing");
+  assert.deepEqual(STRUCTURE_STATES, ["proposed", "existing"]);
+});
+
+test("the dwelling lands existing; everything else lands proposed", () => {
+  // The common job here is a patio or a shed going onto a house that is
+  // already there, so the dwelling saves the client a tap.
+  const state = (kind) =>
+    structureState(STRUCTURE_PRESETS.find((p) => p.kind === kind));
+  assert.equal(state("dwelling"), "existing");
+  for (const kind of ["patio", "shed", "pool", "carport", "retaining"]) {
+    assert.equal(state(kind), "proposed", kind);
+  }
 });
 
 // ---------------------------------------------------------------------------

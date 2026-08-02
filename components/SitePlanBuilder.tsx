@@ -21,8 +21,10 @@ import {
   sanitiseLot,
   sanitiseUnderlay, scaleBarMetres, setbackMarks, setbacks, snap,
   streetLooksCopied,
-  structureArea, underlayAnchor, underlayCentre, underlayMapSize,
-  underlayScale, underlayZoom, type Lot, type LotOrigin, type Underlay,
+  structureArea, structureState, toggleState,
+  underlayAnchor, underlayCentre, underlayMapSize,
+  underlayScale, underlayZoom,
+  type Lot, type LotOrigin, type StructureState, type Underlay,
 } from "@/lib/site-plan.mjs";
 import { buildLot, reorientLot } from "@/lib/cadastre.mjs";
 import { WA_BOUNDS } from "@/lib/address.mjs";
@@ -137,6 +139,9 @@ interface Structure {
   notchW?: number;
   notchD?: number;
   pts?: Pt[];
+  /** Already there, or being applied for. Every design saved before this
+   *  existed loads as proposed and draws exactly as it did. */
+  state: StructureState;
 }
 
 interface Design {
@@ -213,6 +218,35 @@ const KINDS: { kind: string; name: string; fill: string; dark?: boolean }[] = [
 ];
 const FILL: Record<string, string> = Object.fromEntries(KINDS.map((k) => [k.kind, k.fill]));
 
+// ---------------------------------------------------------------------------
+// Existing and proposed, told apart on a photocopy.
+//
+// These sheets get printed in black and white, scanned, and looked at on a
+// phone in a ute. So the difference between a building that is already there
+// and one being applied for can never be carried by colour:
+//
+//   PROPOSED — full type colour, a bold solid outline. The subject.
+//   EXISTING — the same colour washed right back, a thin dashed outline, and a
+//              light diagonal hatch. Reads as background in ink or in grey,
+//              and survives a fax.
+//
+// The dark retaining-wall fill would swallow the hatch, so it gets a pale
+// stand-in when it's existing. Nothing else is special-cased.
+// ---------------------------------------------------------------------------
+const EXIST_WASH = 0.34;
+const EXIST_DARK_FILL = "#C6CFC9";
+const HATCH_INK = "#2B3A31";
+
+/** What one drawn layer of a footprint is painted with — the same handful of
+ *  attributes whether the footprint is a rect or a polygon. */
+interface Paint {
+  fill: string;
+  fillOpacity?: number;
+  stroke?: string;
+  strokeWidth?: number;
+  strokeDasharray?: string;
+}
+
 const uid = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -245,6 +279,9 @@ function sanitise(raw: unknown): Design {
             label: typeof s.label === "string" ? s.label : "Structure",
             w: dim(s.w, 3), d: dim(s.d, 3), x: pos(s.x), y: pos(s.y),
             rot, shape,
+            // No state on the record is proposed — every structure saved
+            // before existing/proposed existed.
+            state: structureState(s),
           };
           if (shape === "lshape") {
             base.notchW = dim(s.notchW, base.w / 2);
@@ -1026,7 +1063,10 @@ export function SitePlanBuilder(
     const at = dropAt(preset.w, preset.d);
     pushStructure({
       id: uid(), kind: preset.kind, label: preset.label,
-      w: preset.w, d: preset.d, rot: 0, shape: "rect", ...at,
+      w: preset.w, d: preset.d, rot: 0, shape: "rect",
+      // Only the dwelling lands as existing — the common job here is work
+      // going onto a house that's already there. One tap corrects it.
+      state: structureState(preset), ...at,
     });
   }
 
@@ -1035,7 +1075,8 @@ export function SitePlanBuilder(
     const at = dropAt(w, d);
     pushStructure({
       id: uid(), kind: "lshape", label: "L-shape",
-      w, d, rot: 0, shape: "lshape", notchW: 3, notchD: 2, ...at,
+      w, d, rot: 0, shape: "lshape", notchW: 3, notchD: 2,
+      state: "proposed", ...at,
     });
   }
 
@@ -1111,7 +1152,7 @@ export function SitePlanBuilder(
     const stored = polyFromFootprint(draw.pts, 0);
     pushStructure({
       id: uid(), kind: "custom", label: "Custom shape",
-      rot: 0, shape: "poly", ...stored,
+      rot: 0, shape: "poly", state: "proposed", ...stored,
     });
   }
 
@@ -1185,6 +1226,11 @@ export function SitePlanBuilder(
     if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeSelected(); return; }
     if (e.key === "Escape") { setSelected(null); return; }
     if (e.key === "r" || e.key === "R") { e.preventDefault(); rotateSelected(); return; }
+    if (e.key === "e" || e.key === "E") {
+      e.preventDefault();
+      patchStructure(sel.id, { state: toggleState(structureState(sel)) });
+      return;
+    }
     const step = e.shiftKey ? 1 : 0.1;
     const d = ARROWS[e.key];
     if (!d) return;
@@ -1198,6 +1244,10 @@ export function SitePlanBuilder(
   // ---- drawing ------------------------------------------------------------
 
   const halo = { paintOrder: "stroke" as const, stroke: "#fff", strokeWidth: mm(0.7), strokeLinejoin: "round" as const };
+  /** The same, cut wider — what a figure needs to stay legible when it sits on
+   *  top of a hatch. A draughtsman would leave a window in the hatching; this
+   *  is the same idea, done with the halo the labels already carry. */
+  const haloWide = { ...halo, strokeWidth: mm(1.4) };
 
   function dimTexts() {
     return (
@@ -1590,18 +1640,53 @@ export function SitePlanBuilder(
     );
   }
 
-  function structureNode(s: Structure, interactive: boolean) {
+  /** The hatch pattern, defined once per SVG in the document: the screen
+   *  canvas and the printed sheet are two separate trees and an id may only
+   *  mean one thing in each. */
+  function hatchDefs(id: string) {
+    // 2.1 mm apart on paper: open enough that the figures inside a hatched
+    // structure still read, close enough to survive a photocopier.
+    const p = mm(2.1);
+    return (
+      <defs>
+        <pattern id={id} width={p} height={p} patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)">
+          <line x1={0} y1={0} x2={0} y2={p} stroke={HATCH_INK} strokeOpacity={0.42}
+            strokeWidth={mm(0.22)} />
+        </pattern>
+      </defs>
+    );
+  }
+
+  function structureNode(s: Structure, interactive: boolean, hatch: string) {
     const isSel = interactive && s.id === selected;
     const dark = s.kind === "retaining";
+    const here = structureState(s) === "existing";
     const b = boundsOf(s);
     const thin = b.d < mm(9);
     const cx = s.x + b.w / 2;
     const labelY = thin ? s.y - mm(4.4) : s.y + b.d / 2 - mm(0.8);
     const dimsY = thin ? s.y - mm(1.4) : s.y + b.d / 2 + mm(2.8);
-    const stroke = isSel ? BRASS : dark ? "#12332A" : SEAL;
-    const strokeW = isSel ? mm(0.55) : mm(0.35);
-    const fill = FILL[s.kind] || "#E7F0EA";
+    // Proposed is exactly the weight and colour this tool has always drawn —
+    // every design already saved is proposed, and none of them changes.
+    // Existing steps back: washed out, thinner, dashed, hatched.
+    const stroke = isSel ? BRASS : here ? "#59695E" : dark ? "#12332A" : SEAL;
+    const strokeW = here ? (isSel ? mm(0.4) : mm(0.22)) : (isSel ? mm(0.55) : mm(0.35));
+    const dash = here ? `${mm(1.4)} ${mm(0.9)}` : undefined;
+    const fill = here && dark ? EXIST_DARK_FILL : (FILL[s.kind] || "#E7F0EA");
+    const fillOp = here && !dark ? EXIST_WASH : 1;
     const marg = mm(1.1);
+    /** The footprint, drawn once per layer: the wash, the hatch over it for an
+     *  existing structure, then the outline on top of both. */
+    const layer = (key: string, p: Paint) =>
+      s.shape === "rect" ? (
+        <rect key={key} x={s.x} y={s.y} width={b.w} height={b.d}
+          rx={s.kind === "pool" ? Math.min(b.w, b.d) * 0.18 : 0}
+          stroke="none" {...p} />
+      ) : (
+        <polygon key={key} points={footprint(s).map((q) => `${q.x},${q.y}`).join(" ")}
+          stroke="none" strokeLinejoin="round" {...p} />
+      );
     return (
       <g key={s.id}
         style={interactive ? { cursor: "move" } : undefined}
@@ -1637,25 +1722,28 @@ export function SitePlanBuilder(
         onPointerUp={interactive ? () => { dragRef.current = null; setGuides([]); } : undefined}
         onPointerCancel={interactive ? () => { dragRef.current = null; setGuides([]); } : undefined}
       >
-        {s.shape === "rect" ? (
-          <rect x={s.x} y={s.y} width={b.w} height={b.d}
-            rx={s.kind === "pool" ? Math.min(b.w, b.d) * 0.18 : 0}
-            fill={fill} stroke={stroke} strokeWidth={strokeW} />
-        ) : (
-          <polygon points={footprint(s).map((p) => `${p.x},${p.y}`).join(" ")}
-            fill={fill} stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
-        )}
+        {layer("wash", { fill, fillOpacity: fillOp })}
+        {here && layer("hatch", { fill: `url(#${hatch})` })}
+        {layer("line", {
+          fill: "none", stroke, strokeWidth: strokeW, strokeDasharray: dash,
+        })}
         {isSel && (
           <rect x={s.x - marg} y={s.y - marg} width={b.w + marg * 2} height={b.d + marg * 2}
             fill="none" stroke={BRASS} strokeWidth={mm(0.25)}
             strokeDasharray={`${mm(1.2)} ${mm(0.9)}`} pointerEvents="none" />
         )}
+        {/* The state is said on the drawing, beside the name. An assessor
+            reading this sheet must never have to guess which buildings the
+            application is actually for. */}
         <text x={cx} y={labelY} textAnchor="middle" fontFamily={FONT_LAB}
-          fontWeight={600} fontSize={mm(2.9)} fill={INK} style={halo}>
+          fontWeight={600} fontSize={mm(2.9)} fill={INK} style={here ? haloWide : halo}>
           {s.label}
+          <tspan fontWeight={500} fontSize={mm(2.4)} fillOpacity={0.75}>
+            {` (${structureState(s)})`}
+          </tspan>
         </text>
         <text x={cx} y={dimsY} textAnchor="middle" fontFamily={FONT_NUM}
-          fontSize={mm(2.5)} fill={INK} fillOpacity={0.75} style={halo}>
+          fontSize={mm(2.5)} fill={INK} fillOpacity={0.75} style={here ? haloWide : halo}>
           {s.shape === "poly" ? `${fmtM(structureArea(s))} m²` : `${fmtM(s.w)} × ${fmtM(s.d)} m`}
         </text>
         {isSel && !draw && handleNodes(s)}
@@ -1663,17 +1751,23 @@ export function SitePlanBuilder(
     );
   }
 
-  /** The legend: one row per structure type actually on the plan, in a
-   *  quiet box tucked into the top-right of the lot on screen and on the
-   *  printed sheet alike. */
-  function legendBox() {
+  /** The legend: one row per structure type actually on the plan, then — under
+   *  a hairline — the two states, drawn exactly as the plan draws them. The
+   *  colours say what a thing is; the weight and the hatch say whether it is
+   *  already there, and that half of the legend is the half that still works
+   *  when the sheet comes out of a black-and-white printer. */
+  function legendBox(hatch: string) {
     const present = KINDS.filter((k) => design.structures.some((s) => s.kind === k.kind));
     if (present.length === 0) return null;
-    const row = mm(4.2), pad = mm(1.8), sw = mm(3);
-    const boxW = mm(27);
-    const boxH = pad * 2 + row * present.length - mm(1);
+    const states = (["proposed", "existing"] as StructureState[])
+      .filter((st) => design.structures.some((s) => structureState(s) === st));
+    const row = mm(4.2), pad = mm(1.8), sw = mm(3), swH = mm(2.6);
+    const boxW = mm(28);
+    const gap = mm(2.4);
+    const boxH = pad * 2 + row * (present.length + states.length) + gap - mm(1);
     const bx = Math.max(mm(1), lotW - boxW - mm(1.5));
     const by = mm(1.5);
+    const ruleY = by + pad + row * present.length + gap / 2 - mm(0.6);
     return (
       <g pointerEvents="none">
         <rect x={bx} y={by} width={boxW} height={boxH} fill="#FFFFFF" fillOpacity={0.92}
@@ -1682,11 +1776,37 @@ export function SitePlanBuilder(
           const y = by + pad + row * i;
           return (
             <g key={k.kind}>
-              <rect x={bx + pad} y={y} width={sw} height={mm(2.6)} rx={mm(0.3)}
+              <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)}
                 fill={k.fill} stroke={k.dark ? "none" : SEAL} strokeOpacity={0.45} strokeWidth={mm(0.15)} />
               <text x={bx + pad + sw + mm(1.5)} y={y + mm(2.2)} fontFamily={FONT_LAB}
                 fontSize={mm(2.3)} fill={INK} fillOpacity={0.8}>
                 {k.name}
+              </text>
+            </g>
+          );
+        })}
+        {states.length > 0 && (
+          <line x1={bx + pad} y1={ruleY} x2={bx + boxW - pad} y2={ruleY}
+            stroke={INK} strokeOpacity={0.25} strokeWidth={mm(0.15)} />
+        )}
+        {states.map((st, i) => {
+          const y = by + pad + row * (present.length + i) + gap;
+          const here = st === "existing";
+          return (
+            <g key={st}>
+              <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)}
+                fill="#E8ECE6" fillOpacity={here ? EXIST_WASH : 1} />
+              {here && (
+                <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)}
+                  fill={`url(#${hatch})`} />
+              )}
+              <rect x={bx + pad} y={y} width={sw} height={swH} rx={mm(0.3)} fill="none"
+                stroke={here ? "#59695E" : SEAL} strokeWidth={here ? mm(0.22) : mm(0.35)}
+                strokeDasharray={here ? `${mm(1.4)} ${mm(0.9)}` : undefined} />
+              <text x={bx + pad + sw + mm(1.5)} y={y + mm(2.2)} fontFamily={FONT_LAB}
+                fontWeight={here ? 400 : 600} fontSize={mm(2.3)} fill={INK}
+                fillOpacity={here ? 0.7 : 0.9}>
+                {here ? "Existing" : "Proposed"}
               </text>
             </g>
           );
@@ -1725,8 +1845,10 @@ export function SitePlanBuilder(
    *  whites drop away so the photo reads, and every line and figure stays
    *  exactly where it was. The printed sheet is never drawn this way. */
   function plan(interactive: boolean, seeThrough = false) {
+    const hatch = interactive ? "cfba-hatch-screen" : "cfba-hatch-sheet";
     return (
       <>
+        {hatchDefs(hatch)}
         {/* street along the bottom edge */}
         <rect x={-mL} y={lotD} width={vbW} height={mB} fill="#E9ECE6"
           fillOpacity={seeThrough ? 0.35 : 1} />
@@ -1754,7 +1876,8 @@ export function SitePlanBuilder(
           </>
         )}
         {sel && setbackLines(sel)}
-        {design.structures.map((s) => structureNode(s, interactive && !draw && !trace && !editing))}
+        {design.structures.map((s) =>
+          structureNode(s, interactive && !draw && !trace && !editing, hatch))}
         {/* alignment guides while a drag is snapped */}
         {interactive && guides.map((g, i) => (
           <line key={i}
@@ -1796,7 +1919,7 @@ export function SitePlanBuilder(
             ))}
           </g>
         )}
-        {legendBox()}
+        {legendBox(hatch)}
         {northAndScale()}
       </>
     );
@@ -2142,7 +2265,10 @@ export function SitePlanBuilder(
                 <button key={p.kind} type="button" onClick={() => addStructure(p)}
                   className="rounded-md border border-rule bg-white px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash">
                   <span className="block text-[13.5px] font-medium">{p.label}</span>
-                  <span className="block font-mono text-[11px] text-ink/45">{fmtM(p.w)} × {fmtM(p.d)} m</span>
+                  <span className="block font-mono text-[11px] text-ink/45">
+                    {fmtM(p.w)} × {fmtM(p.d)} m
+                    {structureState(p) === "existing" ? " · existing" : ""}
+                  </span>
                 </button>
               ))}
               <button type="button" onClick={addLShape}
@@ -2166,6 +2292,34 @@ export function SitePlanBuilder(
                   <label className="label">Label</label>
                   <input className="field" value={sel.label}
                     onChange={(e) => patchStructure(sel.id, { label: e.target.value })} />
+                </div>
+                {/* Existing or proposed. First thing under the name, because
+                    it changes what the drawing means rather than how it
+                    looks — and a new build has to be one tap away. */}
+                <div>
+                  <span className="label">Already there, or proposed</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["existing", "proposed"] as StructureState[]).map((st) => {
+                      const on = structureState(sel) === st;
+                      return (
+                        <button key={st} type="button" aria-pressed={on}
+                          onClick={() => patchStructure(sel.id, { state: st })}
+                          className={`min-h-[44px] rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
+                            on
+                              ? "border-seal bg-wash text-seal"
+                              : "border-rule bg-white text-ink/60 hover:bg-wash"
+                          }`}>
+                          {st === "existing" ? "Existing" : "Proposed"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-[12.5px] leading-snug text-ink/55">
+                    {structureState(sel) === "existing"
+                      ? "Already on the block. Drawn washed back, hatched and dashed, and labelled “existing” on the sheet."
+                      : "What you're applying for. Drawn solid and bold, and labelled “proposed” on the sheet."}
+                    {" "}E swaps it.
+                  </p>
                 </div>
                 {sel.shape === "poly" ? (
                   <p className="text-[12.5px] leading-relaxed text-ink/55">
@@ -2230,8 +2384,9 @@ export function SitePlanBuilder(
               <p className="text-[13px] leading-relaxed text-ink/55">
                 Tap a structure on the plan to select it — drag to move (edges
                 pull in line with neighbours; hold Alt to drag free), drag the
-                square handles to resize, R to rotate, arrow keys to nudge
-                (hold Shift for 1&nbsp;m steps), Delete to remove.
+                square handles to resize, R to rotate, E to swap existing and
+                proposed, arrow keys to nudge (hold Shift for 1&nbsp;m steps),
+                Delete to remove.
                 {editing && " The boundary handles are out at the moment, so the structures are on hold — hit Done adjusting to get them back."}
               </p>
             )}

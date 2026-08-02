@@ -20,6 +20,10 @@ export interface Pt {
   y: number;
 }
 
+/** Already there, or being applied for. Proposed is the default and is every
+ *  structure saved before this existed. */
+export type StructureState = "proposed" | "existing";
+
 /** A structure as the geometry sees it: a rectangle by default, an L or a
  *  drawn polygon when `shape` says so. Old saved rectangles carry none of
  *  the optional fields and behave exactly as before. */
@@ -33,6 +37,7 @@ export interface StructureShape {
   notchW?: number;
   notchD?: number;
   pts?: Pt[];
+  state?: StructureState;
 }
 
 export function setbacks(
@@ -306,10 +311,16 @@ export function parseMetres(s: string | null | undefined): number | null;
 export function fmtM(n: number): string;
 export function fmtM2(n: number): string;
 
+export const STRUCTURE_STATES: StructureState[];
+export function structureState(s: unknown): StructureState;
+export function toggleState(state: StructureState | string): StructureState;
+
 export interface StructurePreset {
   kind: string;
   label: string;
   w: number;
   d: number;
+  /** Absent means proposed. Only the dwelling lands existing. */
+  state?: StructureState;
 }
 export const STRUCTURE_PRESETS: StructurePreset[];
