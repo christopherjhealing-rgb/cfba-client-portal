@@ -87,13 +87,25 @@ accepted client-side and compiled in the browser into a single PDF, one photo
 per A4 page, which then rides the normal lodgement path — so the PDF-only
 pipeline, both its checks and its plumbing, is untouched.
 
-## 4. Address autocomplete — status: planned
+## 4. Address autocomplete — status: shipped on lodgement 2 Aug 2026
 
-Google Places autocomplete on address fields (lodgement first). Needs
-`NEXT_PUBLIC_GOOGLE_MAPS_KEY`; restricted to country AU. Typed text stays
-valid exactly as typed — new lots and unregistered addresses must never be
-blocked by the suggester. Without the key the field silently stays a plain
-input; the portal never degrades visibly for a missing optional key.
+Google Places suggestions on the lodgement form's site address
+(`components/AddressField.tsx`), using the **new** Places API —
+`AutocompleteSuggestion.fetchAutocompleteSuggestions` with a session token
+via the dynamic bootstrap, because the legacy Autocomplete widget is closed
+to Google projects created after March 2025. Restricted to country AU and
+biased to Perth/WA, drawn in a portal-styled dropdown (keyboard, touch and
+combobox ARIA), loaded lazily on first focus. Pure autocomplete only — no
+Place Details call, no per-pick billing. Typed text stays valid exactly as
+typed — new lots and unregistered addresses must never be blocked by the
+suggester; picking merely fills the field, and `/api/submit` still receives
+the same plain string. Needs `NEXT_PUBLIC_GOOGLE_MAPS_KEY` with **Places API
+(New)** enabled on the Google project. Without the key the field silently
+stays a plain input; the portal never degrades visibly for a missing
+optional key. The amend form keeps its job picker (it selects an existing
+job, not a fresh address) and the site plan tool's address stays a plain
+label until v2 cadastre. Pure helpers in `lib/address.mjs` (+ `.d.mts`),
+tested in `tests/address.test.mjs`.
 
 ## 5. AI document checker — status: planned
 

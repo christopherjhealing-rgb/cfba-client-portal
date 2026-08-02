@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { AddressField } from "./AddressField";
 import { FileBucket, type Bucket } from "./FileBucket";
 import { PhotoBucket } from "./PhotoBucket";
 import { uploadDirect } from "@/lib/upload-client";
@@ -180,9 +181,8 @@ export function SubmitForm() {
   return (
     <form onSubmit={submit} className="card p-6 sm:p-7">
       <label className="label" htmlFor="address">Site address</label>
-      <input id="address" required autoFocus value={address}
-        onChange={(e) => setAddress(e.target.value)} className="field"
-        placeholder="32 Elvira St, Palmyra" />
+      <AddressField id="address" required autoFocus value={address}
+        onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
