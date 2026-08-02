@@ -65,10 +65,11 @@ export default async function Dashboard() {
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       {/* Header. The photograph bleeds off the right and sits under a scrim so
-          the greeting stays readable whatever image is dropped in. */}
-      <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-8 pt-9 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-11">
-        <div aria-hidden="true"
-          className="absolute inset-0 -z-20 bg-[url('/heroes/street.jpg')] bg-cover bg-center saturate-[0.75]" />
+          the greeting stays readable whatever image is dropped in. Phones get
+          a shorter band and the 900px crop so jobs sit higher. */}
+      <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-6 pt-6 md:pb-8 md:pt-9 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-11">
+        <div aria-hidden="true" className="hero-photo absolute inset-0 -z-20 saturate-[0.75]"
+          style={{ "--hero": "url(/heroes/street.jpg)", "--hero-m": "url(/heroes/street-m.jpg)" } as React.CSSProperties} />
         <div aria-hidden="true"
           className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A] via-[#0D211A]/65 to-[#0D211A]/10" />
         <div className="flex flex-wrap items-start justify-between gap-4">

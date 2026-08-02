@@ -185,10 +185,13 @@ export function PageHead({
   hero?: string;
 }) {
   if (hero) {
+    // Phones get a shorter band and a 900px image crop; the scrim and the
+    // text layout are identical at every size.
+    const heroM = hero.replace(/\.jpg$/, "-m.jpg");
     return (
-      <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-7 pt-10 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-12">
-        <div aria-hidden="true" className="absolute inset-0 -z-20 bg-cover bg-center saturate-[0.75]"
-          style={{ backgroundImage: `url(${hero})` }} />
+      <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-5 pt-7 md:pb-7 md:pt-10 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-12">
+        <div aria-hidden="true" className="hero-photo absolute inset-0 -z-20 saturate-[0.75]"
+          style={{ "--hero": `url(${hero})`, "--hero-m": `url(${heroM})` } as React.CSSProperties} />
         <div aria-hidden="true"
           className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0D211A] via-[#0D211A]/65 to-[#0D211A]/10" />
         <div className="flex flex-wrap items-end justify-between gap-4">

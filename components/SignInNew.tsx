@@ -10,9 +10,10 @@ import { SignIn } from "@/components/SignIn";
 export function SignInNew() {
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-seal-deep">
-      {/* Full-bleed photo. Decorative — everything readable sits on the scrim. */}
-      <div aria-hidden="true"
-        className="absolute inset-0 -z-20 bg-[url('/heroes/entry.jpg')] bg-cover bg-center saturate-[0.75]" />
+      {/* Full-bleed photo. Decorative — everything readable sits on the scrim.
+          Phones fetch the 900px crop. */}
+      <div aria-hidden="true" className="hero-photo absolute inset-0 -z-20 saturate-[0.75]"
+        style={{ "--hero": "url(/heroes/entry.jpg)", "--hero-m": "url(/heroes/entry-m.jpg)" } as React.CSSProperties} />
       {/* The established page-head scrim, plus a soft floor so the trust line
           holds contrast where the photograph runs light. */}
       <div aria-hidden="true"

@@ -68,6 +68,18 @@ body {
   .eyebrow {
     @apply font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-seal/70;
   }
+  /* Responsive hero photograph. Phones fetch the 900px "-m" crop, md and up
+     the full one — the media query means only the matching image downloads.
+     Callers set both custom properties inline:
+       style={{ "--hero": "url(/heroes/x.jpg)", "--hero-m": "url(/heroes/x-m.jpg)" }} */
+  .hero-photo {
+    background-size: cover;
+    background-position: center;
+    background-image: var(--hero-m, var(--hero));
+  }
+  @media (min-width: 768px) {
+    .hero-photo { background-image: var(--hero); }
+  }
 }
 
 :focus-visible { outline: 2px solid theme(colors.seal.DEFAULT); outline-offset: 2px; }

@@ -17,8 +17,8 @@ export function SignInClassic() {
       {/* Hero. The photograph is decorative and sits behind a scrim so the type
           holds contrast whatever image is dropped in at /public/hero.jpg. */}
       <section className="relative isolate flex min-h-[300px] flex-col justify-between overflow-hidden bg-seal-deep px-8 py-10 lg:min-h-screen lg:px-12 lg:py-14">
-        <div aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[url('/hero.jpg')] bg-cover bg-center saturate-[0.55]" />
+        <div aria-hidden="true" className="hero-photo absolute inset-0 -z-10 saturate-[0.55]"
+          style={{ "--hero": "url(/hero.jpg)", "--hero-m": "url(/hero-m.jpg)" } as React.CSSProperties} />
         <div aria-hidden="true"
           // A near-neutral scrim rather than a green one: the photograph keeps its own
         // colour and the type still holds contrast.
