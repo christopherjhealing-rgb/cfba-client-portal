@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Client portal — development report</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .stats { display: flex; gap: 4mm; margin: 4mm 0 5mm; }
+  .stat { flex: 1; border: 0.4mm solid #E3EAE4; border-radius: 2mm; padding: 3mm 2mm; text-align: center; background: #F4F8F4; }
+  .stat b { display: block; font-family: Georgia, serif; font-size: 17pt; color: #1E5B3C; }
+  .stat span { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #5B6660; }
+  ul.check.two { columns: 2; column-gap: 7mm; }
+  ul.check.two li { break-inside: avoid; }
+  .tag { display: inline-block; font-size: 7pt; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #8A6D1E; background: #FBF4E6; border-radius: 1mm;
+    padding: 0.4mm 1.6mm; margin-left: 1.5mm; vertical-align: 1pt; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="band photo"><div class="bg" style="background-image:url('../../public/heroes/street.jpg')"></div><div class="scrim"></div>
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">CF Building Approvals — internal report</div>
+    <h1>The client portal: one week of build</h1>
+    <div class="goldrule"></div>
+    <div class="sub">Everything added since last Monday — a working portal became a product.
+    Page 1: what clients get. Page 2: what the office gets, and what's landing next.</div>
+  </div>
+
+  <div class="content">
+    <div class="stats">
+      <div class="stat"><b>60+</b><span>features shipped</span></div>
+      <div class="stat"><b>14</b><span>info sheets live</span></div>
+      <div class="stat"><b>19</b><span>marketing documents</span></div>
+      <div class="stat"><b>5 min</b><span>auto-sync cycle</span></div>
+      <div class="stat"><b>29</b><span>councils linked</span></div>
+    </div>
+
+    <div class="sec">Lodging a job</div>
+    <ul class="check two">
+      <li><strong>Instant lodgement</strong> — jobs land on our board the second they're lodged</li>
+      <li><strong>Drag &amp; drop</strong> across every upload, with progress bars</li>
+      <li>Large lodgements beyond normal platform limits (direct-to-storage)</li>
+      <li><strong>Site photos</strong> — phone shots auto-bundled into one tidy PDF</li>
+      <li><strong>My documents library</strong> — save engineering once, tick to attach on every job</li>
+      <li>"Save this engineering for next time" builds the library automatically</li>
+      <li>Client's <strong>own reference number</strong> — on the job, in email subjects, searchable</li>
+      <li>Certificates of title / BA1 forms quietly filtered out</li>
+      <li>Per-job-type checklists built into the form</li>
+    </ul>
+
+    <div class="sec">Following a job</div>
+    <ul class="check two">
+      <li>Live five-stage <strong>visual timeline</strong> on every job</li>
+      <li><strong>Per-job pages</strong>: status, documents sent, full conversation</li>
+      <li><strong>Assigned surveyor</strong> shown on every job</li>
+      <li>Elapsed-day context ("Day 2 · most jobs 3–4") <span class="tag">today</span></li>
+      <li>Automatic emails: information requests, certificate ready</li>
+      <li>Replies land straight on the job — attachments included</li>
+      <li>"Delivered to your surveyor" receipts on messages <span class="tag">today</span></li>
+      <li><strong>Search</strong> by our ref, their ref, address or description + CSV export</li>
+    </ul>
+
+    <div class="sec">Downloading &amp; self-service</div>
+    <ul class="check two">
+      <li>One-click certificate package; download receipts posted to our board</li>
+      <li>Three-month availability with visible countdown, then automatic purge</li>
+      <li><strong>Site plan tool</strong> — draw the lot, drag structures, live setback measurements, print to scale</li>
+      <li><strong>Engineering checker</strong> — full span/member solver, per-client access</li>
+      <li>14 photo-covered <strong>guidance notes</strong> (7 written this week)</li>
+      <li><strong>Resources hub</strong>: council forms, bushfire-map check, 29 councils ranked by our real job volume</li>
+    </ul>
+
+    <div class="sec">Design &amp; feel</div>
+    <ul class="check two">
+      <li>Photo-hero design across every page, matched dusk photography</li>
+      <li>Hand-drawn icon set for all eleven job types</li>
+      <li>Motion &amp; touch feedback throughout — built for phones on site</li>
+      <li>Every message rewritten warm and human; dead ends offer a phone number</li>
+      <li>Premium sign-in redesign, switchable in admin <span class="tag">today</span></li>
+      <li>Install-to-home-screen (app-like) <span class="tag">today</span></li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — portal development report</span>
+    <span>Page 1 of 2</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="band photo"><div class="bg" style="background-image:url('../../public/heroes/garage.jpg')"></div><div class="scrim"></div>
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">CF Building Approvals — internal report</div>
+    <h1>Behind the counter, and what's next</h1>
+    <div class="goldrule"></div>
+  </div>
+
+  <div class="content">
+    <div class="sec" style="margin-top:4mm">Operations (the office view)</div>
+    <ul class="check two">
+      <li><strong>Five-minute auto-sync</strong> with a health banner — one glance covers the whole system</li>
+      <li><strong>Ten-minute issue hold</strong> — an undo window before any client is told</li>
+      <li>OneDrive guard — never ships a half-synced folder; Word templates auto-excluded</li>
+      <li>Unmatched-client workbench; issued-but-no-files and email-failure warnings</li>
+      <li>Admin toggles: hide any section live; supersede info sheets without a deploy</li>
+      <li>Council-forms manager; engineering-set manager with per-client access</li>
+      <li>Named client logins; append-only <strong>audit log</strong>; turnaround reports vs the published 3–4 days</li>
+      <li>Weekly client digest (optional switch)</li>
+    </ul>
+
+    <div class="sec">Security &amp; compliance</div>
+    <ul class="check two">
+      <li>All documents in <strong>private Australian storage</strong>; every download ownership-checked</li>
+      <li>Hardened sign-in: hashed passwords, one-time setup codes, attempt throttling</li>
+      <li>Silent-failure class eliminated — every write verified, every failure visible</li>
+      <li>Data minimisation: declined-lodgement files deleted; 3-month purge honoured</li>
+      <li>WA public holidays (2026–27, verified) in the turnaround maths</li>
+      <li>Privacy notice drafted; collection wording ready for sign-off</li>
+    </ul>
+
+    <div class="sec">Marketing &amp; collateral (19 documents)</div>
+    <ul class="check two">
+      <li>Client flyer with QR, two-page client guide, welcome letter</li>
+      <li>Launch, login and certificate-ready email templates</li>
+      <li>Services one-pager; certificate next-steps sheet</li>
+      <li>Internal job-flow guide, admin guide, incident card</li>
+      <li>Two-page <strong>go-live audit checklist</strong></li>
+      <li>Full print system matching the portal brand</li>
+    </ul>
+
+    <div class="sec">Specced and queued (designs agreed, in the register)</div>
+    <ul class="check two">
+      <li><strong>Address autocomplete</strong> — real addresses picked from a list, no typos</li>
+      <li><strong>AI document checker</strong> — every Class 10 lodgement checked against our requirements; staff-only findings + a drafted FIR</li>
+      <li><strong>Guidance assistant</strong> — answers from our own published notes, hands off to messages</li>
+      <li>Site plan tool v2 — draw over the real cadastral lot &amp; aerial by address; generated elevations</li>
+      <li>One-off public lodgement — no-login homeowner jobs via magic links</li>
+    </ul>
+
+    <div class="callout" style="margin-top:4mm">
+      <strong>The shape of the week:</strong> the portal now lodges faster than email,
+      answers "where's my job?" before the phone rings, carries our guidance library,
+      and drafts the client's site plan. Next: it starts checking the documents too.
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — portal development report</span>
+    <span>Page 2 of 2</span>
+  </div>
+</div>
+
+</body>
+</html>
