@@ -6,19 +6,32 @@
 // pointers and SVG. The tool measures and labels — it never judges.
 import { useEffect, useRef, useState } from "react";
 import {
-  DRAW_MARGIN_MM, STRUCTURE_PRESETS, clampToLot, defaultPlacement, fitScale,
-  fmtM, fmtM2, mToMmOnPaper, mmOnPaperToM, parseMetres, scaleBarMetres,
-  setbacks, snap,
+  DRAW_MARGIN_MM, STRUCTURE_PRESETS, alignSnap, boundsOf, clampToLot,
+  defaultPlacement, deriveStreet, fitScale, fmtM, fmtM2, footprint,
+  isSimplePolygon, mToMmOnPaper, mmOnPaperToM, normalisePts, parseMetres,
+  polyBounds, polyFromFootprint, resizeBounds, rotateStructure,
+  scaleBarMetres, setbackMarks, setbacks, snap, structureArea,
 } from "@/lib/site-plan.mjs";
+
+type Pt = { x: number; y: number };
 
 interface Structure {
   id: string;
   kind: string;
   label: string;
+  /** Overall size of the unrotated shape. For a drawn outline these mirror
+   *  the outline's bounds and are read-only. */
   w: number;
   d: number;
+  /** Top-left of the rotated footprint's bounding box, in lot metres. */
   x: number;
   y: number;
+  /** Quarter turns only: 0 / 90 / 180 / 270. */
+  rot: number;
+  shape: "rect" | "lshape" | "poly";
+  notchW?: number;
+  notchD?: number;
+  pts?: Pt[];
 }
 
 interface Design {
@@ -31,6 +44,13 @@ interface Design {
   structures: Structure[];
 }
 
+interface Guide {
+  axis: "x" | "y";
+  at: number;
+  from: number;
+  to: number;
+}
+
 const BLANK: Design = { address: "", street: "", lotW: 20, lotD: 40, north: 0, structures: [] };
 
 const INK = "#101A15";
@@ -39,10 +59,20 @@ const BRASS = "#B07A18";
 const FONT_LAB = "Inter, system-ui, sans-serif";
 const FONT_NUM = "'IBM Plex Mono', ui-monospace, monospace";
 
-const FILL: Record<string, string> = {
-  dwelling: "#E7F0EA", patio: "#F0F4EE", shed: "#E7F0EA", pool: "#DCEDE9",
-  carport: "#F0F4EE", retaining: "#2B3A31",
-};
+/** One muted, print-friendly fill per structure type — distinct at a glance
+ *  but all sitting comfortably beside the portal's seal green. The same list
+ *  drives the sheet legend, in this order. */
+const KINDS: { kind: string; name: string; fill: string; dark?: boolean }[] = [
+  { kind: "dwelling", name: "Dwelling", fill: "#ECE8DD" },
+  { kind: "patio", name: "Patio", fill: "#DBE6D4" },
+  { kind: "shed", name: "Shed", fill: "#E6DCC6" },
+  { kind: "pool", name: "Pool", fill: "#D3E4EA" },
+  { kind: "carport", name: "Carport", fill: "#DFE3E4" },
+  { kind: "retaining", name: "Retaining wall", fill: "#2B3A31", dark: true },
+  { kind: "lshape", name: "L-shape", fill: "#EBDDD5" },
+  { kind: "custom", name: "Custom shape", fill: "#E3DFEA" },
+];
+const FILL: Record<string, string> = Object.fromEntries(KINDS.map((k) => [k.kind, k.fill]));
 
 const uid = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -64,12 +94,41 @@ function sanitise(raw: unknown): Design {
   const structures: Structure[] = Array.isArray(d.structures)
     ? (d.structures as Record<string, unknown>[])
         .filter((s) => s && typeof s === "object")
-        .map((s) => ({
-          id: typeof s.id === "string" ? s.id : uid(),
-          kind: typeof s.kind === "string" ? s.kind : "shed",
-          label: typeof s.label === "string" ? s.label : "Structure",
-          w: dim(s.w, 3), d: dim(s.d, 3), x: pos(s.x), y: pos(s.y),
-        }))
+        .map((s) => {
+          // Designs saved before shapes existed carry none of these fields:
+          // they default to an unrotated rectangle and behave exactly as
+          // they always did.
+          const rot = s.rot === 90 || s.rot === 180 || s.rot === 270 ? s.rot : 0;
+          const shape = s.shape === "lshape" || s.shape === "poly" ? s.shape : "rect";
+          const base: Structure = {
+            id: typeof s.id === "string" ? s.id : uid(),
+            kind: typeof s.kind === "string" ? s.kind : "shed",
+            label: typeof s.label === "string" ? s.label : "Structure",
+            w: dim(s.w, 3), d: dim(s.d, 3), x: pos(s.x), y: pos(s.y),
+            rot, shape,
+          };
+          if (shape === "lshape") {
+            base.notchW = dim(s.notchW, base.w / 2);
+            base.notchD = dim(s.notchD, base.d / 2);
+          }
+          if (shape === "poly") {
+            const pts = Array.isArray(s.pts)
+              ? (s.pts as Record<string, unknown>[]).filter(
+                  (p) => p && typeof p === "object" &&
+                    typeof p.x === "number" && Number.isFinite(p.x) &&
+                    typeof p.y === "number" && Number.isFinite(p.y),
+                ).map((p) => ({ x: p.x as number, y: p.y as number }))
+              : [];
+            if (pts.length >= 3) {
+              base.pts = normalisePts(pts);
+              const b = polyBounds(base.pts);
+              base.w = b.maxX; base.d = b.maxY;
+            } else {
+              base.shape = "rect";
+            }
+          }
+          return base;
+        })
     : [];
   const north = typeof d.north === "number" && Number.isFinite(d.north)
     ? ((Math.round(d.north / 45) * 45) % 360 + 360) % 360 : 0;
@@ -114,10 +173,17 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [today, setToday] = useState("");
+  const [guides, setGuides] = useState<Guide[]>([]);
+  const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
+  const [pxPerM, setPxPerM] = useState(30);
   const keyRef = useRef(designKey(companyId, ""));
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ id: string; dx: number; dy: number } | null>(null);
+  const resizeRef = useRef<{ id: string; handle?: string; vertex?: number } | null>(null);
+  /** True once the client has typed their own street name — their word wins
+   *  over the derived one until they clear the field again. */
+  const streetEditedRef = useRef(false);
 
   // Restore the last design for this company; date is set client-side only so
   // the server render never disagrees with the browser's timezone.
@@ -126,7 +192,9 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
       const last = localStorage.getItem(pointerKey(companyId));
       const raw = last && localStorage.getItem(last);
       if (last && raw) {
-        setDesign(sanitise(JSON.parse(raw)));
+        const d = sanitise(JSON.parse(raw));
+        setDesign(d);
+        streetEditedRef.current = !!(d.street && d.street !== deriveStreet(d.address));
         keyRef.current = last;
       } else {
         keyRef.current = designKey(companyId, "");
@@ -157,7 +225,11 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     if (design.structures.length === 0) {
       try {
         const raw = localStorage.getItem(key);
-        if (raw) setDesign({ ...sanitise(JSON.parse(raw)), address: design.address });
+        if (raw) {
+          const restored = { ...sanitise(JSON.parse(raw)), address: design.address };
+          setDesign(restored);
+          streetEditedRef.current = !!(restored.street && restored.street !== deriveStreet(restored.address));
+        }
       } catch { /* ignore */ }
     }
     keyRef.current = key;
@@ -174,13 +246,34 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   const viewBox = `${-mL} ${-mT} ${vbW} ${vbH}`;
   const sel = design.structures.find((s) => s.id === selected) ?? null;
 
+  // Screen pixels per drawing metre — resize handles size their touch
+  // targets from this so a fingertip always has ≥ 32 px to land on,
+  // whatever the lot size or window width.
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w > 0) setPxPerM(w / vbW);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [vbW]);
+
   const patchStructure = (id: string, patch: Partial<Structure>) =>
     setDesign((prev) => ({
       ...prev,
       structures: prev.structures.map((s) => {
         if (s.id !== id) return s;
         const n = { ...s, ...patch };
-        return { ...n, ...clampToLot(n.x, n.y, n.w, n.d, prev.lotW, prev.lotD) };
+        if (n.shape === "lshape") {
+          n.notchW = Math.min(n.notchW ?? n.w / 2, Math.max(n.w - 0.1, 0.1));
+          n.notchD = Math.min(n.notchD ?? n.d / 2, Math.max(n.d - 0.1, 0.1));
+        }
+        const b = boundsOf(n);
+        return { ...n, ...clampToLot(n.x, n.y, b.w, b.d, prev.lotW, prev.lotD) };
       }),
     }));
 
@@ -189,24 +282,46 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
       const lot = { lotW: prev.lotW, lotD: prev.lotD, ...patch };
       return {
         ...prev, ...lot,
-        structures: prev.structures.map((s) => ({
-          ...s, ...clampToLot(s.x, s.y, s.w, s.d, lot.lotW, lot.lotD),
-        })),
+        structures: prev.structures.map((s) => {
+          const b = boundsOf(s);
+          return { ...s, ...clampToLot(s.x, s.y, b.w, b.d, lot.lotW, lot.lotD) };
+        }),
       };
     });
 
-  function addStructure(preset: (typeof STRUCTURE_PRESETS)[number]) {
-    const at = defaultPlacement(preset.w, preset.d, lotW, lotD, design.structures.length);
-    const s: Structure = { id: uid(), kind: preset.kind, label: preset.label, w: preset.w, d: preset.d, ...at };
+  function pushStructure(s: Structure) {
     setDesign((prev) => ({ ...prev, structures: [...prev.structures, s] }));
+    setDraw(null);
     setSelected(s.id);
     canvasRef.current?.focus({ preventScroll: true });
+  }
+
+  function addStructure(preset: (typeof STRUCTURE_PRESETS)[number]) {
+    const at = defaultPlacement(preset.w, preset.d, lotW, lotD, design.structures.length);
+    pushStructure({
+      id: uid(), kind: preset.kind, label: preset.label,
+      w: preset.w, d: preset.d, rot: 0, shape: "rect", ...at,
+    });
+  }
+
+  function addLShape() {
+    const w = 6, d = 4;
+    const at = defaultPlacement(w, d, lotW, lotD, design.structures.length);
+    pushStructure({
+      id: uid(), kind: "lshape", label: "L-shape",
+      w, d, rot: 0, shape: "lshape", notchW: 3, notchD: 2, ...at,
+    });
   }
 
   const removeSelected = () => {
     if (!sel) return;
     setDesign((prev) => ({ ...prev, structures: prev.structures.filter((s) => s.id !== sel.id) }));
     setSelected(null);
+  };
+
+  const rotateSelected = () => {
+    if (!sel) return;
+    patchStructure(sel.id, rotateStructure(sel, lotW, lotD));
   };
 
   /** Pointer position in lot metres — the SVG keeps its viewBox aspect, so
@@ -217,10 +332,58 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     return { x: -mL + (e.clientX - r.left) * k, y: -mT + (e.clientY - r.top) * k };
   }
 
+  // ---- the odd-shape drawing mode -----------------------------------------
+
+  function startDraw() {
+    setDraw({ pts: [], hint: "" });
+    setSelected(null);
+    canvasRef.current?.focus({ preventScroll: true });
+  }
+
+  function addDrawPoint(e: { clientX: number; clientY: number }) {
+    if (!draw) return;
+    const p = toM(e);
+    const x = Math.min(Math.max(snap(p.x, 0.1), 0), lotW);
+    const y = Math.min(Math.max(snap(p.y, 0.1), 0), lotD);
+    const pts = draw.pts;
+    // Tapping the first corner again closes the outline.
+    if (pts.length >= 3 &&
+        Math.hypot(x - pts[0].x, y - pts[0].y) <= Math.max(0.3, 16 / pxPerM)) {
+      finishDraw();
+      return;
+    }
+    const last = pts[pts.length - 1];
+    if (last && last.x === x && last.y === y) return;
+    setDraw({ pts: [...pts, { x, y }], hint: "" });
+  }
+
+  function finishDraw() {
+    if (!draw) return;
+    if (draw.pts.length < 3) {
+      setDraw({ ...draw, hint: "Three corners minimum — keep tapping." });
+      return;
+    }
+    if (!isSimplePolygon(draw.pts)) {
+      setDraw({ ...draw, hint: "That outline crosses itself — move the last corner so no sides overlap, or cancel and start again." });
+      return;
+    }
+    const stored = polyFromFootprint(draw.pts, 0);
+    pushStructure({
+      id: uid(), kind: "custom", label: "Custom shape",
+      rot: 0, shape: "poly", ...stored,
+    });
+  }
+
   function onKeyDown(e: React.KeyboardEvent) {
+    if (draw) {
+      if (e.key === "Escape") { e.preventDefault(); setDraw(null); }
+      if (e.key === "Enter") { e.preventDefault(); finishDraw(); }
+      return;
+    }
     if (!sel) return;
     if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeSelected(); return; }
     if (e.key === "Escape") { setSelected(null); return; }
+    if (e.key === "r" || e.key === "R") { e.preventDefault(); rotateSelected(); return; }
     const step = e.shiftKey ? 1 : 0.1;
     const move: Record<string, [number, number]> = {
       ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
@@ -228,6 +391,7 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     const d = move[e.key];
     if (!d) return;
     e.preventDefault();
+    // Nudging is the precise path — it never magnet-snaps.
     patchStructure(sel.id, { x: snap(sel.x + d[0], 0.01), y: snap(sel.y + d[1], 0.01) });
   }
 
@@ -257,13 +421,10 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   }
 
   function setbackLines(s: Structure) {
-    const sb = setbacks(s, lotW, lotD);
-    const cx = s.x + s.w / 2, cy = s.y + s.d / 2;
-    const runs: { x1: number; y1: number; x2: number; y2: number; v: number; tx: number; ty: number }[] = [
-      { x1: cx, y1: s.y, x2: cx, y2: 0, v: sb.rear, tx: cx + mm(1.2), ty: s.y / 2 },
-      { x1: cx, y1: s.y + s.d, x2: cx, y2: lotD, v: sb.front, tx: cx + mm(1.2), ty: (s.y + s.d + lotD) / 2 },
-      { x1: s.x, y1: cy, x2: 0, y2: cy, v: sb.left, tx: s.x / 2, ty: cy - mm(1.4) },
-      { x1: s.x + s.w, y1: cy, x2: lotW, y2: cy, v: sb.right, tx: (s.x + s.w + lotW) / 2, ty: cy - mm(1.4) },
+    const marks = setbackMarks(s, lotW, lotD);
+    const runs = [
+      { ...marks.rear, vertical: true }, { ...marks.front, vertical: true },
+      { ...marks.left, vertical: false }, { ...marks.right, vertical: false },
     ];
     return (
       <g>
@@ -271,7 +432,10 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           <g key={i}>
             <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={BRASS}
               strokeWidth={mm(0.3)} strokeDasharray={`${mm(1.8)} ${mm(1.2)}`} />
-            <text x={r.tx} y={r.ty} textAnchor={i < 2 ? "start" : "middle"}
+            <text
+              x={r.vertical ? r.x1 + mm(1.2) : (r.x1 + r.x2) / 2}
+              y={r.vertical ? (r.y1 + r.y2) / 2 : r.y1 - mm(1.4)}
+              textAnchor={r.vertical ? "start" : "middle"}
               fontFamily={FONT_NUM} fontSize={mm(2.6)} fill={BRASS} style={halo}>
               {fmtM2(r.v)} m
             </text>
@@ -281,13 +445,90 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     );
   }
 
+  /** Resize handles for the selected structure: corners + edges move the
+   *  bounding box of rectangles and Ls; drawn outlines get a handle on every
+   *  corner. Each handle carries an invisible touch pad of at least 32 px. */
+  function handleNodes(s: Structure) {
+    const hitR = Math.max(16 / pxPerM, mm(1.8));
+    const vis = mm(1.2);
+    const pad = (x: number, y: number, cursor: string,
+      start: () => void, move: (e: React.PointerEvent) => void, key: string) => (
+      <g key={key} style={{ cursor }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          start();
+          (e.currentTarget as Element).setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={move}
+        onPointerUp={() => { resizeRef.current = null; }}
+        onPointerCancel={() => { resizeRef.current = null; }}>
+        <circle cx={x} cy={y} r={hitR} fill="transparent" />
+        <rect x={x - vis} y={y - vis} width={vis * 2} height={vis * 2}
+          fill="#fff" stroke={BRASS} strokeWidth={mm(0.35)} />
+      </g>
+    );
+    if (s.shape === "poly") {
+      return (
+        <g>
+          {footprint(s).map((p, i) =>
+            pad(p.x, p.y, "grab",
+              () => { resizeRef.current = { id: s.id, vertex: i }; },
+              (e) => {
+                const r = resizeRef.current;
+                if (!r || r.id !== s.id || r.vertex !== i) return;
+                const m = toM(e);
+                const x = Math.min(Math.max(snap(m.x, 0.1), 0), lotW);
+                const y = Math.min(Math.max(snap(m.y, 0.1), 0), lotD);
+                const next = footprint(s).map((q, j) => (j === i ? { x, y } : q));
+                // A corner dragged across another side would fold the shape —
+                // hold the last honest outline instead.
+                if (!isSimplePolygon(next)) return;
+                patchStructure(s.id, polyFromFootprint(next, s.rot));
+              }, `v${i}`))}
+        </g>
+      );
+    }
+    const b = boundsOf(s);
+    const spots: { h: string; x: number; y: number; cursor: string }[] = [
+      { h: "nw", x: s.x, y: s.y, cursor: "nwse-resize" },
+      { h: "n", x: s.x + b.w / 2, y: s.y, cursor: "ns-resize" },
+      { h: "ne", x: s.x + b.w, y: s.y, cursor: "nesw-resize" },
+      { h: "e", x: s.x + b.w, y: s.y + b.d / 2, cursor: "ew-resize" },
+      { h: "se", x: s.x + b.w, y: s.y + b.d, cursor: "nwse-resize" },
+      { h: "s", x: s.x + b.w / 2, y: s.y + b.d, cursor: "ns-resize" },
+      { h: "sw", x: s.x, y: s.y + b.d, cursor: "nesw-resize" },
+      { h: "w", x: s.x, y: s.y + b.d / 2, cursor: "ew-resize" },
+    ];
+    return (
+      <g>
+        {spots.map(({ h, x, y, cursor }) =>
+          pad(x, y, cursor,
+            () => { resizeRef.current = { id: s.id, handle: h }; },
+            (e) => {
+              const r = resizeRef.current;
+              if (!r || r.id !== s.id || r.handle !== h) return;
+              const m = toM(e);
+              const cur = boundsOf(s);
+              const nb = resizeBounds({ x: s.x, y: s.y, w: cur.w, d: cur.d }, h, m.x, m.y, lotW, lotD);
+              const swap = (s.rot / 90) % 2 === 1;
+              patchStructure(s.id, { x: nb.x, y: nb.y, w: swap ? nb.d : nb.w, d: swap ? nb.w : nb.d });
+            }, h))}
+      </g>
+    );
+  }
+
   function structureNode(s: Structure, interactive: boolean) {
     const isSel = interactive && s.id === selected;
     const dark = s.kind === "retaining";
-    const thin = s.d < mm(9);
-    const cx = s.x + s.w / 2;
-    const labelY = thin ? s.y - mm(4.4) : s.y + s.d / 2 - mm(0.8);
-    const dimsY = thin ? s.y - mm(1.4) : s.y + s.d / 2 + mm(2.8);
+    const b = boundsOf(s);
+    const thin = b.d < mm(9);
+    const cx = s.x + b.w / 2;
+    const labelY = thin ? s.y - mm(4.4) : s.y + b.d / 2 - mm(0.8);
+    const dimsY = thin ? s.y - mm(1.4) : s.y + b.d / 2 + mm(2.8);
+    const stroke = isSel ? BRASS : dark ? "#12332A" : SEAL;
+    const strokeW = isSel ? mm(0.55) : mm(0.35);
+    const fill = FILL[s.kind] || "#E7F0EA";
+    const marg = mm(1.1);
     return (
       <g key={s.id}
         style={interactive ? { cursor: "move" } : undefined}
@@ -303,24 +544,80 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           const drag = dragRef.current;
           if (!drag || drag.id !== s.id) return;
           const p = toM(e);
-          patchStructure(s.id, { x: snap(p.x - drag.dx, 0.05), y: snap(p.y - drag.dy, 0.05) });
+          const bb = boundsOf(s);
+          const raw = clampToLot(snap(p.x - drag.dx, 0.05), snap(p.y - drag.dy, 0.05), bb.w, bb.d, lotW, lotD);
+          // Magnetic alignment with the other structures — hold Alt for a
+          // free drag. Arrow-key nudges never pass through here.
+          if (e.altKey || design.structures.length < 2) {
+            patchStructure(s.id, raw);
+            setGuides([]);
+            return;
+          }
+          const others = design.structures
+            .filter((o) => o.id !== s.id)
+            .map((o) => { const ob = boundsOf(o); return { x: o.x, y: o.y, w: ob.w, d: ob.d }; });
+          const snapped = alignSnap(raw.x, raw.y, bb.w, bb.d, others);
+          const fin = clampToLot(snapped.x, snapped.y, bb.w, bb.d, lotW, lotD);
+          patchStructure(s.id, fin);
+          setGuides(fin.x === snapped.x && fin.y === snapped.y ? snapped.guides : []);
         } : undefined}
-        onPointerUp={interactive ? () => { dragRef.current = null; } : undefined}
-        onPointerCancel={interactive ? () => { dragRef.current = null; } : undefined}
+        onPointerUp={interactive ? () => { dragRef.current = null; setGuides([]); } : undefined}
+        onPointerCancel={interactive ? () => { dragRef.current = null; setGuides([]); } : undefined}
       >
-        <rect x={s.x} y={s.y} width={s.w} height={s.d}
-          rx={s.kind === "pool" ? Math.min(s.w, s.d) * 0.18 : 0}
-          fill={isSel && !dark ? "#F6EEDA" : FILL[s.kind] || "#E7F0EA"}
-          stroke={isSel ? BRASS : dark ? "#12332A" : SEAL}
-          strokeWidth={isSel ? mm(0.55) : mm(0.35)} />
+        {s.shape === "rect" ? (
+          <rect x={s.x} y={s.y} width={b.w} height={b.d}
+            rx={s.kind === "pool" ? Math.min(b.w, b.d) * 0.18 : 0}
+            fill={fill} stroke={stroke} strokeWidth={strokeW} />
+        ) : (
+          <polygon points={footprint(s).map((p) => `${p.x},${p.y}`).join(" ")}
+            fill={fill} stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
+        )}
+        {isSel && (
+          <rect x={s.x - marg} y={s.y - marg} width={b.w + marg * 2} height={b.d + marg * 2}
+            fill="none" stroke={BRASS} strokeWidth={mm(0.25)}
+            strokeDasharray={`${mm(1.2)} ${mm(0.9)}`} pointerEvents="none" />
+        )}
         <text x={cx} y={labelY} textAnchor="middle" fontFamily={FONT_LAB}
           fontWeight={600} fontSize={mm(2.9)} fill={INK} style={halo}>
           {s.label}
         </text>
         <text x={cx} y={dimsY} textAnchor="middle" fontFamily={FONT_NUM}
           fontSize={mm(2.5)} fill={INK} fillOpacity={0.75} style={halo}>
-          {fmtM(s.w)} × {fmtM(s.d)} m
+          {s.shape === "poly" ? `${fmtM(structureArea(s))} m²` : `${fmtM(s.w)} × ${fmtM(s.d)} m`}
         </text>
+        {isSel && !draw && handleNodes(s)}
+      </g>
+    );
+  }
+
+  /** The legend: one row per structure type actually on the plan, in a
+   *  quiet box tucked into the top-right of the lot on screen and on the
+   *  printed sheet alike. */
+  function legendBox() {
+    const present = KINDS.filter((k) => design.structures.some((s) => s.kind === k.kind));
+    if (present.length === 0) return null;
+    const row = mm(4.2), pad = mm(1.8), sw = mm(3);
+    const boxW = mm(27);
+    const boxH = pad * 2 + row * present.length - mm(1);
+    const bx = Math.max(mm(1), lotW - boxW - mm(1.5));
+    const by = mm(1.5);
+    return (
+      <g pointerEvents="none">
+        <rect x={bx} y={by} width={boxW} height={boxH} fill="#FFFFFF" fillOpacity={0.92}
+          stroke={INK} strokeOpacity={0.35} strokeWidth={mm(0.2)} />
+        {present.map((k, i) => {
+          const y = by + pad + row * i;
+          return (
+            <g key={k.kind}>
+              <rect x={bx + pad} y={y} width={sw} height={mm(2.6)} rx={mm(0.3)}
+                fill={k.fill} stroke={k.dark ? "none" : SEAL} strokeOpacity={0.45} strokeWidth={mm(0.15)} />
+              <text x={bx + pad + sw + mm(1.5)} y={y + mm(2.2)} fontFamily={FONT_LAB}
+                fontSize={mm(2.3)} fill={INK} fillOpacity={0.8}>
+                {k.name}
+              </text>
+            </g>
+          );
+        })}
       </g>
     );
   }
@@ -364,7 +661,32 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
         <rect x={0} y={0} width={lotW} height={lotD} fill="#FFFFFF" stroke={INK} strokeWidth={mm(0.5)} />
         {dimTexts()}
         {sel && setbackLines(sel)}
-        {design.structures.map((s) => structureNode(s, interactive))}
+        {design.structures.map((s) => structureNode(s, interactive && !draw))}
+        {/* alignment guides while a drag is snapped */}
+        {interactive && guides.map((g, i) => (
+          <line key={i}
+            x1={g.axis === "x" ? g.at : g.from - mm(2)}
+            y1={g.axis === "x" ? g.from - mm(2) : g.at}
+            x2={g.axis === "x" ? g.at : g.to + mm(2)}
+            y2={g.axis === "x" ? g.to + mm(2) : g.at}
+            stroke="#2E7D5B" strokeWidth={mm(0.3)}
+            strokeDasharray={`${mm(1.2)} ${mm(1)}`} pointerEvents="none" />
+        ))}
+        {/* the outline being drawn */}
+        {interactive && draw && (
+          <g pointerEvents="none">
+            {draw.pts.length > 1 && (
+              <polyline points={draw.pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none" stroke={SEAL} strokeWidth={mm(0.35)}
+                strokeDasharray={`${mm(1.5)} ${mm(1)}`} />
+            )}
+            {draw.pts.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={i === 0 ? mm(1.6) : mm(1)}
+                fill={i === 0 ? "#fff" : SEAL} stroke={SEAL} strokeWidth={mm(0.35)} />
+            ))}
+          </g>
+        )}
+        {legendBox()}
         {northAndScale()}
       </>
     );
@@ -388,21 +710,41 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           <div className="sm:col-span-2 lg:col-span-1">
             <label className="label">Site address</label>
             <input className="field" value={design.address} placeholder="e.g. 12 Wandoo Rise, Baldivis"
-              onChange={(e) => setDesign((p) => ({ ...p, address: e.target.value }))}
+              onChange={(e) => {
+                const address = e.target.value;
+                setDesign((p) => ({
+                  ...p, address,
+                  street: streetEditedRef.current ? p.street : deriveStreet(address),
+                }));
+              }}
               onBlur={commitAddress}
               onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
           </div>
           <div>
             <label className="label">Street name (frontage)</label>
             <input className="field" value={street} placeholder="e.g. Wandoo Rise"
-              onChange={(e) => setDesign((p) => ({ ...p, street: e.target.value }))} />
+              onChange={(e) => {
+                const v = e.target.value;
+                streetEditedRef.current = v.trim() !== "";
+                setDesign((p) => ({ ...p, street: v }));
+              }}
+              onBlur={() => {
+                // Cleared by hand: fall back to deriving from the address.
+                if (!street.trim()) {
+                  streetEditedRef.current = false;
+                  setDesign((p) => ({ ...p, street: deriveStreet(p.address) }));
+                }
+              }} />
           </div>
           <MetresField label="Lot width (m)" value={lotW} onCommit={(n) => setLot({ lotW: n })} />
           <MetresField label="Lot depth (m)" value={lotD} onCommit={(n) => setLot({ lotD: n })} />
         </div>
         <p className="mt-2.5 text-[12.5px] text-ink/50">
-          Rectangular lots in this early version, street frontage along the bottom.
-          Your design saves automatically in this browser, per address.
+          Lots stay rectangular in this version, street frontage along the
+          bottom — structures can be rectangles, L-shapes, or any outline you
+          draw. The street name fills itself from the address; type over it if
+          your frontage is a different street. Your design saves automatically
+          in this browser, per address.
         </p>
       </div>
 
@@ -419,6 +761,16 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
                   <span className="block font-mono text-[11px] text-ink/45">{fmtM(p.w)} × {fmtM(p.d)} m</span>
                 </button>
               ))}
+              <button type="button" onClick={addLShape}
+                className="rounded-md border border-rule bg-white px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash">
+                <span className="block text-[13.5px] font-medium">L-shape</span>
+                <span className="block font-mono text-[11px] text-ink/45">6 × 4 m, notched</span>
+              </button>
+              <button type="button" onClick={startDraw}
+                className={`rounded-md border px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash ${draw ? "border-seal bg-wash" : "border-rule bg-white"}`}>
+                <span className="block text-[13.5px] font-medium">Odd shape</span>
+                <span className="block font-mono text-[11px] text-ink/45">tap its corners</span>
+              </button>
             </div>
           </div>
 
@@ -431,9 +783,28 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
                   <input className="field" value={sel.label}
                     onChange={(e) => patchStructure(sel.id, { label: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <MetresField label="Width (m)" value={sel.w} onCommit={(n) => patchStructure(sel.id, { w: n })} />
-                  <MetresField label="Depth (m)" value={sel.d} onCommit={(n) => patchStructure(sel.id, { d: n })} />
+                {sel.shape === "poly" ? (
+                  <p className="text-[12.5px] leading-relaxed text-ink/55">
+                    Drawn outline, {sel.pts?.length ?? 0} corners — drag the
+                    corner handles on the plan to reshape it.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <MetresField label="Width (m)" value={sel.w} onCommit={(n) => patchStructure(sel.id, { w: n })} />
+                    <MetresField label="Depth (m)" value={sel.d} onCommit={(n) => patchStructure(sel.id, { d: n })} />
+                  </div>
+                )}
+                {sel.shape === "lshape" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <MetresField label="Notch width (m)" value={sel.notchW ?? sel.w / 2}
+                      onCommit={(n) => patchStructure(sel.id, { notchW: n })} />
+                    <MetresField label="Notch depth (m)" value={sel.notchD ?? sel.d / 2}
+                      onCommit={(n) => patchStructure(sel.id, { notchD: n })} />
+                  </div>
+                )}
+                <div className="flex justify-between font-mono text-[12.5px] text-ink/75">
+                  <span className="text-ink/50">Footprint area</span>
+                  <span>{fmtM(structureArea(sel))} m²</span>
                 </div>
                 <div>
                   <span className="label">Distance to boundaries</span>
@@ -446,6 +817,9 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
                     ))}
                   </dl>
                 </div>
+                <button type="button" onClick={rotateSelected} className="btn-ghost w-full">
+                  Rotate 90°{sel.rot ? ` — at ${sel.rot}°` : ""}
+                </button>
                 <button type="button" onClick={removeSelected}
                   className="btn-ghost w-full !text-flag hover:!border-flag/40">
                   Remove structure
@@ -453,8 +827,10 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
               </div>
             ) : (
               <p className="text-[13px] leading-relaxed text-ink/55">
-                Tap a structure on the plan to select it — drag to move, arrow
-                keys to nudge (hold Shift for 1&nbsp;m steps), Delete to remove.
+                Tap a structure on the plan to select it — drag to move (edges
+                pull in line with neighbours; hold Alt to drag free), drag the
+                square handles to resize, R to rotate, arrow keys to nudge
+                (hold Shift for 1&nbsp;m steps), Delete to remove.
               </p>
             )}
           </div>
@@ -474,6 +850,7 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
                   if (window.confirm("Clear every structure and start this plan again?")) {
                     setDesign((p) => ({ ...p, structures: [], north: 0 }));
                     setSelected(null);
+                    setDraw(null);
                   }
                 }}>
                 Start again
@@ -489,11 +866,35 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
 
         {/* the canvas */}
         <div className="card p-4">
+          {draw && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-seal/30 bg-wash px-3 py-2">
+              <p className={`min-w-[180px] flex-1 text-[12.5px] leading-snug ${draw.hint ? "text-brass-deep" : "text-ink/65"}`}>
+                {draw.hint || (
+                  draw.pts.length === 0
+                    ? "Tap the plan at each corner of the shape."
+                    : draw.pts.length < 3
+                      ? `${draw.pts.length} corner${draw.pts.length === 1 ? "" : "s"} placed — keep tapping.`
+                      : `${draw.pts.length} corners placed — tap the first corner or Done to close.`
+                )}
+              </p>
+              <div className="flex gap-2">
+                <button type="button" className="btn !px-3 !py-1.5" onClick={finishDraw}>Done</button>
+                <button type="button" className="btn-ghost !px-3 !py-1.5" onClick={() => setDraw(null)}>Cancel</button>
+              </div>
+            </div>
+          )}
           <div ref={canvasRef} tabIndex={0} onKeyDown={onKeyDown} aria-label="Site plan drawing area"
             className="mx-auto select-none rounded-md" style={{ maxWidth: `${maxCanvasPx}px` }}>
             <svg ref={svgRef} viewBox={viewBox} role="img" aria-label="Site plan"
-              style={{ width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`, display: "block", touchAction: "none" }}
-              onPointerDown={() => setSelected(null)}>
+              style={{
+                width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`,
+                display: "block", touchAction: "none",
+                cursor: draw ? "crosshair" : undefined,
+              }}
+              onPointerDown={(e) => {
+                if (draw) { addDrawPoint(e); return; }
+                setSelected(null);
+              }}>
               {plan(true)}
             </svg>
           </div>
@@ -539,13 +940,33 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
       <style>{`
         @media print {
           @page { size: A4 portrait; margin: 12mm; }
-          body * { visibility: hidden !important; }
-          #site-plan-sheet, #site-plan-sheet * { visibility: visible !important; }
-          #site-plan-sheet {
-            display: block !important;
-            position: absolute; left: 0; top: 0; width: 100%;
+          /* Print the sheet and nothing else. Everything off the sheet's
+             ancestor path is removed outright — display:none frees the space
+             it would otherwise reserve — and the path itself is flattened:
+             no padding, min-heights or animation transforms left standing.
+             (The page-entrance animation keeps a computed transform on main,
+             which silently became the containing block for the previous
+             position:absolute approach and pushed the sheet down the page —
+             blank first page, plan on page two.) */
+          body *:not(:has(#site-plan-sheet)):not(#site-plan-sheet):not(#site-plan-sheet *) {
+            display: none !important;
           }
-          body { background: #fff !important; }
+          body *:has(#site-plan-sheet) {
+            display: block !important;
+            position: static !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            min-height: 0 !important;
+            max-width: none !important;
+            background: #fff !important;
+            animation: none !important;
+            transform: none !important;
+            opacity: 1 !important;
+          }
+          #site-plan-sheet { display: block !important; }
+          html, body { background: #fff !important; }
         }
       `}</style>
     </div>
