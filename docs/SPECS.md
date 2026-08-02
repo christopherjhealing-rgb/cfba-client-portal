@@ -20,9 +20,11 @@ structures on it, print to PDF at a stated scale. Most FIRs about site plans
 are missing dimensions, not bad intent — the tool makes the dimensions
 unavoidable.
 
-**Lot.** Rectangular lots only in v1. Width and depth in metres (decimals,
-e.g. 20.12 × 40.25), street frontage always the bottom edge, street name
-labelled in the frontage band. Boundaries are always dimensioned.
+**Lot.** Width and depth in metres (decimals, e.g. 20.12 × 40.25), street
+frontage the bottom edge, street name labelled in the frontage band.
+Boundaries are always dimensioned. A rectangle is still the default and every
+design saved before the cadastre existed loads as one — but the lot can now
+also be the real parcel outline, fetched from Landgate: see § 7.
 
 **Structures.** Six presets — Dwelling 15 × 10, Patio 6 × 4, Shed 3 × 3,
 Pool 8 × 4, Carport 6 × 3, Retaining wall 10 × 0.3 — added by a click, then
@@ -145,15 +147,214 @@ line and FFL. Parametric preset structures only — never traced dwellings or
 complex designs. Same applicant-authored footer; measures, never judges.
 ~1-2 sessions.
 
-**Underlay v2 upgrade — load the site by address (agreed).** Rather than
-screenshots: geocode the entered address, then pull the underlay from mapping
-services directly. Preferred source: Landgate/SLIP public services — the
-cadastral lot boundary (auto-draws the true lot shape at scale, including
-corner and irregular lots, replacing manual lot entry and calibration) with
-SLIP aerial imagery as an optional reference layer beneath. Google satellite
-only as fallback (licence-grey for tracing); Nearmap as premium underlay if
-CFBA holds a subscription (ask owner). Underlay layers remain browser-only and
-excluded from the printed sheet.
+**Underlay v2 upgrade — load the site by address.** Shipped as § 7 below: the
+address is geocoded, the cadastral lot boundary comes from Landgate/SLIP and
+auto-draws the true lot shape at scale (corner, battleaxe and irregular lots
+included, replacing manual lot entry and calibration), and Google satellite
+imagery sits beneath it as the tracing reference. Still outstanding from the
+original note: SLIP aerial imagery as an alternative reference layer, and
+Nearmap as a premium underlay if CFBA holds a subscription (ask owner).
+Underlay layers remain browser-only and excluded from the printed sheet.
+
+---
+
+## 7. Automatic lot boundaries from the WA cadastre — status: built, endpoint UNVERIFIED
+
+**What.** On the site plan tool, **Find my lot** geocodes the typed address and
+asks Landgate's cadastre for the parcel that contains it. The real lot outline
+replaces the typed rectangle: correct shape, correct dimensions, correct
+orientation, with setbacks measured to the real boundaries and the aerial photo
+already lined up behind it. Corner lots, battleaxes and six-sided infill blocks
+stop being squashed into a rectangle.
+
+The rectangle is still the default and every design saved before this loads and
+behaves identically — the lot record simply isn't there and `sanitiseLot`
+returns the rectangle, the same pattern `sanitiseUnderlay` uses.
+
+### ⚠ The endpoint has never been called
+
+The session that built this had **no outbound access** to
+`services.slip.wa.gov.au` or `catalogue.data.wa.gov.au` (the environment proxy
+refused the CONNECT tunnel). Everything that can be proven offline is proven
+offline — parsing, projection, area, north, frontage inference, edge labelling,
+setbacks, caching, every failure path — over synthetic GeoJSON fixtures in
+`tests/fixtures/cadastre.mjs`. **The one thing that is unproven is whether the
+URL below answers.** Assume it needs correcting.
+
+**The default endpoint:**
+
+```
+https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Property_and_Planning/MapServer/6
+```
+
+**The query it builds** (ArcGIS REST layer query — `lib/cadastre-source.ts`,
+`parcelQueryUrl`):
+
+```
+{CADASTRE_URL}/query
+  ?geometry=<lng>,<lat>          ← ArcGIS wants x,y, so longitude first
+  &geometryType=esriGeometryPoint
+  &inSR=4326 &outSR=4326
+  &spatialRel=esriSpatialRelIntersects
+  &outFields=* &returnGeometry=true
+  &returnCountOnly=false &resultRecordCount=1
+  &f=geojson
+  [&token=<CADASTRE_TOKEN>]      ← only for an authenticated service
+```
+
+**A good answer** is a GeoJSON `FeatureCollection` whose one feature has a
+`Polygon` (or `MultiPolygon`) geometry in WGS84 and properties carrying the lot
+and plan numbers. The parser also accepts **Esri JSON** (`features[].geometry.
+rings` + `features[].attributes`), so a service that ignores `f=geojson` still
+works — that path is tested.
+
+**How to correct it in minutes.** Open Landgate's service directory in a
+browser and find the cadastre layer, then set `CADASTRE_URL` to the layer URL
+(the one ending in a number) in Vercel and redeploy:
+
+1. Browse `https://services.slip.wa.gov.au/public/rest/services` and look
+   under the Property/Planning or Cadastre folders for a layer named along the
+   lines of "Cadastre — Land Parcels" / "Property Boundaries".
+2. Confirm it by pasting the built query into a browser with a known Perth
+   point — e.g. `geometry=115.8613,-31.9505` — and checking a polygon comes
+   back.
+3. If the service is WFS rather than ArcGIS REST, or needs a different query
+   shape, `parcelQueryUrl` in `lib/cadastre-source.ts` is the only function
+   that has to change; nothing downstream of it knows or cares.
+4. Then `CADASTRE_ENABLED=1` and redeploy. Env changes never apply to an
+   existing deployment.
+
+Symptoms of a wrong URL: the client always sees the "couldn't find this lot"
+message, and the server log shows `cadastre upstream 404` or
+`cadastre upstream returned non-JSON — check CADASTRE_URL`.
+
+**Attribute names.** `parseParcel` reads the lot and plan numbers from a
+candidate list of spellings (`lot_number`, `survey_lot_no`, `cad_lot_number`,
+…) case-insensitively. If the live service uses another spelling, add it to
+`LOT_KEYS` / `PLAN_KEYS` / `ADDRESS_KEYS` in `lib/cadastre.mjs`. Getting this
+wrong costs the "Lot 214 on Plan 78123" line on the sheet and nothing else —
+never the boundary itself.
+
+### The route
+
+`app/api/cadastre/route.ts`, GET, `?lat=&lng=`. Signed-in clients only
+(`getClientSession`, 401 otherwise), same as every other client API. It takes
+**only two numbers**, both validated against Western Australia's bounding box —
+never a URL, never a host, never a query — and the upstream host is pinned in
+`lib/cadastre-source.ts`, so the route can never become an SSRF relay. The
+response is hard-whitelisted: `{ found, cached, lot: { ring, lotId, address,
+source, fetched } }` and nothing else. None of the service's other attributes
+leave the server.
+
+Only 401 (signed out) and 400 (not a WA coordinate) are errors. Every upstream
+outcome is a 200 with `found: false` and a reason — `unconfigured`,
+`not-found`, `timeout`, `upstream`, `network` — because not finding a lot is an
+ordinary thing, not a fault.
+
+### Caching
+
+Every result goes into `portal_settings` (no table, no migration) under
+`cadastre:<lat>,<lng>` rounded to five decimal places — about a metre, so one
+address is one lookup forever, whoever asks. The cache is checked before the
+upstream call, always. A found lot is kept indefinitely: boundaries don't move.
+A miss is kept for **14 days** and then re-tried, because a new estate does
+eventually reach the cadastre. A failed cache write costs another lookup later
+and never costs the client the boundary just found.
+
+### Frontage, north and the aerial
+
+The cadastre records parcels, not frontages, so the street boundary is
+inferred, in this order (`inferFrontage`):
+
+1. **An access leg.** A battleaxe meets the road across the end of its
+   driveway and nowhere else, and a driveway is unmistakable: a short edge
+   (≤ 8 m) closing a neck whose two sides run antiparallel and are ≥ 4× longer.
+   A splayed corner truncation looks similar and is excluded — its neighbours
+   meet at a right angle, not head on.
+2. **Which way the address point lies** from the middle of the lot, matched
+   against each boundary's outward normal. Direction, not distance: on a
+   12.5 m wide block a roof point 8 m back from the front is *nearer the side
+   fence* than the front boundary, so "nearest edge" gets the commonest lot in
+   Perth wrong.
+3. **The shortest boundary**, when the address point is missing or sits on the
+   middle of the lot.
+
+**Tapping any boundary on the plan overrules it**, and the whole sheet
+re-derives: the parcel is laid out again from its own ground ring so the new
+frontage runs along the bottom, north follows, and the labels change with it.
+
+**North is derived, not set.** Putting the frontage along the bottom of the
+sheet fixes the sheet's bearing exactly, so the north arrow is a real bearing
+rather than a 45° step. The hand rotation is hidden while a cadastre lot is
+loaded — turning it by hand could only put it out.
+
+**The aerial then lines itself up.** The parcel gives one point whose latitude
+and longitude are known exactly and whose position on the drawing is known
+exactly (`ringToPlan` returns it as `anchor`), and north comes from the same
+parcel. The photo lands on the lot with no dragging. The nudge controls stay
+for the cases where the cadastre itself is the thing that's out.
+
+**Edge labelling.** Four-sided lots get Front / Side / Rear / Side reckoned
+from the frontage. Anything else is numbered round from the front — "rear" on a
+six-sided block means nothing and guessing would be worse than counting. Every
+boundary carries its length on the plan and in the sidebar.
+
+### Accuracy — the part that isn't negotiable
+
+Cadastral boundaries are **indicative**. In parts of Perth they sit a metre or
+more off the surveyed pegs, and this plan feeds building permit applications
+where 900 mm decides the answer. Therefore:
+
+- The printed sheet carries a **Lot boundary** row naming the source and the
+  date it was retrieved, and the footer becomes: *"Prepared by the applicant
+  using the CFBA plan tool. The lot boundary is taken from {source} on {date}:
+  cadastral boundaries are indicative and can sit a metre or more from the
+  surveyed pegs. Structures, dimensions and the nominated frontage are as
+  entered by the applicant. Not a certified document and not a survey."* The
+  old wording is unchanged when no cadastre lot is loaded.
+- On screen, in the portal's voice: *"Boundaries from the State's cadastre are
+  indicative — the shape is right, but they can sit a metre or so off the pegs.
+  Check anything tight against your survey."*
+- **The tool still only measures.** No setback derived from the cadastre is
+  ever presented as a compliance verdict, here or anywhere else.
+- The aerial underlay still never reaches printed output. Both existing
+  guards stay: it is off the printed sheet's ancestor path, and
+  `.cfba-underlay` is struck out explicitly in the print stylesheet.
+
+### The fallback is a main path
+
+New subdivisions are a large share of CFBA's work and are routinely missing
+from the cadastre. Every failure — not found, timeout, service down, no
+credentials configured, geocode miss — lands in the same place: the aerial
+photo is already down and unlocked for tracing, the dimension fields are still
+there, and the message is *"We couldn't find this lot on the State's records
+yet — you can trace it over the aerial photo, or type the dimensions in."*
+Nothing about the tool is worse than it was before this feature existed.
+
+### Where things live
+
+| | |
+|---|---|
+| Pure geometry, parsing, projection, frontage | `lib/cadastre.mjs` + `.d.mts` |
+| Lot model, edges, labels, polygon setbacks | `lib/site-plan.mjs` + `.d.mts` |
+| **The only module that opens a socket** | `lib/cadastre-source.ts` |
+| Route, auth, validation, cache | `app/api/cadastre/route.ts` |
+| Canvas, tapping, sidebar, sheet | `components/SitePlanBuilder.tsx` |
+| Fixtures (suburban, corner, battleaxe, 6-sided, Esri, multipart) | `tests/fixtures/cadastre.mjs` |
+| Tests | `tests/cadastre.test.mjs`, `tests/site-plan.test.mjs` |
+
+`CADASTRE_FIXTURE` points `fetchParcel` at a local JSON file instead of
+Landgate, **demo mode only** (it is unreachable once Supabase is configured).
+That is the seam the success path was driven through in a browser without
+network access to the State.
+
+**Backlog:** a "trace the boundary yourself" mode that produces the same
+polygon lot without the cadastre (the model already supports it — a lot with
+no ground ring keeps its shape and only re-labels); easements and sewer
+alignments as a second overlay; a true-scale PDF export so the stated scale
+doesn't depend on the print dialog being left at 100%.
+
+---
 
 ## One-off public lodgement (planned)
 

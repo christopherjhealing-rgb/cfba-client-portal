@@ -7,6 +7,9 @@ import {
   deriveStreet, normalisePts, rotatePts, polyBounds, lShapePts, shapePts,
   footprint, boundsOf, polygonArea, structureArea, isSimplePolygon,
   polyFromFootprint, rotateStructure, setbackMarks, alignSnap, resizeBounds,
+  rectLotPts, RECT_FRONTAGE, lotPts, lotFrontage, lotEdges, edgeLabels,
+  polygonCentroid, closestOnSegment, pointToSegment, minDistPolyToSegment,
+  polygonContains, polygonInside, lotSetbacks, sanitiseLot,
   MERCATOR_M_PER_PX_Z0, UNDERLAY_DEFAULT_OPACITY, UNDERLAY_MAX_ZOOM,
   metresPerPixel, zoomForMetresPerPixel, underlayZoom, underlayScale,
   rotationCoverScale, underlayMapSize, groundToPlanVector, planToGroundVector,
@@ -236,6 +239,181 @@ test("rotateStructure steps 90° about the centre and stays inside the lot", () 
   assert.deepEqual({ rot: edge.rot, x: edge.x, y: edge.y }, { rot: 90, x: 3, y: 0 });
   // A full lap returns to 0°.
   assert.equal(rotateStructure({ ...s, rot: 270 }, 20, 40).rot, 0);
+});
+
+// ---------------------------------------------------------------------------
+// The lot: a rectangle by default, a polygon when there's a real one.
+// ---------------------------------------------------------------------------
+
+test("the rectangle lot is the four-cornered case of the polygon lot", () => {
+  assert.deepEqual(rectLotPts(20, 40),
+    [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 40 }, { x: 0, y: 40 }]);
+  // Edge 2 is the bottom one — the street, where it has always been.
+  assert.equal(RECT_FRONTAGE, 2);
+  const pts = rectLotPts(20, 40);
+  assert.deepEqual(pts[RECT_FRONTAGE], { x: 20, y: 40 });
+  assert.deepEqual(pts[(RECT_FRONTAGE + 1) % 4], { x: 0, y: 40 });
+  // A design with no lot record, or a half-written one, is that rectangle.
+  assert.deepEqual(lotPts(null, 20, 40), pts);
+  assert.deepEqual(lotPts({ kind: "rect" }, 20, 40), pts);
+  assert.deepEqual(lotPts({ kind: "poly", pts: [{ x: 0, y: 0 }] }, 20, 40), pts);
+  assert.equal(lotFrontage(null), 2);
+  assert.equal(lotFrontage({ kind: "rect" }), 2);
+});
+
+test("lotEdges gives every boundary its length, middle and outward normal", () => {
+  const e = lotEdges(rectLotPts(20, 40));
+  assert.equal(e.length, 4);
+  assert.deepEqual(e.map((x) => x.length), [20, 40, 20, 40]);
+  assert.deepEqual(e[0].mid, { x: 10, y: 0 });
+  // Normals point away from the lot: the top edge's is up the page (y grows
+  // downward), the bottom edge's is down it.
+  assert.deepEqual({ nx: e[0].nx, ny: e[0].ny }, { nx: 0, ny: -1 });
+  assert.deepEqual({ nx: e[1].nx, ny: e[1].ny }, { nx: 1, ny: 0 });
+  assert.deepEqual({ nx: e[2].nx, ny: e[2].ny }, { nx: 0, ny: 1 });
+  assert.deepEqual({ nx: e[3].nx, ny: e[3].ny }, { nx: -1, ny: 0 });
+});
+
+test("four-sided lots get Front, Side, Rear, Side from wherever the street is", () => {
+  assert.deepEqual(edgeLabels(4, 2), ["Rear", "Side", "Front", "Side"]);
+  assert.deepEqual(edgeLabels(4, 0), ["Front", "Side", "Rear", "Side"]);
+  assert.deepEqual(edgeLabels(4, 1), ["Side", "Front", "Side", "Rear"]);
+  assert.deepEqual(edgeLabels(4, 3), ["Side", "Rear", "Side", "Front"]);
+  // Out-of-range indices wrap rather than throwing.
+  assert.deepEqual(edgeLabels(4, 6), edgeLabels(4, 2));
+  assert.deepEqual(edgeLabels(4, -2), edgeLabels(4, 2));
+});
+
+test("irregular lots are counted round from the front, never guessed at", () => {
+  assert.deepEqual(edgeLabels(5, 0), ["Front", "Boundary 2", "Boundary 3", "Boundary 4", "Boundary 5"]);
+  assert.deepEqual(edgeLabels(3, 1), ["Boundary 3", "Front", "Boundary 2"]);
+  assert.deepEqual(edgeLabels(6, 4)[4], "Front");
+  assert.deepEqual(edgeLabels(6, 4)[5], "Boundary 2");
+  assert.deepEqual(edgeLabels(2, 0), []);
+});
+
+test("polygonCentroid is the shoelace centre, and survives a degenerate ring", () => {
+  assert.deepEqual(polygonCentroid(rectLotPts(20, 40)), { x: 10, y: 20 });
+  // An L: the centre is pulled towards the bulk, not the bounding box middle.
+  const l = lShapePts(6, 4, 3, 2);
+  const c = polygonCentroid(l);
+  assert.ok(c.x < 3 && c.y < 2, `${c.x}, ${c.y} sits in the leg, not the notch`);
+  // No area at all falls back to the mean corner rather than dividing by zero.
+  assert.deepEqual(polygonCentroid([{ x: 0, y: 0 }, { x: 2, y: 2 }, { x: 4, y: 4 }]), { x: 2, y: 2 });
+});
+
+test("closestOnSegment and pointToSegment stop at the ends of the line", () => {
+  const a = { x: 0, y: 0 }, b = { x: 10, y: 0 };
+  assert.deepEqual(closestOnSegment(a, b, { x: 4, y: 3 }), { x: 4, y: 0 });
+  // Past either end, the end itself is the nearest point — a boundary is a
+  // segment, not an infinite line, and measuring to the line would flatter.
+  assert.deepEqual(closestOnSegment(a, b, { x: -5, y: 0 }), { x: 0, y: 0 });
+  assert.deepEqual(closestOnSegment(a, b, { x: 99, y: 4 }), { x: 10, y: 0 });
+  close(pointToSegment(a, b, { x: 4, y: 3 }), 3);
+  close(pointToSegment(a, b, { x: 13, y: 4 }), 5);
+  // A zero-length edge is its own nearest point rather than a NaN.
+  assert.deepEqual(closestOnSegment(a, a, { x: 3, y: 4 }), { x: 0, y: 0 });
+});
+
+test("minDistPolyToSegment finds the nearest pair, corner to corner included", () => {
+  const box = [{ x: 4, y: 4 }, { x: 8, y: 4 }, { x: 8, y: 7 }, { x: 4, y: 7 }];
+  // Face to face.
+  const left = minDistPolyToSegment(box, { x: 0, y: 0 }, { x: 0, y: 20 });
+  close(left.d, 4);
+  close(left.to.x, 0);
+  // Corner to corner: the boundary runs out before the face does.
+  const corner = minDistPolyToSegment(box, { x: 0, y: 0 }, { x: 1, y: 1 });
+  close(corner.d, Math.hypot(3, 3), 1e-4);
+  assert.deepEqual(corner.from, { x: 4, y: 4 });
+  // Crossing the boundary is nothing at all, not a positive number.
+  close(minDistPolyToSegment(box, { x: 6, y: 0 }, { x: 6, y: 20 }).d, 0);
+});
+
+test("polygonContains and polygonInside know a structure from a lot", () => {
+  const lot = rectLotPts(20, 40);
+  assert.ok(polygonContains(lot, { x: 10, y: 20 }));
+  assert.ok(!polygonContains(lot, { x: 25, y: 20 }));
+  const shed = [{ x: 2, y: 2 }, { x: 5, y: 2 }, { x: 5, y: 5 }, { x: 2, y: 5 }];
+  assert.ok(polygonInside(shed, lot));
+  // Hard against the boundary still counts as in.
+  assert.ok(polygonInside([{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3, y: 3 }, { x: 0, y: 3 }], lot));
+  // Hanging over it does not.
+  assert.ok(!polygonInside([{ x: 19, y: 0 }, { x: 22, y: 0 }, { x: 22, y: 3 }, { x: 19, y: 3 }], lot));
+});
+
+test("lotSetbacks on the rectangle lot are exactly the numbers the tool always gave", () => {
+  const sb = lotSetbacks({ x: 1, y: 2, w: 3, d: 4 }, rectLotPts(10, 20), RECT_FRONTAGE);
+  const by = Object.fromEntries(sb.map((e) => [e.label, e.v]));
+  const old = setbacks({ x: 1, y: 2, w: 3, d: 4 }, 10, 20);
+  close(by.Rear, old.rear);
+  close(by.Front, old.front);
+  assert.deepEqual(sb.map((e) => e.v), [2, 6, 14, 1]);   // rear, side, front, side
+  assert.deepEqual(sb.map((e) => e.label), ["Rear", "Side", "Front", "Side"]);
+  assert.deepEqual(sb.map((e) => e.length), [10, 20, 10, 20]);
+  // Rotated and L-shaped structures agree with the old measurements too.
+  const l = { x: 2, y: 3, w: 6, d: 4, rot: 0, shape: "lshape", notchW: 3, notchD: 2 };
+  const lsb = lotSetbacks(l, rectLotPts(20, 40), RECT_FRONTAGE);
+  const lold = setbacks(l, 20, 40);
+  close(lsb[0].v, lold.rear);
+  close(lsb[1].v, lold.right);
+  close(lsb[2].v, lold.front);
+  close(lsb[3].v, lold.left);
+});
+
+test("lotSetbacks measure to a slanted boundary, where a bounding box would lie", () => {
+  // A four-sided lot with one boundary running on a diagonal.
+  const lot = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 12, y: 30 }, { x: 0, y: 30 }];
+  const shed = { x: 8, y: 4, w: 4, d: 4 };
+  const sb = lotSetbacks(shed, lot, 2);
+  // The diagonal is edge 1, from (20, 0) to (12, 30). The boundary leans in
+  // as it goes down the page, so the nearest corner of the shed is its
+  // bottom-right one at (12, 8), and the honest number is that corner's
+  // perpendicular distance to the line — not 20 − 12.
+  const dx = 12 - 20, dy = 30 - 0, len = Math.hypot(dx, dy);
+  const expect = Math.abs(dx * (8 - 0) - dy * (12 - 20)) / len;
+  close(sb[1].v, expect, 1e-4);
+  assert.ok(sb[1].v < 8, "measured to the boundary, not to the bounding box");
+  // And it carries the boundary's true length, which is not 30.
+  close(sb[1].length, len, 1e-4);
+});
+
+test("sanitiseLot: a design saved before the cadastre existed loads as a rectangle", () => {
+  const blank = {
+    kind: "rect", pts: [], ring: [], frontage: 0, north: 0, anchor: null,
+    lat: null, lng: null, source: "", fetched: "", lotId: "", address: "",
+  };
+  assert.deepEqual(sanitiseLot(undefined), blank);
+  assert.deepEqual(sanitiseLot(null), blank);
+  assert.deepEqual(sanitiseLot("nope"), blank);
+  assert.deepEqual(sanitiseLot({}), blank);
+  // A polygon lot with an outline that can't be drawn is a rectangle too.
+  assert.deepEqual(sanitiseLot({ kind: "poly", pts: [{ x: 0, y: 0 }, { x: 1, y: 1 }] }), blank);
+  assert.deepEqual(sanitiseLot({
+    kind: "poly",
+    pts: [{ x: 0, y: 0 }, { x: 2, y: 2 }, { x: 2, y: 0 }, { x: 0, y: 2 }],   // a bowtie
+  }), blank);
+});
+
+test("sanitiseLot keeps a real lot and normalises what it keeps", () => {
+  const lot = sanitiseLot({
+    kind: "poly",
+    pts: [{ x: 3, y: 5 }, { x: 15.5, y: 5 }, { x: 15.5, y: 37 }, { x: 3, y: 37 }],
+    ring: [[-32.3234, 115.8412], [-32.3234, 115.84133], ["x", 1], [-32.32311, 115.8412]],
+    frontage: 6, north: 451.5, anchor: { x: 6.25, y: 16 },
+    lat: -32.32326, lng: 115.84127,
+    source: "Landgate cadastre (SLIP)", fetched: "2026-08-02",
+    lotId: "Lot 214 on Plan 78123", address: "12 Wandoo Rise, Baldivis",
+  });
+  assert.equal(lot.kind, "poly");
+  // Anchored at the origin, whatever it was saved as.
+  assert.deepEqual(lot.pts[0], { x: 0, y: 0 });
+  assert.equal(polygonArea(lot.pts), 400);
+  assert.equal(lot.frontage, 2);              // wrapped into range
+  assert.equal(lot.north, 91.5);              // wrapped into 0–360
+  assert.equal(lot.ring.length, 3);           // the unreadable corner dropped
+  assert.equal(lot.lotId, "Lot 214 on Plan 78123");
+  // Nonsense coordinates mean no anchor point for the photo.
+  assert.equal(sanitiseLot({ kind: "poly", pts: rectLotPts(10, 20), lat: 99, lng: 115.8 }).lat, null);
 });
 
 // ---------------------------------------------------------------------------

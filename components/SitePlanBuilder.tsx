@@ -8,13 +8,15 @@ import { useEffect, useRef, useState } from "react";
 import {
   DRAW_MARGIN_MM, STRUCTURE_PRESETS, UNDERLAY_MAX_ROT, UNDERLAY_MIN_OPACITY,
   alignSnap, boundsOf, clampToLot, clampUnderlayOpacity, clampUnderlayRot,
-  defaultPlacement, deriveStreet, fitScale, fmtM, fmtM2, footprint,
-  isSimplePolygon, mToMmOnPaper, mmOnPaperToM, normalisePts, parseMetres,
-  polyBounds, polyFromFootprint, resizeBounds, rotateStructure,
+  defaultPlacement, deriveStreet, edgeLabels, fitScale, fmtM, fmtM2, footprint,
+  isSimplePolygon, lotEdges, lotFrontage, lotPts, lotSetbacks, mToMmOnPaper,
+  mmOnPaperToM, normalisePts, parseMetres, polyBounds, polyFromFootprint,
+  polygonArea, polygonInside, resizeBounds, rotateStructure, sanitiseLot,
   sanitiseUnderlay, scaleBarMetres, setbackMarks, setbacks, snap,
   structureArea, underlayAnchor, underlayCentre, underlayMapSize,
-  underlayScale, underlayZoom, type Underlay,
+  underlayScale, underlayZoom, type Lot, type Underlay,
 } from "@/lib/site-plan.mjs";
+import { buildLot, reorientLot } from "@/lib/cadastre.mjs";
 import { WA_BOUNDS } from "@/lib/address.mjs";
 import { GOOGLE_MAPS_KEY, loadMapsLibrary } from "@/lib/google-maps";
 
@@ -54,6 +56,42 @@ interface GeocodingLibrary {
 const AERIAL_MISS =
   "We couldn't find that address on the map — you can still draw your plan by hand.";
 
+// ---------------------------------------------------------------------------
+// The lot boundary, from the State's cadastre.
+//
+// Typing a width and a depth turns every lot into a rectangle, and a great
+// many aren't: corner blocks, battleaxes, the six-sided leftovers of an
+// infill subdivision. Landgate holds the real parcel outline, so the tool
+// asks for it and draws the lot that is actually there — right shape, right
+// dimensions, right orientation, with setbacks measured to the real
+// boundaries and north derived from the parcel rather than guessed at.
+//
+// Two things about that boundary matter more than the feature does:
+//
+//   It is INDICATIVE. Cadastral boundaries in parts of Perth sit a metre or
+//   more off the surveyed pegs, and this plan feeds building permit
+//   applications where 900 mm decides the answer. The sheet names the source
+//   and the date, says plainly that it is not a survey, and the on-screen
+//   copy says the same in fewer words.
+//
+//   It is often missing. New subdivisions are a large share of this business
+//   and they routinely aren't in the cadastre yet. Not finding a lot is a
+//   main path, not an error path: the client lands exactly where the tool
+//   left them before this existed — trace the aerial, or type the numbers in.
+// ---------------------------------------------------------------------------
+
+const LOT_MISS =
+  "We couldn't find this lot on the State's records yet — you can trace it " +
+  "over the aerial photo, or type the dimensions in.";
+const LOT_NO_ADDRESS =
+  "Pop the site address in above and we'll go looking for your lot.";
+/** Said on screen and, in longer form, on the printed sheet. Warm, short,
+ *  and never a judgement about whether anything complies. */
+const LOT_INDICATIVE =
+  "Boundaries from the State's cadastre are indicative — the shape is right, " +
+  "but they can sit a metre or so off the pegs. Check anything tight against " +
+  "your survey.";
+
 /** Alignment buttons get pressed with a thumb, on site, in the sun: 40 px
  *  minimum on both axes and a press you can see. */
 const NUDGE =
@@ -82,14 +120,20 @@ interface Structure {
 interface Design {
   address: string;
   street: string;
+  /** Overall size of the lot. For a polygon lot these mirror its bounding
+   *  box and drive the paper scale exactly as they always have. */
   lotW: number;
   lotD: number;
-  /** North arrow bearing, degrees clockwise from straight up, steps of 45. */
+  /** North arrow bearing, degrees clockwise from straight up. Turned by hand
+   *  in 45° steps; derived to the degree from a cadastre lot. */
   north: number;
   structures: Structure[];
   /** Screen-only aerial. No site in it means no photo — which is every
    *  design saved before this existed. */
   underlay: Underlay;
+  /** The lot itself: a rectangle unless a real parcel has been loaded, which
+   *  is every design saved before the cadastre existed. */
+  lot: Lot;
 }
 
 interface Guide {
@@ -102,6 +146,7 @@ interface Guide {
 const BLANK: Design = {
   address: "", street: "", lotW: 20, lotD: 40, north: 0, structures: [],
   underlay: sanitiseUnderlay(undefined),
+  lot: sanitiseLot(undefined),
 };
 
 const INK = "#101A15";
@@ -124,6 +169,15 @@ const KINDS: { kind: string; name: string; fill: string; dark?: boolean }[] = [
   { kind: "custom", name: "Custom shape", fill: "#E3DFEA" },
 ];
 const FILL: Record<string, string> = Object.fromEntries(KINDS.map((k) => [k.kind, k.fill]));
+
+/** A stored ISO date as a builder would read it. Anything unparseable comes
+ *  back as it went in rather than as "Invalid Date". */
+const fmtDate = (iso: string) => {
+  const t = Date.parse(iso);
+  return Number.isFinite(t)
+    ? new Date(t).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })
+    : iso;
+};
 
 const uid = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -181,8 +235,12 @@ function sanitise(raw: unknown): Design {
           return base;
         })
     : [];
+  // North used to be 45° steps because it was only ever turned by hand. A
+  // cadastre lot derives it to the degree, so any bearing is valid now —
+  // and every design saved before this build held a multiple of 45 anyway,
+  // so they all load exactly as they were.
   const north = typeof d.north === "number" && Number.isFinite(d.north)
-    ? ((Math.round(d.north / 45) * 45) % 360 + 360) % 360 : 0;
+    ? ((d.north % 360) + 360) % 360 : 0;
   return {
     address: typeof d.address === "string" ? d.address : "",
     street: typeof d.street === "string" ? d.street : "",
@@ -191,6 +249,7 @@ function sanitise(raw: unknown): Design {
     north,
     structures,
     underlay: sanitiseUnderlay(d.underlay),
+    lot: sanitiseLot(d.lot),
   };
 }
 
@@ -220,7 +279,9 @@ function MetresField({ label, value, onCommit }: {
   );
 }
 
-export function SitePlanBuilder({ companyId }: { companyId: string }) {
+export function SitePlanBuilder(
+  { companyId, cadastre = false }: { companyId: string; cadastre?: boolean },
+) {
   const [design, setDesign] = useState<Design>(BLANK);
   const [selected, setSelected] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -235,6 +296,10 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   const [aerialNote, setAerialNote] = useState("");
   const [mapReady, setMapReady] = useState(false);
   const [liveZoom, setLiveZoom] = useState<number | null>(null);
+  /** The lot lookup: whether one is in flight, and what to say if it didn't
+   *  land. A blank note is the ordinary state — this never nags. */
+  const [findingLot, setFindingLot] = useState(false);
+  const [lotNote, setLotNote] = useState("");
   const keyRef = useRef(designKey(companyId, ""));
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -308,6 +373,17 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   const { denom, fits } = fitScale(lotW, lotD);
   const mm = (v: number) => mmOnPaperToM(v, denom);
 
+  // The lot, whichever kind it is. Everything downstream — the outline, the
+  // boundary lengths, the setback list, the area on the sheet — reads these
+  // four, so a rectangle and a cadastre parcel travel exactly the same path.
+  const boundary = design.lot;
+  const isPoly = boundary.kind === "poly";
+  const lotOutline = lotPts(boundary, lotW, lotD);
+  const frontage = lotFrontage(boundary);
+  const edges = lotEdges(lotOutline);
+  const edgeNames = edgeLabels(lotOutline.length, frontage);
+  const lotArea = polygonArea(lotOutline);
+
   // viewBox: the lot plus paper-true annotation margins, all in metres.
   const mL = mm(DRAW_MARGIN_MM.left), mR = mm(DRAW_MARGIN_MM.right);
   const mT = mm(DRAW_MARGIN_MM.top), mB = mm(DRAW_MARGIN_MM.bottom);
@@ -353,7 +429,16 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   // Where the map element's own centre sits in the drawing's metres, and
   // where the geocoded point should land.
   const elCentre = { x: -mL + vbW / 2, y: -mT + vbH / 2 };
-  const anchor = underlayAnchor(lotW, lotD, under.offsetX, under.offsetY);
+  // With a cadastre lot the photo needs no lining up at all: the parcel gives
+  // one point whose real latitude and longitude are known exactly, and where
+  // it sits on the drawing. That — with north derived from the same parcel —
+  // is what drops the imagery straight onto the lot. The nudge controls stay
+  // for the cases where the cadastre itself is the thing that's out.
+  const lotAnchored = isPoly && boundary.anchor !== null &&
+    boundary.lat !== null && under.lat === boundary.lat && under.lng === boundary.lng;
+  const anchor = underlayAnchor(
+    lotW, lotD, under.offsetX, under.offsetY, lotAnchored ? boundary.anchor : null,
+  );
   const centre = under.lat !== null && under.lng !== null
     ? underlayCentre({ lat: under.lat, lng: under.lng }, anchor, elCentre, imageryDeg)
     : null;
@@ -424,19 +509,12 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     // centre is rebuilt every render; its two numbers are the real inputs.
   }, [mapReady, wantZoom, centre?.lat, centre?.lng]);
 
-  /** Geocode the typed address and drop the photo behind the plan. Quiet on
-   *  every failure: no address on the map is not the client's mistake. */
-  async function findSite() {
-    const address = design.address.trim();
-    if (!address) {
-      setAerialNote("Pop the site address in above and we'll go looking for it.");
-      return;
-    }
-    setFinding(true);
-    setAerialNote("");
+  /** The typed address as a point on the ground, or null. Quiet on every
+   *  failure: an address Google can't place is not the client's mistake. */
+  async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
     try {
       const lib = await loadMapsLibrary<GeocodingLibrary>("geocoding");
-      if (!lib?.Geocoder) throw new Error("no geocoder");
+      if (!lib?.Geocoder) return null;
       const { results } = await new lib.Geocoder().geocode({
         address,
         componentRestrictions: { country: "AU" },
@@ -446,20 +524,123 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
       const loc = results?.[0]?.geometry?.location;
       const lat = typeof loc?.lat === "function" ? loc.lat() : NaN;
       const lng = typeof loc?.lng === "function" ? loc.lng() : NaN;
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("no result");
-      setSelected(null);
-      setDraw(null);
-      patchUnderlay({
-        lat, lng, zoom: underlayZoom(lat, pxPerM),
-        offsetX: 0, offsetY: 0, rot: 0, visible: true,
-        // Straight into alignment: the pin lands on a roof, not a corner.
-        locked: false,
-      });
+      return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
     } catch {
-      setAerialNote(AERIAL_MISS);
-    } finally {
-      setFinding(false);
+      return null;
     }
+  }
+
+  /** Geocode the typed address and drop the photo behind the plan. */
+  async function findSite() {
+    const address = design.address.trim();
+    if (!address) {
+      setAerialNote("Pop the site address in above and we'll go looking for it.");
+      return;
+    }
+    setFinding(true);
+    setAerialNote("");
+    const site = await geocode(address);
+    setFinding(false);
+    if (!site) { setAerialNote(AERIAL_MISS); return; }
+    setSelected(null);
+    setDraw(null);
+    patchUnderlay({
+      lat: site.lat, lng: site.lng, zoom: underlayZoom(site.lat, pxPerM),
+      offsetX: 0, offsetY: 0, rot: 0, visible: true,
+      // Straight into alignment: the pin lands on a roof, not a corner.
+      locked: false,
+    });
+  }
+
+  /** Put a real parcel on the sheet. The outline becomes the lot, its
+   *  bounding size drives the paper scale exactly as typed dimensions did,
+   *  north comes from the parcel, and the photo hangs off the parcel's own
+   *  ground point — so it arrives already lined up. */
+  function applyLot(lot: Lot, keepPhotoState = false) {
+    const b = polyBounds(lot.pts);
+    const w = Math.max(Math.ceil(b.maxX * 100) / 100, 1);
+    const d = Math.max(Math.ceil(b.maxY * 100) / 100, 1);
+    setDesign((p) => ({
+      ...p,
+      lot, lotW: w, lotD: d, north: lot.north,
+      structures: p.structures.map((s) => {
+        const bb = boundsOf(s);
+        return { ...s, ...clampToLot(s.x, s.y, bb.w, bb.d, w, d) };
+      }),
+      underlay: lot.lat !== null && lot.lng !== null
+        ? {
+            ...p.underlay,
+            lat: lot.lat, lng: lot.lng, zoom: underlayZoom(lot.lat, pxPerM),
+            offsetX: 0, offsetY: 0, rot: 0,
+            visible: keepPhotoState ? p.underlay.visible : true,
+            // Nothing to line up — the parcel did it.
+            locked: true,
+          }
+        : p.underlay,
+    }));
+  }
+
+  /**
+   * Fetch the lot boundary for the typed address.
+   *
+   * The photo goes down first, deliberately. If the cadastre has the lot, the
+   * boundary lands on top of it and the client is done. If it hasn't — which
+   * is the ordinary answer for a new estate — they are left with an aerial to
+   * trace and the dimension fields to type into, which is exactly where this
+   * tool stood before today. That path is a main road, so it gets the good
+   * outcome ready before the lookup is even attempted.
+   */
+  async function findLot() {
+    const address = design.address.trim();
+    if (!address) { setLotNote(LOT_NO_ADDRESS); return; }
+    setFindingLot(true);
+    setLotNote("");
+    setSelected(null);
+    setDraw(null);
+    try {
+      const site = await geocode(address);
+      if (!site) { setLotNote(LOT_MISS); return; }
+      patchUnderlay({
+        lat: site.lat, lng: site.lng, zoom: underlayZoom(site.lat, pxPerM),
+        offsetX: 0, offsetY: 0, rot: 0, visible: true, locked: false,
+      });
+      const r = await fetch(
+        `/api/cadastre?lat=${encodeURIComponent(site.lat)}&lng=${encodeURIComponent(site.lng)}`,
+        { headers: { Accept: "application/json" } },
+      );
+      const j = await r.json().catch(() => null);
+      const ring = j?.lot?.ring;
+      if (!r.ok || !j?.found || !Array.isArray(ring)) { setLotNote(LOT_MISS); return; }
+      const lot = buildLot(
+        { ring, lotId: String(j.lot.lotId || ""), address: String(j.lot.address || "") },
+        site,
+        { source: String(j.lot.source || ""), fetched: String(j.lot.fetched || "") },
+      );
+      if (!lot) { setLotNote(LOT_MISS); return; }
+      applyLot(lot);
+    } catch {
+      setLotNote(LOT_MISS);
+    } finally {
+      setFindingLot(false);
+    }
+  }
+
+  /** Tapping a boundary makes it the street. The parcel is laid out again
+   *  from its own ground ring, so the lot turns on the sheet, north follows
+   *  it and the labels re-derive — nothing is re-measured or approximated. */
+  function setFrontage(i: number) {
+    if (!isPoly || i === frontage) return;
+    applyLot(reorientLot(design.lot, i), true);
+  }
+
+  /** Back to typed dimensions, keeping the overall size so nothing jumps. */
+  function clearLot() {
+    setLotNote("");
+    setDesign((p) => ({
+      ...p,
+      lot: sanitiseLot(undefined),
+      north: ((Math.round(p.north / 45) * 45) % 360 + 360) % 360,
+    }));
   }
 
   const nudgeUnderlay = (dx: number, dy: number) =>
@@ -691,7 +872,37 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     );
   }
 
+  /** Dashed distances from the selected structure to every boundary. On a
+   *  rectangle these are the four the tool has always drawn; on a real lot
+   *  they run to whichever boundary line is nearest, at whatever angle it
+   *  happens to sit. Measurements, both ways round — the sheet says how far,
+   *  never whether it's far enough. */
   function setbackLines(s: Structure) {
+    if (isPoly) {
+      const runs = lotSetbacks(s, lotOutline, frontage).filter((r) => r.v > 0.004);
+      return (
+        <g>
+          {runs.map((r) => {
+            const dx = r.x2 - r.x1, dy = r.y2 - r.y1;
+            const len = Math.hypot(dx, dy) || 1;
+            // Sit the figure just off its own dimension line, whichever way
+            // that line happens to run.
+            const ox = (-dy / len) * mm(1.5), oy = (dx / len) * mm(1.5);
+            return (
+              <g key={r.i}>
+                <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={BRASS}
+                  strokeWidth={mm(0.3)} strokeDasharray={`${mm(1.8)} ${mm(1.2)}`} />
+                <text x={(r.x1 + r.x2) / 2 + ox} y={(r.y1 + r.y2) / 2 + oy + mm(0.9)}
+                  textAnchor="middle" fontFamily={FONT_NUM} fontSize={mm(2.6)}
+                  fill={BRASS} style={halo}>
+                  {fmtM2(r.v)} m
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      );
+    }
     const marks = setbackMarks(s, lotW, lotD);
     const runs = [
       { ...marks.rear, vertical: true }, { ...marks.front, vertical: true },
@@ -711,6 +922,63 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
               {fmtM2(r.v)} m
             </text>
           </g>
+        ))}
+      </g>
+    );
+  }
+
+  /** Short form of a boundary's name for the plan itself, where "BOUNDARY 4"
+   *  would be four times the width of the line it labels. */
+  const shortEdgeName = (name: string) =>
+    name.startsWith("Boundary ") ? name.slice(9) : name.toUpperCase();
+
+  /** Every boundary of a real lot, dimensioned and named: its length outside
+   *  the line, what it is inside it, and the street boundary drawn heavier
+   *  because everything else is reckoned from it. */
+  function boundaryTexts() {
+    return (
+      <g pointerEvents="none">
+        <line x1={edges[frontage].a.x} y1={edges[frontage].a.y}
+          x2={edges[frontage].b.x} y2={edges[frontage].b.y}
+          stroke={SEAL} strokeWidth={mm(0.9)} strokeLinecap="round" />
+        {edges.map((e, i) => {
+          if (e.length < 0.5) return null;
+          return (
+            <g key={i}>
+              <text x={e.mid.x + e.nx * mm(2.4)} y={e.mid.y + e.ny * mm(2.4) + mm(0.9)}
+                textAnchor="middle" fontFamily={FONT_NUM} fontSize={mm(2.6)}
+                fill={INK} fillOpacity={0.8} style={halo}>
+                {fmtM(e.length)} m
+              </text>
+              <text x={e.mid.x - e.nx * mm(3.2)} y={e.mid.y - e.ny * mm(3.2) + mm(0.8)}
+                textAnchor="middle" fontFamily={FONT_LAB} fontWeight={700}
+                fontSize={mm(2.1)} letterSpacing={mm(0.25)}
+                fill={i === frontage ? SEAL : INK}
+                fillOpacity={i === frontage ? 0.95 : 0.45} style={halo}>
+                {shortEdgeName(edgeNames[i])}
+              </text>
+            </g>
+          );
+        })}
+      </g>
+    );
+  }
+
+  /** An invisible fat line over each boundary: tap one and it becomes the
+   *  street. The cadastre records parcels, not frontages, so whatever the
+   *  tool inferred is only ever an opening offer. Drawn under the structures
+   *  so a tap near the fence still picks up the shed sitting on it. */
+  function edgeTargets() {
+    const grab = Math.max(20 / pxPerM, mm(3));
+    return (
+      <g>
+        {edges.map((e, i) => (
+          <line key={i} x1={e.a.x} y1={e.a.y} x2={e.b.x} y2={e.b.y}
+            stroke="transparent" strokeWidth={grab} pointerEvents="stroke"
+            style={{ cursor: "pointer" }}
+            onPointerDown={(ev) => { ev.stopPropagation(); setFrontage(i); }}>
+            <title>{`Make this the street frontage — ${edgeNames[i]}, ${fmtM(e.length)} m`}</title>
+          </line>
         ))}
       </g>
     );
@@ -932,10 +1200,22 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           fontWeight={600} fontSize={mm(3.2)} letterSpacing={mm(0.5)} fill={INK} fillOpacity={0.55}>
           {(street.trim() || "Street").toUpperCase()}
         </text>
-        {/* the lot */}
-        <rect x={0} y={0} width={lotW} height={lotD} fill="#FFFFFF"
-          fillOpacity={seeThrough ? 0 : 1} stroke={INK} strokeWidth={mm(0.5)} />
-        {dimTexts()}
+        {/* the lot: the real parcel where we have one, a rectangle otherwise */}
+        {isPoly ? (
+          <>
+            <polygon points={lotOutline.map((p) => `${p.x},${p.y}`).join(" ")}
+              fill="#FFFFFF" fillOpacity={seeThrough ? 0 : 1}
+              stroke={INK} strokeWidth={mm(0.5)} strokeLinejoin="round" />
+            {interactive && !draw && edgeTargets()}
+            {boundaryTexts()}
+          </>
+        ) : (
+          <>
+            <rect x={0} y={0} width={lotW} height={lotD} fill="#FFFFFF"
+              fillOpacity={seeThrough ? 0 : 1} stroke={INK} strokeWidth={mm(0.5)} />
+            {dimTexts()}
+          </>
+        )}
         {sel && setbackLines(sel)}
         {design.structures.map((s) => structureNode(s, interactive && !draw))}
         {/* alignment guides while a drag is snapped */}
@@ -1012,28 +1292,58 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
                 }
               }} />
           </div>
-          <MetresField label="Lot width (m)" value={lotW} onCommit={(n) => setLot({ lotW: n })} />
-          <MetresField label="Lot depth (m)" value={lotD} onCommit={(n) => setLot({ lotD: n })} />
+          {isPoly ? (
+            <div className="sm:col-span-2 grid grid-cols-2 gap-2">
+              <div>
+                <span className="label">Lot area</span>
+                <p className="font-mono text-[15px] leading-[38px] text-ink">{fmtM(lotArea)} m²</p>
+              </div>
+              <div>
+                <span className="label">Overall</span>
+                <p className="font-mono text-[15px] leading-[38px] text-ink">
+                  {fmtM(lotW)} × {fmtM(lotD)} m
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <MetresField label="Lot width (m)" value={lotW} onCommit={(n) => setLot({ lotW: n })} />
+              <MetresField label="Lot depth (m)" value={lotD} onCommit={(n) => setLot({ lotD: n })} />
+            </>
+          )}
         </div>
-        {/* The aerial is only ever offered where it can actually turn up —
-            with no key there is nothing here to promise or explain. */}
+        {/* Neither of these is ever offered where it can't actually turn up:
+            no Google key, no geocode and so no lookup at all; no cadastre
+            configured, no lot button. A missing optional service must never
+            surface to a client as a promise the portal can't keep. */}
         {GOOGLE_MAPS_KEY !== "" && (
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <button type="button" onClick={findSite} disabled={finding}
+            {cadastre && (
+              <button type="button" onClick={findLot} disabled={findingLot || finding}
+                className="btn min-h-[40px] !py-2">
+                {findingLot ? "Looking…" : isPoly ? "Find my lot again" : "Find my lot"}
+              </button>
+            )}
+            <button type="button" onClick={findSite} disabled={finding || findingLot}
               className="btn-ghost min-h-[40px] !py-2">
               {finding ? "Looking…" : sited ? "Find this site again" : "Show the aerial photo"}
             </button>
-            <p className={`min-w-[200px] flex-1 text-[12.5px] leading-snug ${aerialNote ? "text-brass-deep" : "text-ink/55"}`}>
-              {aerialNote || (sited
-                ? "Line the photo up with your lot, then lock it and draw over the top."
-                : "Puts an aerial photo of the site behind your plan to trace over. It never appears on the printed plan.")}
+            <p className={`min-w-[200px] flex-1 text-[12.5px] leading-snug ${lotNote || aerialNote ? "text-brass-deep" : "text-ink/55"}`}>
+              {lotNote || aerialNote || (isPoly
+                ? LOT_INDICATIVE
+                : cadastre
+                  ? "We'll look your lot up on the State's records and draw the real boundary — shape, dimensions and all."
+                  : sited
+                    ? "Line the photo up with your lot, then lock it and draw over the top."
+                    : "Puts an aerial photo of the site behind your plan to trace over. It never appears on the printed plan.")}
             </p>
           </div>
         )}
         <p className="mt-2.5 text-[12.5px] text-ink/50">
-          Lots stay rectangular in this version, street frontage along the
-          bottom — structures can be rectangles, L-shapes, or any outline you
-          draw. The street name fills itself from the address; type over it if
+          {isPoly
+            ? "This is the lot as the State records it. Tap any boundary on the plan to make it the street frontage — the labels and the north arrow follow it."
+            : "Type the lot size here, or set it out yourself — street frontage runs along the bottom. Structures can be rectangles, L-shapes, or any outline you draw."}
+          {" "}The street name fills itself from the address; type over it if
           your frontage is a different street. Your design saves automatically
           in this browser, per address.
         </p>
@@ -1042,6 +1352,60 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
       <div className="grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]">
         {/* toolbox + selected structure */}
         <div className="space-y-5">
+          {/* The lot boundary — only once there's a real one to talk about. */}
+          {isPoly && (
+            <div className="card p-4">
+              <h2 className="sectionhead !mb-2">Lot boundary</h2>
+              <dl className="space-y-1 font-mono text-[12.5px] text-ink/75">
+                {boundary.lotId && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-ink/50">Lot</dt>
+                    <dd className="text-right">{boundary.lotId}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between gap-2">
+                  <dt className="text-ink/50">Area</dt>
+                  <dd>{fmtM(lotArea)} m²</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-ink/50">North</dt>
+                  <dd>{Math.round(north)}° on this sheet</dd>
+                </div>
+              </dl>
+
+              <div className="mt-3">
+                <span className="label">Boundaries — tap to set the frontage</span>
+                <div className="space-y-1">
+                  {edges.map((e, i) => (
+                    <button key={i} type="button" onClick={() => setFrontage(i)}
+                      aria-pressed={i === frontage}
+                      className={`flex min-h-[36px] w-full items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-left transition ${
+                        i === frontage
+                          ? "border-seal/50 bg-wash"
+                          : "border-rule bg-white hover:border-seal/40 hover:bg-wash"
+                      }`}>
+                      <span className={`text-[13px] ${i === frontage ? "font-semibold text-seal" : "text-ink/70"}`}>
+                        {edgeNames[i]}
+                      </span>
+                      <span className="font-mono text-[12px] text-ink/60">{fmtM(e.length)} m</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button type="button" onClick={clearLot}
+                className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
+                Type the dimensions instead
+              </button>
+              <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                {boundary.source
+                  ? `${boundary.source}${boundary.fetched ? `, fetched ${fmtDate(boundary.fetched)}` : ""}. `
+                  : ""}
+                {LOT_INDICATIVE}
+              </p>
+            </div>
+          )}
+
           {/* Aerial alignment — only once there's a photo to line up. */}
           {sited && (
             <div className="card p-4">
@@ -1190,13 +1554,30 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
                 <div>
                   <span className="label">Distance to boundaries</span>
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[12.5px] text-ink/75">
-                    {Object.entries(setbacks(sel, lotW, lotD)).map(([side, v]) => (
-                      <div key={side} className="flex justify-between gap-2">
-                        <dt className="capitalize text-ink/50">{side === "front" ? "front (street)" : side}</dt>
-                        <dd>{fmtM2(v)} m</dd>
-                      </div>
-                    ))}
+                    {isPoly
+                      ? lotSetbacks(sel, lotOutline, frontage).map((r) => (
+                          <div key={r.i} className="flex justify-between gap-2">
+                            <dt className="text-ink/50">
+                              {r.label === "Front" ? "front (street)" : r.label.toLowerCase()}
+                            </dt>
+                            <dd>{fmtM2(r.v)} m</dd>
+                          </div>
+                        ))
+                      : Object.entries(setbacks(sel, lotW, lotD)).map(([side, v]) => (
+                          <div key={side} className="flex justify-between gap-2">
+                            <dt className="capitalize text-ink/50">{side === "front" ? "front (street)" : side}</dt>
+                            <dd>{fmtM2(v)} m</dd>
+                          </div>
+                        ))}
                   </dl>
+                  {/* A polygon lot is not its bounding box, so a structure can
+                      be dragged out of it. Said as an observation, not a
+                      ruling — this tool has never told anyone they're wrong. */}
+                  {isPoly && !polygonInside(footprint(sel), lotOutline) && (
+                    <p className="mt-1.5 text-[12.5px] leading-snug text-brass-deep">
+                      Part of this sits outside the lot boundary — drag it back in.
+                    </p>
+                  )}
                 </div>
                 <button type="button" onClick={rotateSelected} className="btn-ghost w-full">
                   Rotate 90°{sel.rot ? ` — at ${sel.rot}°` : ""}
@@ -1219,10 +1600,21 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Sheet</h2>
             <div className="space-y-2">
-              <button type="button" className="btn-ghost w-full"
-                onClick={() => setDesign((p) => ({ ...p, north: (p.north + 45) % 360 }))}>
-                Rotate north — {north}°
-              </button>
+              {/* With a real parcel on the sheet, north is a fact rather than
+                  a setting: it falls out of the boundary's own bearing, and
+                  turning it by hand would only put it out. Choose a different
+                  frontage instead and the whole sheet turns together. */}
+              {isPoly ? (
+                <p className="rounded-md border border-rule bg-wash px-3 py-2 text-[12.5px] leading-snug text-ink/60">
+                  North is {Math.round(north)}° on this sheet, worked out from the
+                  lot boundary. Tap a different boundary to turn the plan.
+                </p>
+              ) : (
+                <button type="button" className="btn-ghost w-full"
+                  onClick={() => setDesign((p) => ({ ...p, north: (p.north + 45) % 360 }))}>
+                  Rotate north — {north}°
+                </button>
+              )}
               <button type="button" className="btn w-full" onClick={() => window.print()}>
                 Print / save as PDF
               </button>
@@ -1350,7 +1742,9 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           </div>
           <div style={{ display: "flex" }}>
             {[
-              ["Lot", `${fmtM(lotW)} m × ${fmtM(lotD)} m`],
+              ["Lot", isPoly
+                ? `${fmtM(lotArea)} m² — ${fmtM(lotW)} × ${fmtM(lotD)} m overall`
+                : `${fmtM(lotW)} m × ${fmtM(lotD)} m`],
               ["Street frontage", street.trim() || "—"],
               ["Scale", fits ? `1:${denom} (A4)` : "Reduced to fit A4 — use the scale bar"],
               ["Date", today],
@@ -1361,11 +1755,40 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
               </div>
             ))}
           </div>
+          {/* Where the boundary came from and when. A plan that draws the
+              State's cadastre must say so on its face: the reader has to be
+              able to tell a fetched boundary from a measured one without
+              being told, and to know how old it is. */}
+          {isPoly && boundary.source && (
+            <div style={{ padding: "2mm 3.5mm", borderTop: "0.3mm solid #2B3A31" }}>
+              <div style={{ fontSize: "2.3mm", textTransform: "uppercase", letterSpacing: "0.4mm", opacity: 0.55 }}>
+                Lot boundary
+              </div>
+              <div style={{ fontSize: "2.9mm", fontFamily: FONT_NUM }} data-cadastre-source="1">
+                {boundary.lotId ? `${boundary.lotId} — ` : ""}{boundary.source}
+                {boundary.fetched ? `, retrieved ${fmtDate(boundary.fetched)}` : ""}
+              </div>
+            </div>
+          )}
         </div>
         <p style={{ marginTop: "3mm", fontSize: "2.6mm", lineHeight: 1.5, color: INK, opacity: 0.75, fontFamily: FONT_LAB }}>
-          Prepared by the applicant using the CFBA plan tool — boundaries and
-          dimensions as entered by the applicant. Not a certified document and
-          not a survey.
+          {isPoly && boundary.source ? (
+            <>
+              Prepared by the applicant using the CFBA plan tool. The lot
+              boundary is taken from {boundary.source}
+              {boundary.fetched ? ` on ${fmtDate(boundary.fetched)}` : ""}:
+              cadastral boundaries are indicative and can sit a metre or more
+              from the surveyed pegs. Structures, dimensions and the nominated
+              frontage are as entered by the applicant. Not a certified
+              document and not a survey.
+            </>
+          ) : (
+            <>
+              Prepared by the applicant using the CFBA plan tool — boundaries
+              and dimensions as entered by the applicant. Not a certified
+              document and not a survey.
+            </>
+          )}
         </p>
       </div>
 

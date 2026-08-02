@@ -6,6 +6,7 @@ import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
 import { SitePlanBuilder } from "@/components/SitePlanBuilder";
+import { CADASTRE_READY } from "@/lib/cadastre-source";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,18 @@ export default async function SitePlan() {
           drawn complies is judged during assessment, so if you&apos;re unsure
           about a distance or a detail, ask us before you lodge.
         </p>
+        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && CADASTRE_READY && (
+          <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
+            Put your address in and hit <strong className="font-semibold">Find my
+            lot</strong>: the tool looks your block up on the State&apos;s land
+            records and draws the real boundary — shape, dimensions and
+            orientation — with an aerial photo lined up behind it. Those
+            boundaries are indicative rather than surveyed, so check anything
+            tight against your own survey, and if your lot is a new one it may
+            not be on the records yet — you can still trace it or type the
+            dimensions in.
+          </p>
+        )}
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
           <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
             Put your address in and the tool can drop an aerial photo of the
@@ -61,7 +74,7 @@ export default async function SitePlan() {
             lodge a job</Link>.
         </p>
       </div>
-      <SitePlanBuilder companyId={session.companyId} />
+      <SitePlanBuilder companyId={session.companyId} cadastre={CADASTRE_READY} />
     </AppShell>
   );
 }

@@ -71,6 +71,76 @@ export function rotateStructure(
   s: StructureShape, lotW: number, lotD: number,
 ): { rot: number; x: number; y: number };
 
+// --- the lot, rectangle or polygon -----------------------------------------
+
+export function rectLotPts(lotW: number, lotD: number): Pt[];
+export const RECT_FRONTAGE: number;
+
+/** The lot as it is stored on a design. `kind: "rect"` is the default and is
+ *  every design saved before the cadastre existed. */
+export interface Lot {
+  kind: "rect" | "poly";
+  /** Corners in plan metres, top-left normalised at (0, 0). */
+  pts: Pt[];
+  /** The parcel's own ground ring, [[lat, lng], …] — what re-orienting the
+   *  sheet is recomputed from. Empty for a lot that wasn't fetched. */
+  ring: [number, number][];
+  /** Index of the street boundary: edge i runs pts[i] → pts[i + 1]. */
+  frontage: number;
+  /** True north for this placement, degrees clockwise from straight up. */
+  north: number;
+  /** Plan position of the point at `lat`/`lng` — anchors the aerial. */
+  anchor: Pt | null;
+  lat: number | null;
+  lng: number | null;
+  /** Where the boundary came from, and the date it was fetched. Both are
+   *  printed on the sheet; neither is ever a claim of survey accuracy. */
+  source: string;
+  fetched: string;
+  lotId: string;
+  address: string;
+}
+
+export function lotPts(lot: Lot | null | undefined, lotW: number, lotD: number): Pt[];
+export function lotFrontage(lot: Lot | null | undefined): number;
+
+export interface LotEdge {
+  i: number;
+  a: Pt;
+  b: Pt;
+  length: number;
+  mid: Pt;
+  /** Outward unit normal — where a label sits clear of the lot. */
+  nx: number;
+  ny: number;
+}
+export function lotEdges(pts: Pt[]): LotEdge[];
+export function edgeLabels(n: number, frontage: number): string[];
+export function polygonCentroid(pts: Pt[]): Pt;
+export function closestOnSegment(a: Pt, b: Pt, p: Pt): Pt;
+export function pointToSegment(a: Pt, b: Pt, p: Pt): number;
+export function minDistPolyToSegment(
+  poly: Pt[], a: Pt, b: Pt,
+): { d: number; from: Pt; to: Pt };
+export function polygonContains(pts: Pt[], p: Pt): boolean;
+export function polygonInside(inner: Pt[], outer: Pt[], tol?: number): boolean;
+
+export interface LotSetback {
+  i: number;
+  label: string;
+  /** Shortest distance from the structure's outline to this boundary. */
+  v: number;
+  length: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+export function lotSetbacks(
+  s: StructureShape, pts: Pt[], frontage?: number,
+): LotSetback[];
+export function sanitiseLot(raw: unknown): Lot;
+
 export interface AlignGuide {
   axis: "x" | "y";
   at: number;
@@ -128,6 +198,7 @@ export function offsetLatLng(lat: number, lng: number, east: number, north: numb
 export function metresBetween(from: LatLng, to: LatLng): { east: number; north: number };
 export function underlayAnchor(
   lotW: number, lotD: number, offsetX?: number, offsetY?: number,
+  base?: Pt | null,
 ): Pt;
 export function underlayCentre(
   site: LatLng, anchor: Pt, elementCentre: Pt, deg: number,

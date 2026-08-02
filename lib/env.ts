@@ -50,6 +50,25 @@ export const env = {
   resendApiKey: process.env.RESEND_API_KEY || "",
   fromEmail: process.env.FROM_EMAIL || "no-reply@cfbuildingapprovals.com.au",
   appUrl: process.env.APP_URL || "http://localhost:3000",
+
+  // Landgate / SLIP cadastre, for the site plan tool's lot boundaries.
+  //
+  // OFF until CADASTRE_ENABLED=1. The URL below is the best-known Landgate
+  // cadastre layer but has NOT been called from this codebase — see
+  // docs/SPECS.md § 7. Keeping it in an environment variable means a wrong
+  // guess is a Vercel setting away from being right, not a code change.
+  cadastreEnabled: process.env.CADASTRE_ENABLED === "1",
+  cadastreUrl: process.env.CADASTRE_URL ||
+    "https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Property_and_Planning/MapServer/6",
+  // Server-side only. SLIP's public services need nothing; an authenticated
+  // one takes a token. Never NEXT_PUBLIC_, never in a response.
+  cadastreToken: process.env.CADASTRE_TOKEN || "",
+  // What the printed sheet names as the source of the boundary.
+  cadastreSource: process.env.CADASTRE_SOURCE_NAME || "Landgate cadastre (SLIP)",
+  cadastreTimeoutMs: Number(process.env.CADASTRE_TIMEOUT_MS || "6000"),
+  // Development seam, demo mode only: a JSON file to answer lookups from
+  // instead of calling Landgate, so the success path can be walked offline.
+  cadastreFixture: process.env.CADASTRE_FIXTURE || "",
 };
 
 export const DEMO_MODE =
