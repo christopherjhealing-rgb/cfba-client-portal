@@ -133,10 +133,19 @@ export default async function MyJobs({
         <EmptyState title="Nothing Here"
           body="No jobs match this filter. Try 'All' to see everything you have with us." />
       ) : (
-        <div className="card overflow-hidden">
-          {/* The table keeps its column layout and scrolls sideways on
-              phones — without this the action column was clipped
-              unreachably behind the card's overflow-hidden. */}
+        <>
+        {/* Below lg the same rows render as cards — JobCards, at the foot of
+            this file. The table needs 640px to hold its four columns, so on a
+            390px screen it scrolled sideways, and the column that had to be
+            scrolled to was the one holding the action. */}
+        <div className="lg:hidden">
+          <JobCards received={showReceived ? received : []} rows={rows}
+            bucketOf={bucketOf} elapsedFor={elapsedFor} />
+        </div>
+
+        {/* The table, from lg up, exactly as it was — the right pattern on the
+            screen this portal is mostly used on. */}
+        <div className="card hidden overflow-hidden lg:block">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse">
             <thead className="border-b border-rule bg-wash">
@@ -216,7 +225,92 @@ export default async function MyJobs({
           </table>
           </div>
         </div>
+        </>
       )}
     </AppShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The same jobs as cards, for below lg. Deliberately not a shrunken table: the
+// headline is the address, because that is how a builder knows which job this
+// is, with the status under it and one action. The job number moves to the
+// meta line — it matters when quoting a job to us, not when finding it.
+// ---------------------------------------------------------------------------
+type Row = Awaited<ReturnType<typeof repo.listJobsForCompany>>[number] & Record<string, unknown>;
+
+function JobCards({
+  received, rows, bucketOf, elapsedFor,
+}: {
+  received: Awaited<ReturnType<typeof repo.listSubmissionsForCompany>>;
+  rows: Row[];
+  bucketOf: (ref: string) => string;
+  elapsedFor: (j: Row) => number | null;
+}) {
+  return (
+    <div className="space-y-2.5">
+      {received.map((r) => (
+        <div key={r.id} className="card p-4">
+          <div className="flex items-start gap-3">
+            <JobArt description={r.description} size="sm" />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium leading-snug text-ink">{r.address}</div>
+              <div className="mt-0.5 break-words text-[13px] text-ink/55">{r.description}</div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="chip">Received — awaiting CFBA</span>
+          </div>
+        </div>
+      ))}
+
+      {rows.map((j) => {
+        const ref = j.ref as string;
+        const b = bucketOf(ref);
+        const elapsed = b === "progress" ? elapsedFor(j) : null;
+        const needs = needsClientInfo(j);
+        return (
+          <div key={ref}
+            className={`card p-4 ${needs ? "border-[#E4C98A] bg-[#FCF7EC]" : ""}`}>
+            <Link href={`/jobs/${encodeURIComponent(ref)}`} className="flex items-start gap-3">
+              <JobArt description={j.description as string} size="sm"
+                tone={needs ? "amber" : "seal"} />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium leading-snug text-ink">{j.address as string}</div>
+                <div className="mt-0.5 break-words text-[13px] text-ink/55">
+                  {j.description as string}
+                  {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
+                </div>
+                <div className="mt-1 font-mono text-[11.5px] text-ink/45">
+                  {ref}
+                  {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
+                </div>
+              </div>
+            </Link>
+
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className={`chip ${needs ? "chip-brass" : b === "ready" ? "chip-seal" : ""}`}>
+                {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
+              </span>
+              {elapsed !== null && (
+                <span className="text-[12px] text-ink/55">Day {elapsed + 1}</span>
+              )}
+            </div>
+
+            {b === "progress" ? (
+              needs && (
+                <Link href={`/messages?ref=${encodeURIComponent(ref)}`}
+                  className="btn-ghost mt-3 w-full">Send Info</Link>
+              )
+            ) : (
+              <div className="mt-3">
+                <DownloadButton block href={`/api/jobs/${encodeURIComponent(ref)}/download`}
+                  label={b === "past" ? "Download Again" : "Download CDC Package"} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
