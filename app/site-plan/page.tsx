@@ -38,15 +38,30 @@ export default async function SitePlan() {
         sub="Set out your lot, place the structures, and print a clear, dimensioned site plan."
         action={<span className="chip">Early Version</span>}
       />
-      <div className="card mb-5 p-5">
-        <p className="max-w-2xl text-[14px] leading-relaxed text-ink/70">
-          A clear site plan with every dimension on it is the single best thing
-          you can lodge with — most of the questions we have to come back with
-          start from a plan that leaves us guessing. This tool helps you prepare
-          one: it draws and measures what you enter. Whether what you&apos;ve
+      {/* Five paragraphs of preamble ran to 439px, which pushed the drawing
+          itself below the fold on a 900px screen — on a page whose whole point
+          is the drawing. The line that protects everyone (we measure, the
+          assessment judges) stays in plain sight; the rest is a fold-out for
+          the first-timer who wants it. */}
+      <div className="card mb-5 px-5 py-4">
+        <p className="max-w-3xl text-[14px] leading-relaxed text-ink/70">
+          This tool draws and measures what you enter. Whether what you&apos;ve
           drawn complies is judged during assessment, so if you&apos;re unsure
-          about a distance or a detail, ask us before you lodge.
+          about a distance or a detail, ask us before you lodge. Printed your
+          plan? It goes in the drawings bucket when you{" "}
+          <Link href="/submit" className="font-medium text-seal underline underline-offset-2">
+            lodge a job</Link>.
         </p>
+        <details className="group mt-2">
+          <summary className="cursor-pointer list-none font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-seal hover:text-seal-deep">
+            How It Works
+            <span className="ml-1 inline-block transition group-open:rotate-90">›</span>
+          </summary>
+          <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
+            A clear site plan with every dimension on it is the single best
+            thing you can lodge with — most of the questions we have to come
+            back with start from a plan that leaves us guessing.
+          </p>
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && CADASTRE_READY && (
           <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
             Put your address in and hit <strong className="font-semibold">Find my
@@ -91,11 +106,7 @@ export default async function SitePlan() {
           tool measures and labels; whether a distance is enough is judged during
           assessment.
         </p>
-        <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
-          Printed your plan? It goes in the drawings bucket when you{" "}
-          <Link href="/submit" className="font-medium text-seal underline underline-offset-2">
-            lodge a job</Link>.
-        </p>
+        </details>
       </div>
       <SitePlanBuilder companyId={session.companyId} cadastre={CADASTRE_READY} />
     </AppShell>
