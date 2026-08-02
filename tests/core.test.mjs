@@ -146,6 +146,15 @@ test("sendColumnWrite honours a board that spells the rungs differently", () => 
   assert.equal(sendColumnWrite("READY", "Downloaded", ladder), "unknown");
 });
 
+test("a card still carrying a retired label can still move forward", () => {
+  // NO and YES came off the board in Aug 2026. Cards that kept the value must
+  // not be stranded by that: if these ever return "unknown", the portal quietly
+  // stops moving them and nothing anywhere says so.
+  assert.equal(sendColumnWrite("NO", SEND_READY), "write");
+  assert.equal(sendColumnWrite("YES", SEND_READY), "write");
+  assert.equal(sendColumnWrite("NO", SEND_DOWNLOADED), "write");
+});
+
 test("sendRank places every rung and nothing else", () => {
   assert.equal(sendRank("NO"), 0);
   assert.equal(sendRank("SENT"), 2);
