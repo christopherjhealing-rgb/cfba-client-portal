@@ -19,8 +19,8 @@ const NAV: NavItem[] = [
   { href: "/downloads", label: "Downloads", icon: "download" },
   { href: "/info-sheets", label: "Info sheets", icon: "book" },
   { href: "/resources", label: "Resources", icon: "folder" },
-  { href: "/site-plan", label: "Site plan tool", icon: "edit" },
-  { href: "/engineering", label: "Engineering", icon: "check" },
+  { href: "/site-plan", label: "Site plan tool", icon: "ruler" },
+  { href: "/engineering", label: "Engineering", icon: "beam" },
   { href: "/messages", label: "Messages", icon: "mail" },
   { href: "/details", label: "My details", icon: "user" },
   { href: "/help", label: "Help & support", icon: "help" },
@@ -149,6 +149,20 @@ export function AppShell({
               </span>
               {impersonated ? "Stop viewing" : "Sign out"}
             </button>
+          </form>
+
+          {/* Global search — a plain GET to My jobs, which matches ref, your
+              ref, address and description. Works without JS, and rides along
+              in the phone drawer. */}
+          <form action="/jobs" method="get" className="mt-3 border-t border-white/10 px-1 pt-4">
+            <label htmlFor="shell-search" className="sr-only">Search your jobs</label>
+            <input
+              id="shell-search"
+              name="q"
+              type="search"
+              placeholder="Search your jobs…"
+              className="w-full rounded-md border border-white/10 bg-white/[0.07] px-3 py-2 text-[13px] text-white/70 outline-none transition placeholder:text-white/40 focus:border-white/30 focus:text-white"
+            />
           </form>
         </nav>
 

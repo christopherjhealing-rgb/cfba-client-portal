@@ -5,7 +5,9 @@ import { Icon } from "./Icon";
 export interface Bucket {
   key: string;
   label: string;
-  hint: string;
+  /** Short guidance under the label. May carry a link (e.g. the drawings
+      bucket pointing at the site plan tool). */
+  hint: React.ReactNode;
   required?: boolean;
 }
 

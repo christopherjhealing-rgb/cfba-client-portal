@@ -40,7 +40,9 @@ async function sign(payload: Record<string, unknown>, hours: number) {
     .sign(secret);
 }
 
-export async function setClientSession(s: ClientSession, hours = 24 * 14) {
+// 30 days with "remember me" (was 14): a builder who has to re-log weekly on
+// site stops using the portal. The JWT expiry and cookie maxAge move together.
+export async function setClientSession(s: ClientSession, hours = 24 * 30) {
   const token = await sign({ ...s, kind: "client" }, hours);
   (await cookies()).set(CLIENT_COOKIE, token, {
     httpOnly: true,

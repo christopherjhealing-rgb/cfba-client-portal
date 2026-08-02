@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const username = normUsername(body.username);
   const password = (body.password || "").toString();
-  // "Remember me" keeps the session for a fortnight; without it the cookie
+  // "Remember me" keeps the session for 30 days; without it the cookie
   // lasts a working day, which suits a shared site office machine.
   const remember = body.remember !== false;
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   await clearFailures(username);
   await setClientSession(
     { companyId: company.id, companyName: company.name, username, displayName: login.displayName || undefined },
-    remember ? 24 * 14 : 12
+    remember ? 24 * 30 : 12
   );
   return NextResponse.json({ ok: true });
 }

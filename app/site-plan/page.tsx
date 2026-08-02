@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import { unreadCount } from "@/lib/unread";
@@ -44,6 +45,11 @@ export default async function SitePlan() {
           one: it draws and measures what you enter. Whether what you&apos;ve
           drawn complies is judged during assessment, so if you&apos;re unsure
           about a distance or a detail, ask us before you lodge.
+        </p>
+        <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
+          Printed your plan? It goes in the drawings bucket when you{" "}
+          <Link href="/submit" className="font-medium text-seal underline underline-offset-2">
+            lodge a job</Link>.
         </p>
       </div>
       <SitePlanBuilder companyId={session.companyId} />

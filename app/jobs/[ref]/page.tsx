@@ -101,12 +101,19 @@ export default async function JobDetail({
               </span>
             )}
           </div>
-          {downloadable && (
-            <DownloadButton
-              href={`/api/jobs/${encodeURIComponent(ref)}/download`}
-              label={bucket === "downloaded" ? "Download again" : "Download certificate"}
-            />
-          )}
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {bucket !== "expired" && !hidden.has("amend") && (
+              <Link href={`/amend?ref=${encodeURIComponent(ref)}`} className="btn-ghost">
+                Amend this job
+              </Link>
+            )}
+            {downloadable && (
+              <DownloadButton
+                href={`/api/jobs/${encodeURIComponent(ref)}/download`}
+                label={bucket === "downloaded" ? "Download again" : "Download certificate"}
+              />
+            )}
+          </div>
         </div>
         <JobTimeline job={job} />
         <p className="mt-4 text-[12.5px] text-ink/50">
