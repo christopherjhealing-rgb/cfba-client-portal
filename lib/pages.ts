@@ -4,14 +4,14 @@
 import * as repo from "./repo";
 
 export const TOGGLEABLE_PAGES = [
-  { key: "submit", href: "/submit", label: "Lodge a job" },
-  { key: "amend", href: "/amend", label: "Amend a job" },
+  { key: "submit", href: "/submit", label: "Lodge a Job" },
+  { key: "amend", href: "/amend", label: "Amend a Job" },
   { key: "downloads", href: "/downloads", label: "Downloads" },
-  { key: "infoSheets", href: "/info-sheets", label: "Info sheets" },
+  { key: "infoSheets", href: "/info-sheets", label: "Info Sheets" },
   { key: "resources", href: "/resources", label: "Resources" },
-  { key: "sitePlan", href: "/site-plan", label: "Site plan tool" },
+  { key: "sitePlan", href: "/site-plan", label: "Site Plan Tool" },
   { key: "messages", href: "/messages", label: "Messages" },
-  { key: "help", href: "/help", label: "Help & support" },
+  { key: "help", href: "/help", label: "Help & Support" },
 ] as const;
 
 export type PageKey = (typeof TOGGLEABLE_PAGES)[number]["key"];

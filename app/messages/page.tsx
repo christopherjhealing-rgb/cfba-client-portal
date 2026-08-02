@@ -71,11 +71,11 @@ export default async function Messages({
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead hero="/heroes/table.jpg" title="My messages" sub="Everything we've sent you about a job, and your replies." />
+      <PageHead hero="/heroes/table.jpg" title="My Messages" sub="Everything we've sent you about a job, and your replies." />
 
       {listRefs.length === 0 ? (
         <EmptyState
-          title="No messages"
+          title="No Messages"
           body="When we need something on a job, or have an update worth sending, it appears here."
         />
       ) : (
@@ -120,7 +120,7 @@ export default async function Messages({
                 )}
               </div>
               {job && needsClientInfo(job) && (
-                <span className="chip chip-brass shrink-0">With you</span>
+                <span className="chip chip-brass shrink-0">With You</span>
               )}
             </div>
 

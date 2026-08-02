@@ -19,8 +19,8 @@ export const dynamic = "force-dynamic";
 
 const FILTERS = [
   { key: "all", label: "All" },
-  { key: "action", label: "Needs you" },
-  { key: "progress", label: "In progress" },
+  { key: "action", label: "Needs You" },
+  { key: "progress", label: "In Progress" },
   { key: "ready", label: "Ready" },
   { key: "past", label: "Past" },
 ] as const;
@@ -89,9 +89,9 @@ export default async function MyJobs({
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         hero="/heroes/carport.jpg"
-        title="My jobs"
+        title="My Jobs"
         sub="Every job you have with CF Building Approvals."
-        action={<Link href="/submit" className="btn"><Icon name="plus" /> Lodge a job</Link>}
+        action={<Link href="/submit" className="btn"><Icon name="plus" /> Lodge a Job</Link>}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -121,7 +121,7 @@ export default async function MyJobs({
       </div>
 
       {rows.length === 0 && !(showReceived && received.length) ? (
-        <EmptyState title="Nothing here"
+        <EmptyState title="Nothing Here"
           body="No jobs match this filter. Try 'All' to see everything you have with us." />
       ) : (
         <div className="card overflow-hidden">
@@ -132,7 +132,7 @@ export default async function MyJobs({
           <table className="w-full min-w-[640px] border-collapse">
             <thead className="border-b border-rule bg-wash">
               <tr>
-                <th className="th w-[110px]">Job no.</th>
+                <th className="th w-[110px]">Job No.</th>
                 <th className="th">Address</th>
                 <th className="th w-[240px]">Status</th>
                 <th className="th w-[150px] text-right">Action</th>
@@ -193,11 +193,11 @@ export default async function MyJobs({
                       {b === "progress" ? (
                         needsClientInfo(j) ? (
                           <Link href={`/messages?ref=${encodeURIComponent(j.ref as string)}`}
-                            className="btn-ghost">Send info</Link>
+                            className="btn-ghost">Send Info</Link>
                         ) : <span className="text-[13px] text-ink/35">—</span>
                       ) : (
                         <DownloadButton href={`/api/jobs/${encodeURIComponent(j.ref as string)}/download`}
-                          label={b === "past" ? "Download again" : "Download"} />
+                          label={b === "past" ? "Download Again" : "Download"} />
                       )}
                     </td>
                   </tr>

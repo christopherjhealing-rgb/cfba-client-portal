@@ -34,7 +34,7 @@ export function DecisionButtons({ id }: { id: string }) {
         <div className="mt-2 flex gap-2">
           <button className="btn-ghost flex-1" onClick={() => setRejecting(false)}>Cancel</button>
           <button className="btn flex-1" disabled={busy !== null} onClick={() => decide("reject")}>
-            {busy === "reject" ? "…" : "Confirm reject"}
+            {busy === "reject" ? "…" : "Confirm Reject"}
           </button>
         </div>
         {msg && <p className="mt-2 text-[12px] text-flag">{msg}</p>}

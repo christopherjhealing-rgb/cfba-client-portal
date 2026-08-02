@@ -13,17 +13,17 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
-  { href: "/jobs", label: "My jobs", icon: "list" },
-  { href: "/messages", label: "My messages", icon: "mail" },
-  { href: "/submit", label: "Lodge a job", icon: "plus" },
-  { href: "/amend", label: "Amend a job", icon: "edit" },
+  { href: "/jobs", label: "My Jobs", icon: "list" },
+  { href: "/messages", label: "My Messages", icon: "mail" },
+  { href: "/submit", label: "Lodge a Job", icon: "plus" },
+  { href: "/amend", label: "Amend a Job", icon: "edit" },
   { href: "/downloads", label: "Downloads", icon: "download" },
-  { href: "/info-sheets", label: "Info sheets", icon: "book" },
+  { href: "/info-sheets", label: "Info Sheets", icon: "book" },
   { href: "/resources", label: "Resources", icon: "folder" },
-  { href: "/site-plan", label: "Site plan tool", icon: "ruler" },
+  { href: "/site-plan", label: "Site Plan Tool", icon: "ruler" },
   { href: "/engineering", label: "Engineering", icon: "beam" },
-  { href: "/details", label: "My details", icon: "user" },
-  { href: "/help", label: "Help & support", icon: "help" },
+  { href: "/details", label: "My Details", icon: "user" },
+  { href: "/help", label: "Help & Support", icon: "help" },
 ];
 
 export function AppShell({
@@ -151,7 +151,7 @@ export function AppShell({
               <span className="shrink-0 opacity-80">
                 <Icon name="signOut" size={16} />
               </span>
-              {impersonated ? "Stop viewing" : "Sign out"}
+              {impersonated ? "Stop Viewing" : "Sign Out"}
             </button>
           </form>
 

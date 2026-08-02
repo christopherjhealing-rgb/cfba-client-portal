@@ -37,7 +37,7 @@ export function PageToggles({
   return (
     <div className="card mb-8 p-4">
       <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-        Portal pages
+        Portal Pages
       </h2>
       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
         Switch a section off while you update it — its link disappears from the

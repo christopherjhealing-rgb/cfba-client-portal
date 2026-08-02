@@ -16,7 +16,7 @@ const BUCKETS: Bucket[] = [
         Draw one here</a>.</> },
   { key: "engineering", label: "Engineering", required: true,
     hint: "Signed and dated structural certification. Guidance note 02 lists what we look for." },
-  { key: "other", label: "Other supporting documents",
+  { key: "other", label: "Other Supporting Documents",
     hint: "BAL assessment, soil classification, anything else relevant. Optional." },
 ];
 
@@ -148,7 +148,7 @@ export function SubmitForm() {
         <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-seal/10 text-seal">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
         </div>
-        <h2 className="font-display text-[21px] font-semibold">Job lodged</h2>
+        <h2 className="font-display text-[21px] font-semibold">Job Lodged</h2>
         <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-ink/65">
           {instant ? (
             <>Thanks — it&apos;s on our board. It&apos;ll appear at the top of
@@ -166,7 +166,7 @@ export function SubmitForm() {
             is on the job — you&apos;ll see it against this job and in our emails.
           </p>
         )}
-        <a href="/jobs" className="btn mt-6">View my jobs</a>
+        <a href="/jobs" className="btn mt-6">View My Jobs</a>
       </div>
     );
   }
@@ -180,7 +180,7 @@ export function SubmitForm() {
 
   return (
     <form onSubmit={submit} className="card p-6 sm:p-7">
-      <label className="label" htmlFor="address">Site address</label>
+      <label className="label" htmlFor="address">Site Address</label>
       <AddressField id="address" required autoFocus value={address}
         onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
 
@@ -205,7 +205,7 @@ export function SubmitForm() {
       </div>
 
       <div className="mt-6">
-        <p className="label">Supporting documents</p>
+        <p className="label">Supporting Documents</p>
         <p className="mb-3 text-[13px] leading-relaxed text-ink/60">
           Drawings and engineering are both needed before an assessment can start.
           A job lodged without them will only come straight back to you.
@@ -231,7 +231,7 @@ export function SubmitForm() {
               {b.key === "engineering" && library.length > 0 && (
                 <div className="mt-2 rounded-lg border border-rule bg-white px-4 py-3">
                   <p className="font-display text-[13px] font-semibold text-ink">
-                    From your documents
+                    From Your Documents
                   </p>
                   <p className="mt-0.5 text-[12px] leading-snug text-ink/55">
                     Engineering you&apos;ve saved with us — tick to attach it to this job.
@@ -282,7 +282,7 @@ export function SubmitForm() {
         </p>
       </div>
 
-      <label className="label mt-6" htmlFor="clientRef">Your reference (optional)</label>
+      <label className="label mt-6" htmlFor="clientRef">Your Reference (optional)</label>
       <input id="clientRef" value={clientRef} maxLength={60}
         onChange={(e) => setClientRef(e.target.value)} className="field"
         placeholder="Your own PO or job number — shown on this job and quoted in our emails" />
@@ -295,13 +295,13 @@ export function SubmitForm() {
         Added to the job&apos;s conversation for our team — not shown as a public field.
       </p>
 
-      <label className="label mt-4" htmlFor="contact">Contact for this job (optional)</label>
+      <label className="label mt-4" htmlFor="contact">Contact for This Job (optional)</label>
       <input id="contact" type="email" value={contact}
         onChange={(e) => setContact(e.target.value)} className="field"
         placeholder="site.supervisor@yourcompany.com.au" />
 
       <button className="btn mt-6 w-full" disabled={busy || !ready}>
-        {busy ? (progress || "Lodging…") : "Lodge this job"}
+        {busy ? (progress || "Lodging…") : "Lodge This Job"}
       </button>
       {!ready && (
         <p className="mt-2 text-center text-[12px] text-ink/50">

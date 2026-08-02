@@ -89,7 +89,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
         </div>
-        <h2 className="font-display text-[21px] font-semibold">Amendment sent</h2>
+        <h2 className="font-display text-[21px] font-semibold">Amendment Sent</h2>
         <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-ink/65">
           {instant ? (
             <>It&apos;s been opened as a new job{ref ? ` linked to ${ref}` : ""} and will
@@ -101,7 +101,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
             as it is. We&apos;ll reply to the email address on your account.</>
           )}
         </p>
-        <a href="/jobs" className="btn mt-6">Back to my jobs</a>
+        <a href="/jobs" className="btn mt-6">Back to My Jobs</a>
       </div>
     );
   }
@@ -109,7 +109,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
   if (jobs.length === 0) {
     return (
       <div className="card px-6 py-10 text-center">
-        <p className="font-display text-[16px] font-semibold">Nothing to amend yet</p>
+        <p className="font-display text-[16px] font-semibold">Nothing to Amend Yet</p>
         <p className="mx-auto mt-1 max-w-sm text-[13px] text-ink/55">
           Once you have a job with us, you can request a change to it here.
         </p>
@@ -163,12 +163,12 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       <input id="what" required value={description} onChange={(e) => setDescription(e.target.value)}
         className="field" placeholder="e.g. Patio extended by 1.2 m to the north" />
 
-      <label className="label mt-5" htmlFor="notes">Anything else we should know</label>
+      <label className="label mt-5" htmlFor="notes">Anything Else We Should Know</label>
       <textarea id="notes" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
         className="field resize-y"
         placeholder="Why it changed, whether anything has been built yet, and anything the surveyor should look at first." />
 
-      <label className="label mt-5" htmlFor="files">Revised drawings</label>
+      <label className="label mt-5" htmlFor="files">Revised Drawings</label>
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -185,7 +185,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       </p>
 
       <button className="btn mt-6 w-full" disabled={busy || !query.trim()}>
-        {busy ? "Sending…" : "Request the amendment"}
+        {busy ? "Sending…" : "Request the Amendment"}
       </button>
 
       {msg && (

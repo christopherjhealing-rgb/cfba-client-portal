@@ -95,10 +95,10 @@ export function ReplyBox({ refNo }: { refNo: string }) {
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button className="btn" disabled={busy || !canSend}>
-          {busy ? "Sending…" : "Send message"}
+          {busy ? "Sending…" : "Send Message"}
         </button>
         <button type="button" onClick={() => input.current?.click()} className="btn-ghost">
-          <Icon name="plus" size={13} /> Attach files
+          <Icon name="plus" size={13} /> Attach Files
         </button>
         <span className={`text-[12px] ${tooBig ? "font-medium text-flag" : "text-ink/50"}`}>
           {files.length

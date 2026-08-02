@@ -25,7 +25,7 @@ export default async function SitePlan() {
   if (hidden.has("sitePlan")) {
     return (
       <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-        <PageOffline section="The site plan tool" />
+        <PageOffline section="The Site Plan Tool" />
       </AppShell>
     );
   }
@@ -34,9 +34,9 @@ export default async function SitePlan() {
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         hero="/heroes/street.jpg"
-        title="Site plan tool"
+        title="Site Plan Tool"
         sub="Set out your lot, place the structures, and print a clear, dimensioned site plan."
-        action={<span className="chip">Early version</span>}
+        action={<span className="chip">Early Version</span>}
       />
       <div className="card mb-5 p-5">
         <p className="max-w-2xl text-[14px] leading-relaxed text-ink/70">

@@ -231,9 +231,9 @@ const KINDS: { kind: string; name: string; fill: string; dark?: boolean }[] = [
   { kind: "shed", name: "Shed", fill: "#E6DCC6" },
   { kind: "pool", name: "Pool", fill: "#D3E4EA" },
   { kind: "carport", name: "Carport", fill: "#DFE3E4" },
-  { kind: "retaining", name: "Retaining wall", fill: "#2B3A31", dark: true },
+  { kind: "retaining", name: "Retaining Wall", fill: "#2B3A31", dark: true },
   { kind: "lshape", name: "L-shape", fill: "#EBDDD5" },
-  { kind: "custom", name: "Custom shape", fill: "#E3DFEA" },
+  { kind: "custom", name: "Custom Shape", fill: "#E3DFEA" },
 ];
 const FILL: Record<string, string> = Object.fromEntries(KINDS.map((k) => [k.kind, k.fill]));
 
@@ -1180,7 +1180,7 @@ export function SitePlanBuilder(
     }
     const stored = polyFromFootprint(draw.pts, 0);
     pushStructure({
-      id: uid(), kind: "custom", label: "Custom shape",
+      id: uid(), kind: "custom", label: "Custom Shape",
       rot: 0, shape: "poly", state: "proposed", ...stored,
     });
   }
@@ -2124,7 +2124,7 @@ export function SitePlanBuilder(
       <div className="card mb-5 p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
-            <label className="label">Site address</label>
+            <label className="label">Site Address</label>
             <input className="field" value={design.address} placeholder="e.g. 12 Wandoo Rise, Baldivis"
               onChange={(e) => {
                 const address = e.target.value;
@@ -2137,7 +2137,7 @@ export function SitePlanBuilder(
               onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
           </div>
           <div>
-            <label className="label">Street name (frontage)</label>
+            <label className="label">Street Name (frontage)</label>
             <input className="field" value={street} placeholder="e.g. Wandoo Rise"
               onChange={(e) => {
                 const v = e.target.value;
@@ -2155,7 +2155,7 @@ export function SitePlanBuilder(
           {isPoly ? (
             <div className="sm:col-span-2 grid grid-cols-2 gap-2">
               <div>
-                <span className="label">Lot area</span>
+                <span className="label">Lot Area</span>
                 <p className="font-mono text-[15px] leading-[38px] text-ink">{fmtM(lotArea)} m²</p>
               </div>
               <div>
@@ -2167,8 +2167,8 @@ export function SitePlanBuilder(
             </div>
           ) : (
             <>
-              <MetresField label="Lot width (m)" value={lotW} onCommit={(n) => setLot({ lotW: n })} />
-              <MetresField label="Lot depth (m)" value={lotD} onCommit={(n) => setLot({ lotD: n })} />
+              <MetresField label="Lot Width (m)" value={lotW} onCommit={(n) => setLot({ lotW: n })} />
+              <MetresField label="Lot Depth (m)" value={lotD} onCommit={(n) => setLot({ lotD: n })} />
             </>
           )}
         </div>
@@ -2181,12 +2181,12 @@ export function SitePlanBuilder(
             {cadastre && (
               <button type="button" onClick={findLot} disabled={findingLot || finding}
                 className="btn min-h-[40px] !py-2">
-                {findingLot ? "Looking…" : isPoly ? "Find my lot again" : "Find my lot"}
+                {findingLot ? "Looking…" : isPoly ? "Find My Lot Again" : "Find My Lot"}
               </button>
             )}
             <button type="button" onClick={findSite} disabled={finding || findingLot}
               className="btn-ghost min-h-[40px] !py-2">
-              {finding ? "Looking…" : sited ? "Find this site again" : "Show the aerial photo"}
+              {finding ? "Looking…" : sited ? "Find This Site Again" : "Show the Aerial Photo"}
             </button>
             {/* With the photo down, matching the boundary to it is the whole
                 job — so the way in sits right here rather than three cards
@@ -2229,7 +2229,7 @@ export function SitePlanBuilder(
               boundary too, and the whole point of this card is that you can
               take hold of it. */}
           <div className="card p-4">
-            <h2 className="sectionhead !mb-2">Lot boundary</h2>
+            <h2 className="sectionhead !mb-2">Lot Boundary</h2>
             <dl className="space-y-1 font-mono text-[12.5px] text-ink/75">
               {boundary.lotId && (
                 <div className="flex justify-between gap-2">
@@ -2260,7 +2260,7 @@ export function SitePlanBuilder(
                 className={`min-h-[40px] flex-1 rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
                   editing ? "border-brass bg-[#F6EEDA] text-brass-deep" : "border-rule bg-white text-ink hover:bg-wash"
                 }`}>
-                {editing ? "Done adjusting" : "Adjust the boundary"}
+                {editing ? "Done Adjusting" : "Adjust the Boundary"}
               </button>
               <button type="button" onClick={startTrace}
                 className={`min-h-[40px] flex-1 rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
@@ -2271,7 +2271,7 @@ export function SitePlanBuilder(
             </div>
             <button type="button" onClick={undoLot} disabled={history.length === 0}
               className="btn-ghost mt-2 min-h-[40px] w-full !py-2 disabled:opacity-40">
-              Undo the last boundary change{history.length > 1 ? ` (${history.length})` : ""}
+              Undo the Last Boundary Change{history.length > 1 ? ` (${history.length})` : ""}
             </button>
 
             {/* What's picked up, and what can be done to it. Both controls are
@@ -2286,7 +2286,7 @@ export function SitePlanBuilder(
                     </p>
                     <button type="button" onClick={() => removeCorner(lotSel.i)}
                       className="btn-ghost mt-2 min-h-[40px] w-full !py-2 !text-flag hover:!border-flag/40">
-                      Remove this corner
+                      Remove This Corner
                     </button>
                   </>
                 ) : lotSel?.kind === "edge" ? (
@@ -2296,12 +2296,12 @@ export function SitePlanBuilder(
                     </p>
                     <button type="button" onClick={() => addCornerOn(lotSel.i, null)}
                       className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
-                      Add a corner here
+                      Add a Corner Here
                     </button>
                     {isPoly && lotSel.i !== frontage && (
                       <button type="button" onClick={() => setFrontage(lotSel.i)}
                         className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
-                        Make this the street frontage
+                        Make This the Street Frontage
                       </button>
                     )}
                   </>
@@ -2318,7 +2318,7 @@ export function SitePlanBuilder(
 
             {isPoly && (
               <div className="mt-3">
-                <span className="label">Boundaries — tap to set the frontage</span>
+                <span className="label">Boundaries — Tap to Set the Frontage</span>
                 <div className="space-y-1">
                   {edges.map((e, i) => (
                     <button key={i} type="button" onClick={() => setFrontage(i)}
@@ -2341,7 +2341,7 @@ export function SitePlanBuilder(
             {isPoly && (
               <button type="button" onClick={clearLot}
                 className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
-                Type the dimensions instead
+                Type the Dimensions Instead
               </button>
             )}
             {/* Where this boundary came from, in the same words the printed
@@ -2354,12 +2354,12 @@ export function SitePlanBuilder(
           {/* Aerial alignment — only once there's a photo to line up. */}
           {sited && (
             <div className="card p-4">
-              <h2 className="sectionhead !mb-2">Aerial photo</h2>
+              <h2 className="sectionhead !mb-2">Aerial Photo</h2>
               <div className="flex gap-2">
                 <button type="button"
                   onClick={() => patchUnderlay((u) => ({ visible: !u.visible }))}
                   className="btn-ghost min-h-[40px] flex-1 !px-2 !py-2">
-                  {under.visible ? "Hide photo" : "Show photo"}
+                  {under.visible ? "Hide Photo" : "Show Photo"}
                 </button>
                 <button type="button"
                   onClick={() => patchUnderlay((u) => ({ locked: !u.locked, visible: true }))}
@@ -2374,7 +2374,7 @@ export function SitePlanBuilder(
                 <div className="mt-3 space-y-3">
                   {/* nudge pad — 44 px targets, arrow keys do the same job */}
                   <div>
-                    <span className="label">Nudge the photo</span>
+                    <span className="label">Nudge the Photo</span>
                     <div className="mx-auto grid w-[152px] grid-cols-3 gap-1">
                       <span />
                       <button type="button" aria-label="Nudge the photo up"
@@ -2431,7 +2431,7 @@ export function SitePlanBuilder(
               <button type="button"
                 onClick={() => patchUnderlay(sanitiseUnderlay(undefined))}
                 className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
-                Take the photo off
+                Take the Photo Off
               </button>
               <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
                 {aligning
@@ -2442,7 +2442,7 @@ export function SitePlanBuilder(
           )}
 
           <div className="card p-4">
-            <h2 className="sectionhead !mb-2">Add a structure</h2>
+            <h2 className="sectionhead !mb-2">Add a Structure</h2>
             <div className="grid grid-cols-2 gap-2">
               {STRUCTURE_PRESETS.map((p) => (
                 <button key={p.kind} type="button" onClick={() => addStructure(p)}
@@ -2461,14 +2461,14 @@ export function SitePlanBuilder(
               </button>
               <button type="button" onClick={startDraw}
                 className={`rounded-md border px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash ${draw ? "border-seal bg-wash" : "border-rule bg-white"}`}>
-                <span className="block text-[13.5px] font-medium">Odd shape</span>
+                <span className="block text-[13.5px] font-medium">Odd Shape</span>
                 <span className="block font-mono text-[11px] text-ink/45">tap its corners</span>
               </button>
             </div>
           </div>
 
           <div className="card p-4">
-            <h2 className="sectionhead !mb-2">Selected structure</h2>
+            <h2 className="sectionhead !mb-2">Selected Structure</h2>
             {sel ? (
               <div className="space-y-3">
                 <div>
@@ -2480,7 +2480,7 @@ export function SitePlanBuilder(
                     it changes what the drawing means rather than how it
                     looks — and a new build has to be one tap away. */}
                 <div>
-                  <span className="label">Already there, or proposed</span>
+                  <span className="label">Already There, or Proposed</span>
                   <div className="grid grid-cols-2 gap-2">
                     {(["existing", "proposed"] as StructureState[]).map((st) => {
                       const on = structureState(sel) === st;
@@ -2517,18 +2517,18 @@ export function SitePlanBuilder(
                 )}
                 {sel.shape === "lshape" && (
                   <div className="grid grid-cols-2 gap-2">
-                    <MetresField label="Notch width (m)" value={sel.notchW ?? sel.w / 2}
+                    <MetresField label="Notch Width (m)" value={sel.notchW ?? sel.w / 2}
                       onCommit={(n) => patchStructure(sel.id, { notchW: n })} />
-                    <MetresField label="Notch depth (m)" value={sel.notchD ?? sel.d / 2}
+                    <MetresField label="Notch Depth (m)" value={sel.notchD ?? sel.d / 2}
                       onCommit={(n) => patchStructure(sel.id, { notchD: n })} />
                   </div>
                 )}
                 <div className="flex justify-between font-mono text-[12.5px] text-ink/75">
-                  <span className="text-ink/50">Footprint area</span>
+                  <span className="text-ink/50">Footprint Area</span>
                   <span>{fmtM(structureArea(sel))} m²</span>
                 </div>
                 <div>
-                  <span className="label">Distance to boundaries</span>
+                  <span className="label">Distance to Boundaries</span>
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[12.5px] text-ink/75">
                     {isPoly
                       ? lotSetbacks(sel, lotOutline, frontage).map((r) => (
@@ -2561,7 +2561,7 @@ export function SitePlanBuilder(
                     never judged: separation and barrier distances are decided
                     during assessment, not here. */}
                 <div>
-                  <span className="label">Distance to nearby structures</span>
+                  <span className="label">Distance to Nearby Structures</span>
                   {nearSel.length === 0 ? (
                     <p className="text-[12.5px] leading-snug text-ink/55">
                       Nothing else on the plan to measure to yet.
@@ -2605,7 +2605,7 @@ export function SitePlanBuilder(
                 </button>
                 <button type="button" onClick={removeSelected}
                   className="btn-ghost w-full !text-flag hover:!border-flag/40">
-                  Remove structure
+                  Remove Structure
                 </button>
               </div>
             ) : (
@@ -2639,7 +2639,7 @@ export function SitePlanBuilder(
                 </button>
               )}
               <button type="button" className="btn w-full" onClick={() => window.print()}>
-                Print / save as PDF
+                Print / Save as PDF
               </button>
               <button type="button" className="btn-ghost w-full"
                 onClick={() => {

@@ -3,9 +3,9 @@ import { SignIn } from "@/components/SignIn";
 import { Icon } from "@/components/Icon";
 
 const POINTS = [
-  { icon: "folder", text: "Track your jobs" },
-  { icon: "download", text: "Download certificates & plans" },
-  { icon: "check", text: "Secure, simple, reliable" },
+  { icon: "folder", text: "Track Your Jobs" },
+  { icon: "download", text: "Download Certificates & Plans" },
+  { icon: "check", text: "Secure, Simple, Reliable" },
 ] as const;
 
 /** The original split-panel sign-in. Kept as the "classic" layout behind the
@@ -56,7 +56,7 @@ export function SignInClassic() {
       <section className="flex items-center justify-center px-6 py-12 lg:px-12">
         <div className="w-full max-w-[420px]">
           <div className="mb-6">
-            <h2 className="font-display text-[26px] font-semibold text-ink">Welcome back</h2>
+            <h2 className="font-display text-[26px] font-semibold text-ink">Welcome Back</h2>
             <p className="mt-1 text-[14px] text-ink/60">Sign in to your account</p>
           </div>
 

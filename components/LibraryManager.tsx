@@ -60,7 +60,7 @@ export function LibraryManager({ initial }: { initial: LibraryDoc[] }) {
 
   return (
     <div className="card mb-6 p-5">
-      <p className="font-display text-[14px] font-semibold text-ink">My documents</p>
+      <p className="font-display text-[14px] font-semibold text-ink">My Documents</p>
       <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-ink/65">
         Engineering you lodge again and again — standard patio details, shed
         certification. Save it here once, and when you lodge a job it&apos;s a
@@ -108,7 +108,7 @@ export function LibraryManager({ initial }: { initial: LibraryDoc[] }) {
         className={`mt-4 rounded-lg border border-rule bg-wash p-3.5 ${docs.length ? "" : "border-dashed"}`}>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[200px] flex-1">
-            <label className="label" htmlFor="doc-label">Name it</label>
+            <label className="label" htmlFor="doc-label">Name It</label>
             <input id="doc-label" value={label} maxLength={80}
               onChange={(e) => setLabel(e.target.value)} className="field py-2 text-[14px]"
               placeholder="e.g. Standard patio engineering" />
@@ -120,7 +120,7 @@ export function LibraryManager({ initial }: { initial: LibraryDoc[] }) {
             {file ? "Change PDF" : "Choose PDF"}
           </button>
           <button className="btn" disabled={busy || !file}>
-            {busy ? "Saving…" : "Save document"}
+            {busy ? "Saving…" : "Save Document"}
           </button>
         </div>
         {file && (

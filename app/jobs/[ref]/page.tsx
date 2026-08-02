@@ -71,7 +71,7 @@ export default async function JobDetail({
       <PageHead
         title={job.address as string || `Job ${ref}`}
         sub={`Job ${ref}${job.clientRef ? ` · your ref ${job.clientRef}` : ""}${job.description ? ` · ${job.description}` : ""}`}
-        action={<Link href="/jobs" className="btn-ghost">← All jobs</Link>}
+        action={<Link href="/jobs" className="btn-ghost">← All Jobs</Link>}
       />
 
       {needsClientInfo(job) && (
@@ -105,13 +105,13 @@ export default async function JobDetail({
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             {bucket !== "expired" && !hidden.has("amend") && (
               <Link href={`/amend?ref=${encodeURIComponent(ref)}`} className="btn-ghost">
-                Amend this job
+                Amend This Job
               </Link>
             )}
             {downloadable && (
               <DownloadButton
                 href={`/api/jobs/${encodeURIComponent(ref)}/download`}
-                label={bucket === "downloaded" ? "Download again" : "Download certificate"}
+                label={bucket === "downloaded" ? "Download Again" : "Download Certificate"}
               />
             )}
           </div>
@@ -127,7 +127,7 @@ export default async function JobDetail({
       {lodgements.length > 0 && (
         <div className="card mb-6 p-4">
           <h2 className="mb-2 font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-            What you&apos;ve sent us
+            What You&apos;ve Sent Us
           </h2>
           <div className="divide-y divide-rule">
             {lodgements.map((s) => (

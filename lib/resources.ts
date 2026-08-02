@@ -12,17 +12,17 @@ export interface LinkGroup { group: string; items: LinkItem[] }
 export interface PortalForm { key: string; code: string; title: string; note: string }
 
 export const PORTAL_FORMS: PortalForm[] = [
-  { key: "ba1", code: "BA1", title: "Application for building permit — certified",
+  { key: "ba1", code: "BA1", title: "Application for Building Permit — Certified",
     note: "Lodged with a certificate of design compliance (our CDC). The usual path for Class 10 work." },
-  { key: "ba2", code: "BA2", title: "Application for building permit — uncertified",
+  { key: "ba2", code: "BA2", title: "Application for Building Permit — Uncertified",
     note: "For certain Class 1a/10 work where the local government does the assessment." },
-  { key: "ba5", code: "BA5", title: "Application for demolition permit",
+  { key: "ba5", code: "BA5", title: "Application for Demolition Permit",
     note: "To demolish a building or structure." },
-  { key: "ba13", code: "BA13", title: "Notice of completion",
+  { key: "ba13", code: "BA13", title: "Notice of Completion",
     note: "Given to the permit authority when building work is complete." },
-  { key: "ba19", code: "BA19", title: "Application to amend a building permit",
+  { key: "ba19", code: "BA19", title: "Application to Amend a Building Permit",
     note: "When an already-approved job changes. Lodge an amendment with us too." },
-  { key: "ba22", code: "BA22", title: "Application for occupancy permit",
+  { key: "ba22", code: "BA22", title: "Application for Occupancy Permit",
     note: "For a new commercial building or a change of use." },
 ];
 
@@ -33,7 +33,7 @@ export const FORMS_OFFICIAL_SOURCE =
 
 export const LINK_GROUPS: LinkGroup[] = [
   {
-    group: "Maps & property",
+    group: "Maps & Property",
     items: [
       { name: "Map of Bush Fire Prone Areas (DFES)",
         url: "https://maps.slip.wa.gov.au/landgate/bushfireprone/",
@@ -44,9 +44,9 @@ export const LINK_GROUPS: LinkGroup[] = [
     ],
   },
   {
-    group: "The rules",
+    group: "The Rules",
     items: [
-      { name: "National Construction Code (free)",
+      { name: "National Construction Code (Free)",
         url: "https://ncc.abcb.gov.au/", note: "Free to read after a quick registration." },
       { name: "Residential Design Codes (R-Codes)",
         url: "https://www.wa.gov.au/government/publications/state-planning-policy-73-residential-design-codes-volume-1", // confirm
@@ -60,7 +60,7 @@ export const LINK_GROUPS: LinkGroup[] = [
     items: [
       { name: "Before You Dig Australia",
         url: "https://www.byda.com.au/", note: "Free service locations before excavation." },
-      { name: "Water Corporation — build over/near assets",
+      { name: "Water Corporation — Build Over/Near Assets",
         url: "https://www.watercorporation.com.au/Building-and-developing", // confirm
         note: "Consent for building over or near a sewer or drain." },
       { name: "Registered building surveyor / licence search",

@@ -28,12 +28,12 @@ function greeting() {
 }
 
 const QUICK: { href: string; icon: IconName; title: string; sub: string }[] = [
-  { href: "/submit", icon: "plus", title: "Lodge another job", sub: "Start a new application" },
-  { href: "/messages", icon: "mail", title: "Message your surveyor", sub: "Send documents or ask a question" },
-  { href: "/downloads", icon: "download", title: "Download certificates", sub: "Issued permits and plans" },
-  { href: "/amend", icon: "edit", title: "Amend a job", sub: "Tell us what's changed" },
-  { href: "/info-sheets", icon: "book", title: "Info sheets", sub: "What we need, and why jobs come back" },
-  { href: "/details", icon: "user", title: "My details", sub: "How your company is recorded" },
+  { href: "/submit", icon: "plus", title: "Lodge Another Job", sub: "Start a new application" },
+  { href: "/messages", icon: "mail", title: "Message Your Surveyor", sub: "Send documents or ask a question" },
+  { href: "/downloads", icon: "download", title: "Download Certificates", sub: "Issued permits and plans" },
+  { href: "/amend", icon: "edit", title: "Amend a Job", sub: "Tell us what's changed" },
+  { href: "/info-sheets", icon: "book", title: "Info Sheets", sub: "What we need, and why jobs come back" },
+  { href: "/details", icon: "user", title: "My Details", sub: "How your company is recorded" },
 ];
 
 export default async function Dashboard() {
@@ -86,40 +86,40 @@ export default async function Dashboard() {
               <span className="font-medium text-white">{String(env.turnaroundDays).replace("-", "\u2013")} business days</span>{" "}
               of everything being received.{" "}
               <Link href="/help" className="text-white underline underline-offset-2">
-                How long a job takes
+                How Long a Job Takes
               </Link>
             </p>
           </div>
-          <Link href="/submit" className="btn shrink-0"><Icon name="plus" /> Lodge a job</Link>
+          <Link href="/submit" className="btn shrink-0"><Icon name="plus" /> Lodge a Job</Link>
         </div>
       </div>
 
       {nothing ? (
         <EmptyState
-          title="No jobs yet"
+          title="No Jobs Yet"
           body="When you lodge a job it will appear here, and you can follow it right through to download."
-          action={<Link href="/submit" className="btn">Lodge your first job</Link>}
+          action={<Link href="/submit" className="btn">Lodge Your First Job</Link>}
         />
       ) : (
         <>
           <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Stat href="/downloads" icon="download" n={g.ready.length}
-              label="Ready to download" note="Issued documents ready for you."
-              cta="View jobs" />
+              label="Ready to Download" note="Issued documents ready for you."
+              cta="View Jobs" />
             <Stat href="/jobs?show=progress" icon="clock" n={running.length}
-              label="In progress" note="Jobs currently being assessed."
-              cta="View jobs" />
+              label="In Progress" note="Jobs currently being assessed."
+              cta="View Jobs" />
             <Stat href="/jobs?show=action" icon="mail" n={awaiting.length}
-              label="Action required" note="Information requested from you."
-              cta="View jobs" tone={awaiting.length ? "amber" : "plain"} />
+              label="Action Required" note="Information requested from you."
+              cta="View Jobs" tone={awaiting.length ? "amber" : "plain"} />
             <Stat href="/downloads" icon="folder" n={g.downloaded.length}
-              label="Past jobs" note="Previously issued and completed."
-              cta="View all" />
+              label="Past Jobs" note="Previously issued and completed."
+              cta="View All" />
           </div>
 
           {g.ready.length > 0 && (
             <section className="mb-8">
-              <SectionHead title="Ready to download" count={g.ready.length} />
+              <SectionHead title="Ready to Download" count={g.ready.length} />
               <div className="card divide-y divide-rule overflow-hidden">
                 {g.ready.map((j) => (
                   <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-4">
@@ -134,7 +134,7 @@ export default async function Dashboard() {
                       </div>
                       <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-seal">
                         <Icon name="check" size={13} />
-                        <span className="font-medium">Permit issued</span>
+                        <span className="font-medium">Permit Issued</span>
                         <span className="text-ink/55">{fmtDate(j.issuedAt)}</span>
                       </div>
                     </div>
@@ -147,7 +147,7 @@ export default async function Dashboard() {
 
           {awaiting.length > 0 && (
             <section className="mb-8">
-              <SectionHead title="Action required" count={awaiting.length} tone="amber" />
+              <SectionHead title="Action Required" count={awaiting.length} tone="amber" />
               <div className="panel-amber overflow-hidden">
                 {awaiting.map((j) => (
                   <div key={j.ref} className="border-b border-[#E9D7AC] px-4 py-4 last:border-b-0">
@@ -178,7 +178,7 @@ export default async function Dashboard() {
                         )}
                       </div>
                       <Link href={`/messages?ref=${encodeURIComponent(j.ref)}`} className="btn shrink-0">
-                        Send information
+                        Send Information
                       </Link>
                     </div>
                     <div className="mt-4 max-w-[560px] sm:ml-[102px]">
@@ -193,12 +193,12 @@ export default async function Dashboard() {
           <section className="mb-8">
             <div className="mb-2.5 flex items-center gap-3">
               <span className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
-                Jobs in progress
+                Jobs in Progress
               </span>
               <span className="h-px flex-1 bg-rule" />
               <Link href="/jobs?show=progress"
                 className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-seal">
-                View all in progress <Icon name="arrowRight" size={13} />
+                View All in Progress <Icon name="arrowRight" size={13} />
               </Link>
             </div>
             {running.length === 0 ? (
@@ -233,12 +233,12 @@ export default async function Dashboard() {
             <section className="mb-8">
               <div className="mb-2.5 flex items-center gap-3">
                 <span className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
-                  Past jobs — issued
+                  Past Jobs — Issued
                 </span>
                 <span className="h-px flex-1 bg-rule" />
                 <Link href="/downloads"
                   className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-seal">
-                  View all past jobs <Icon name="arrowRight" size={13} />
+                  View All Past Jobs <Icon name="arrowRight" size={13} />
                 </Link>
               </div>
               <div className="card divide-y divide-rule overflow-hidden">
@@ -264,7 +264,7 @@ export default async function Dashboard() {
           )}
 
           <section>
-            <SectionHead title="Quick actions" />
+            <SectionHead title="Quick Actions" />
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {QUICK.map((q) => (
                 <Link key={q.href} href={q.href}

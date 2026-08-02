@@ -10,8 +10,8 @@ export default async function AdminLoginPage() {
   return (
     <>
       <main className="mx-auto max-w-md px-5 py-14">
-        <p className="eyebrow">CFBA staff</p>
-        <h1 className="mb-5 mt-1 font-display text-[26px] font-semibold">Office sign-in</h1>
+        <p className="eyebrow">CFBA Staff</p>
+        <h1 className="mb-5 mt-1 font-display text-[26px] font-semibold">Office Sign-In</h1>
         <StaffLogin demo={DEMO_MODE} />
       </main>
     </>

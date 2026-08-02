@@ -47,7 +47,7 @@ export function FormManager({
   return (
     <div className="card mb-8 p-4">
       <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-        Council forms
+        Council Forms
       </h2>
       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
         Host the current PDF of each council form on the Resources page. Upload a
@@ -63,7 +63,7 @@ export function FormManager({
                 <span className="font-mono text-[12px] text-seal">{f.code}</span>
                 <span className="ml-2 text-[13px] font-medium">{f.title}</span>
                 <span className={`ml-2 chip ${has ? "text-seal" : "text-ink/45"}`}>
-                  {has ? "Hosted" : "Link only"}
+                  {has ? "Hosted" : "Link Only"}
                 </span>
               </div>
               <div className="flex shrink-0 gap-2">

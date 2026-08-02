@@ -50,8 +50,8 @@ export function updateEmail(opts: {
 }): { subject: string; html: string } {
   const { ref, address, body, needsAction, clientRef } = opts;
   const subject = needsAction
-    ? `Action required — job ${ref}, ${address}${clientRef ? ` (your ref ${clientRef})` : ""}`
-    : `Update on job ${ref}, ${address}${clientRef ? ` (your ref ${clientRef})` : ""}`;
+    ? `Action Required — Job ${ref}, ${address}${clientRef ? ` (Your Ref ${clientRef})` : ""}`
+    : `Update on Job ${ref}, ${address}${clientRef ? ` (Your Ref ${clientRef})` : ""}`;
 
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
@@ -88,7 +88,7 @@ export function issuedEmail(opts: {
   ref: string; address: string; clientRef?: string;
 }): { subject: string; html: string } {
   const { ref, address, clientRef } = opts;
-  const subject = `Your certificate is ready — job ${ref}, ${address}${clientRef ? ` (your ref ${clientRef})` : ""}`;
+  const subject = `Your Certificate Is Ready — Job ${ref}, ${address}${clientRef ? ` (Your Ref ${clientRef})` : ""}`;
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
   <p style="margin:0 0 16px">Hello,</p>
@@ -145,7 +145,7 @@ export function digestEmail(opts: {
   </p>
   <p style="margin:0;color:#5B6660;font-size:13px">CF Building Approvals · 1300 029 074 · admin@cfba.com.au</p>
 </div>`.trim();
-  return { subject: `Your CFBA jobs this week — ${waiting.length} with you`, html };
+  return { subject: `Your CFBA Jobs This Week — ${waiting.length} with You`, html };
 }
 
 /** Internal notice to the office when a client replies in the portal. Monday
@@ -156,7 +156,7 @@ export function officeReplyEmail(opts: {
   companyName: string; ref: string; address: string; body: string; fileNames: string[];
 }): { subject: string; html: string } {
   const { companyName, ref, address, body, fileNames } = opts;
-  const subject = `Portal reply — ${companyName}, job ${ref}`;
+  const subject = `Portal Reply — ${companyName}, Job ${ref}`;
   const files = fileNames.length
     ? `<p style="margin:0 0 12px;font-size:14px"><strong>Attachments:</strong> ${fileNames.map(esc).join(", ")}</p>`
     : "";

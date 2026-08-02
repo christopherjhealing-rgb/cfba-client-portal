@@ -27,7 +27,7 @@ export function TurnaroundNote() {
         </span>
         <div className="min-w-0">
           <p className="font-display text-[15px] font-semibold text-ink">
-            How long a job takes
+            How Long a Job Takes
           </p>
           <div className="mt-2 space-y-2.5 text-[14px] leading-relaxed text-ink/70">
             <p>

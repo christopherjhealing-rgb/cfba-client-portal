@@ -42,7 +42,7 @@ export default async function Resources() {
       <section className="mb-8">
         <div className="mb-2.5 flex items-center gap-3">
           <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-            Council forms
+            Council Forms
           </h2>
           <span className="h-px flex-1 bg-rule" />
         </div>
@@ -70,7 +70,7 @@ export default async function Resources() {
                     </a>
                   )}
                   <a href={FORMS_OFFICIAL_SOURCE} target="_blank" rel="noopener noreferrer"
-                    className="text-[12.5px] text-ink/50 hover:underline">Official source</a>
+                    className="text-[12.5px] text-ink/50 hover:underline">Official Source</a>
                 </div>
               </div>
             );
@@ -106,7 +106,7 @@ export default async function Resources() {
       <section className="mb-4">
         <div className="mb-2.5 flex items-center gap-3">
           <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-            Your local government
+            Your Local Government
           </h2>
           <span className="h-px flex-1 bg-rule" />
         </div>

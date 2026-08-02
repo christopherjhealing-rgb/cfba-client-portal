@@ -36,7 +36,7 @@ export function BushfireCheck() {
           onChange={(e) => setAddress(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && open()}
         />
-        <button className="btn" onClick={open}>Check the official map</button>
+        <button className="btn" onClick={open}>Check the Official Map</button>
       </div>
       <p className="mt-2 text-[12px] text-ink/45">
         Opens the Map of Bush Fire Prone Areas (DFES) — the authoritative source.

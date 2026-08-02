@@ -22,7 +22,7 @@ export function SyncButton() {
   return (
     <div className="flex flex-col items-end">
       <button onClick={run} className="btn" disabled={busy}>
-        {busy ? "Syncing…" : "Run sync"}
+        {busy ? "Syncing…" : "Run Sync"}
       </button>
       {result && <span className="mt-1 max-w-[280px] text-right text-[11px] text-ink/55">{result}</span>}
     </div>

@@ -49,12 +49,12 @@ export function SignIn({ demo }: { demo?: boolean }) {
         <button type="button" onClick={() => { setMode("signin"); setMsg(null); }}
           className={`flex-1 rounded-sm px-3 py-2 font-display text-[11px] font-semibold uppercase tracking-[0.08em] transition ${
             mode === "signin" ? "bg-white text-ink shadow-sm" : "text-ink/55"}`}>
-          Sign in
+          Sign In
         </button>
         <button type="button" onClick={() => { setMode("setup"); setMsg(null); }}
           className={`flex-1 rounded-sm px-3 py-2 font-display text-[11px] font-semibold uppercase tracking-[0.08em] transition ${
             mode === "setup" ? "bg-white text-ink shadow-sm" : "text-ink/55"}`}>
-          First time
+          First Time
         </button>
       </div>
 
@@ -80,7 +80,7 @@ export function SignIn({ demo }: { demo?: boolean }) {
               <input type="checkbox" checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
                 className="h-4 w-4 rounded border-rule text-seal accent-[#1E5B3C]" />
-              Remember me
+              Remember Me
             </label>
             <button type="button" disabled={busy}
               onClick={async () => {
@@ -96,11 +96,11 @@ export function SignIn({ demo }: { demo?: boolean }) {
                 setMode("setup");
               }}
               className="text-[13px] font-medium text-seal underline underline-offset-2">
-              Forgot password?
+              Forgot Password?
             </button>
           </div>
           <button className="btn mt-4 w-full" disabled={busy}>
-            {busy ? "Signing in…" : "Sign in"}
+            {busy ? "Signing in…" : "Sign In"}
           </button>
           <p className="mt-3 text-center text-[13px] text-ink/55">
             Forgotten your password? Contact the CFBA office and we&apos;ll issue a new setup code.
@@ -116,19 +116,19 @@ export function SignIn({ demo }: { demo?: boolean }) {
           <input id="su" required autoFocus autoCapitalize="none" autoCorrect="off"
             value={username} onChange={(e) => setUsername(e.target.value)}
             className="field" placeholder="yourcompany" />
-          <label className="label mt-4" htmlFor="sc">Setup code</label>
+          <label className="label mt-4" htmlFor="sc">Setup Code</label>
           <input id="sc" required value={setupCode}
             onChange={(e) => setSetupCode(e.target.value.toUpperCase())}
             className="field font-mono tracking-[0.12em]" placeholder="XXX-XXX-XXX" />
-          <label className="label mt-4" htmlFor="np">Choose a password</label>
+          <label className="label mt-4" htmlFor="np">Choose a Password</label>
           <input id="np" type="password" required value={password}
             onChange={(e) => setPassword(e.target.value)} className="field"
             placeholder="at least 10 characters" />
-          <label className="label mt-4" htmlFor="cp">Confirm password</label>
+          <label className="label mt-4" htmlFor="cp">Confirm Password</label>
           <input id="cp" type="password" required value={confirm}
             onChange={(e) => setConfirm(e.target.value)} className="field" />
           <button className="btn mt-5 w-full" disabled={busy}>
-            {busy ? "Setting up…" : "Set password and sign in"}
+            {busy ? "Setting up…" : "Set Password and Sign In"}
           </button>
         </form>
       )}
@@ -142,7 +142,7 @@ export function SignIn({ demo }: { demo?: boolean }) {
       {demo && (
         <div className="mt-5 rounded-sm border-l-[3px] border-brass bg-[#FBF6EA] px-3 py-2.5 text-[13px] leading-relaxed">
           <div className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/55">
-            Test client
+            Test Client
           </div>
           <div className="mt-1">
             Sign in: <span className="font-mono font-semibold">cfba.test</span> /{" "}

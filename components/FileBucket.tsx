@@ -45,7 +45,7 @@ export function FileBucket({
           <p className="mt-0.5 text-[12px] leading-snug text-ink/55">{bucket.hint} PDF only — or drag them onto this box.</p>
         </div>
         <button type="button" onClick={() => input.current?.click()} className="btn-ghost shrink-0">
-          {files.length ? "Change" : "Choose files"}
+          {files.length ? "Change" : "Choose Files"}
         </button>
       </div>
 

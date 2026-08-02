@@ -40,12 +40,12 @@ export default async function Downloads() {
       />
 
       {g.ready.length + g.downloaded.length === 0 ? (
-        <EmptyState title="Nothing to download yet"
+        <EmptyState title="Nothing to Download Yet"
           body="As soon as a job is issued, its certificate and stamped plans appear here as a single file." />
       ) : (
         <>
           <section className="mb-8">
-            <SectionHead title="Ready to download" count={g.ready.length} />
+            <SectionHead title="Ready to Download" count={g.ready.length} />
             {g.ready.length === 0 ? (
               <p className="empty">Nothing new right now. Issued jobs appear here automatically.</p>
             ) : (
@@ -62,7 +62,7 @@ export default async function Downloads() {
 
           {g.downloaded.length > 0 && (
             <section>
-              <SectionHead title="Already downloaded" count={g.downloaded.length} />
+              <SectionHead title="Already Downloaded" count={g.downloaded.length} />
               <div className="card divide-y divide-rule overflow-hidden">
                 {g.downloaded.map((j) => {
                   const r = retention(j.firstDownloadedAt as string, new Date(), env.retentionMonths);
@@ -81,7 +81,7 @@ export default async function Downloads() {
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <DownloadButton href={`/api/jobs/${encodeURIComponent(j.ref)}/download`}
-                          label="Download again" />
+                          label="Download Again" />
                         <span className={`text-[11px] ${soon ? "font-medium text-brass-deep" : "text-ink/55"}`}>
                           available {r.daysLeft} more day{r.daysLeft === 1 ? "" : "s"}
                         </span>

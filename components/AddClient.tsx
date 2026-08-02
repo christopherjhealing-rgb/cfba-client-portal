@@ -44,17 +44,17 @@ export function AddClient() {
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="label">Client name</label>
+          <label className="label">Client Name</label>
           <input className="field" value={name} onChange={(e) => setName(e.target.value)}
             placeholder="Ventura Homes" />
         </div>
         <div>
-          <label className="label">Contact emails (comma separated, optional)</label>
+          <label className="label">Contact Emails (comma separated, optional)</label>
           <input className="field" value={emails} onChange={(e) => setEmails(e.target.value)}
             placeholder="permits@ventura.com.au" />
         </div>
         <div className="sm:col-span-2">
-          <label className="label">Other Monday spellings (comma separated, optional)</label>
+          <label className="label">Other Monday Spellings (comma separated, optional)</label>
           <input className="field" value={aliases} onChange={(e) => setAliases(e.target.value)}
             placeholder="Ventura, Ventura Home Group" />
         </div>

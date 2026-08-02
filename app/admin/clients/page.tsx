@@ -25,9 +25,9 @@ export default async function ClientsPage() {
 
   return (
     <StaffShell title="Clients" sub="Every company with a portal login." active="/admin/clients">
-        <Link href="/admin" className="text-[13px] text-seal underline">← Back to admin</Link>
+        <Link href="/admin" className="text-[13px] text-seal underline">← Back to Admin</Link>
         <p className="eyebrow mt-4">Clients</p>
-        <h1 className="mb-1 mt-1 font-display text-[26px] font-semibold">Clients &amp; logins</h1>
+        <h1 className="mb-1 mt-1 font-display text-[26px] font-semibold">Clients &amp; Logins</h1>
         <p className="mb-6 max-w-2xl text-[14px] leading-relaxed text-ink/65">
           Issue a username to each major client, then give them the one-time setup
           code — they choose their own password. Open a client to check the jobs
@@ -80,10 +80,10 @@ export default async function ClientsPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">
-                    <Link href={`/admin/clients/${c.id}`} className="btn-ghost">Check folders</Link>
+                    <Link href={`/admin/clients/${c.id}`} className="btn-ghost">Check Folders</Link>
                     <form action="/api/admin/impersonate" method="post">
                       <input type="hidden" name="companyId" value={c.id} />
-                      <button className="btn-ghost">View as client</button>
+                      <button className="btn-ghost">View as Client</button>
                     </form>
                   </div>
                 </div>

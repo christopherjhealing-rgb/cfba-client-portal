@@ -59,7 +59,7 @@ export function InfoSheetManager({
   return (
     <div className="card mb-8 p-4">
       <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-        Info sheets
+        Info Sheets
       </h2>
       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
         Upload a new PDF to supersede a published note — clients get the new
@@ -85,7 +85,7 @@ export function InfoSheetManager({
                 />
                 <button className="btn-ghost" disabled={busy === s.file}
                   onClick={() => inputs.current[s.file]?.click()}>
-                  {busy === s.file ? "…" : "Upload new version"}
+                  {busy === s.file ? "…" : "Upload New Version"}
                 </button>
                 {isUpdated && (
                   <button className="btn-ghost" disabled={busy === s.file}

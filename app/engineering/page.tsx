@@ -30,7 +30,7 @@ export default async function Engineering() {
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead hero="/heroes/garage.jpg" title="Engineering checker" sub="Check a design against the engineering before lodging." />
+      <PageHead hero="/heroes/garage.jpg" title="Engineering Checker" sub="Check a design against the engineering before lodging." />
       <div className="card mb-5 p-5">
         <p className="max-w-2xl text-[14px] leading-relaxed text-ink/70">
           These checkers report whether a design is covered by the engineering,
@@ -41,7 +41,7 @@ export default async function Engineering() {
         </p>
         {eng.url && (
           <a href={eng.url} target="_blank" rel="noopener noreferrer" className="btn mt-4">
-            Open the external checker
+            Open the External Checker
           </a>
         )}
       </div>

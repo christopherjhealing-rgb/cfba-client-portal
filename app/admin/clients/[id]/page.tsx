@@ -43,7 +43,7 @@ export default async function ClientCheckPage({ params }: { params: { id: string
         <Link href="/admin/clients" className="text-[13px] text-seal underline">← All clients</Link>
         <div className="mb-6 mt-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">Folder check</p>
+            <p className="eyebrow">Folder Check</p>
             <h1 className="mt-1 font-display text-[26px] font-semibold">{company.name}</h1>
             <p className="mt-1 text-[13px] text-ink/55">
               {jobs.length} job{jobs.length === 1 ? "" : "s"} matched to this client
@@ -52,7 +52,7 @@ export default async function ClientCheckPage({ params }: { params: { id: string
           </div>
           <form action="/api/admin/impersonate" method="post">
             <input type="hidden" name="companyId" value={company.id} />
-            <button className="btn">View as client</button>
+            <button className="btn">View as Client</button>
           </form>
         </div>
 
@@ -89,7 +89,7 @@ export default async function ClientCheckPage({ params }: { params: { id: string
 
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     <div>
-                      <div className="eyebrow mb-1.5">In the portal ({files.length})</div>
+                      <div className="eyebrow mb-1.5">In the Portal ({files.length})</div>
                       {files.length === 0 ? (
                         <p className="text-[13px] text-ink/45">No files synced.</p>
                       ) : (

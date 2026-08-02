@@ -51,14 +51,14 @@ export default async function Help() {
   if (hidden.has("help")) {
     return (
       <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-        <PageOffline section="Help & support" />
+        <PageOffline section="Help & Support" />
       </AppShell>
     );
   }
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead hero="/heroes/entry.jpg" title="Help & support" sub="How the portal works, and how to reach us." />
+      <PageHead hero="/heroes/entry.jpg" title="Help & Support" sub="How the portal works, and how to reach us." />
 
       <div className="mb-6"><TurnaroundNote /></div>
 
@@ -74,7 +74,7 @@ export default async function Help() {
 
         <div className="card p-5">
           <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
-            Contact us
+            Contact Us
           </p>
           <p className="mt-3 text-[14px] font-medium text-ink">CF Building Approvals</p>
           <p className="mt-2 text-[14px] text-ink/70">
@@ -88,7 +88,7 @@ export default async function Help() {
           <p className="mt-4 text-[13px] leading-relaxed text-ink/55">
             Office hours Monday to Friday. Quote your job number and we&apos;ll get to it faster.
           </p>
-          <Link href="/submit" className="btn mt-5 w-full">Lodge a job</Link>
+          <Link href="/submit" className="btn mt-5 w-full">Lodge a Job</Link>
         </div>
       </div>
 

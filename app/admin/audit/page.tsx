@@ -7,14 +7,14 @@ import { StaffShell } from "@/components/StaffShell";
 export const dynamic = "force-dynamic";
 
 const LABELS: Record<string, string> = {
-  "submission.accept": "Accepted job",
-  "submission.reject": "Rejected job",
-  "login.create": "Issued login",
-  "login.reset": "Reset login",
-  "client.alias": "Added client alias",
-  "client.create": "Created client",
-  "certificate.download": "Downloaded certificate",
-  "engineering.settings": "Engineering checker",
+  "submission.accept": "Accepted Job",
+  "submission.reject": "Rejected Job",
+  "login.create": "Issued Login",
+  "login.reset": "Reset Login",
+  "client.alias": "Added Client Alias",
+  "client.create": "Created Client",
+  "certificate.download": "Downloaded Certificate",
+  "engineering.settings": "Engineering Checker",
 };
 
 function when(iso: string) {
@@ -28,9 +28,9 @@ export default async function AuditPage() {
   const entries = await repo.listAudit(300).catch(() => []);
 
   return (
-    <StaffShell title="Activity log" sub="Who did what, when." active="/admin">
-      <Link href="/admin" className="text-[13px] text-seal underline">← Back to admin</Link>
-      <h1 className="mb-1 mt-4 font-display text-[26px] font-semibold">Activity log</h1>
+    <StaffShell title="Activity Log" sub="Who did what, when." active="/admin">
+      <Link href="/admin" className="text-[13px] text-seal underline">← Back to Admin</Link>
+      <h1 className="mb-1 mt-4 font-display text-[26px] font-semibold">Activity Log</h1>
       <p className="mb-6 max-w-2xl text-[14px] leading-relaxed text-ink/65">
         An append-only record of accepts, rejects, credential changes, client
         matches and certificate downloads — the trail a complaint or audit asks

@@ -30,7 +30,7 @@ export function LoginDesignToggle({ initial }: { initial: Design }) {
   return (
     <div className="card mb-8 p-4">
       <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-        Sign-in design
+        Sign-In Design
       </h2>
       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
         Which sign-in page clients see. <strong>New</strong>{" "}

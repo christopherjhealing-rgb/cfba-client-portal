@@ -37,23 +37,23 @@ export default async function AdminHome() {
   for (const c of companies) names[c.id] = c.name;
 
   return (
-    <StaffShell title="Submission queue" sub="Jobs lodged through the portal, waiting to be accepted onto the board." active="/admin">
+    <StaffShell title="Submission Queue" sub="Jobs lodged through the portal, waiting to be accepted onto the board." active="/admin">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">CFBA office</p>
-            <h1 className="mt-1 font-display text-[26px] font-semibold">Portal admin</h1>
+            <p className="eyebrow">CFBA Office</p>
+            <h1 className="mt-1 font-display text-[26px] font-semibold">Portal Admin</h1>
           </div>
           <div className="flex gap-2">
             <Link href="/admin/reports" className="btn-ghost">Reports</Link>
-            <Link href="/admin/audit" className="btn-ghost">Activity log</Link>
-            <Link href="/admin/clients" className="btn-ghost">Clients &amp; logins</Link>
+            <Link href="/admin/audit" className="btn-ghost">Activity Log</Link>
+            <Link href="/admin/clients" className="btn-ghost">Clients &amp; Logins</Link>
             <SyncButton />
           </div>
         </div>
 
         <div className="card mb-8 divide-y divide-rule text-[13px]">
-          <Row label="Data store" value={DEMO_MODE ? "Demo (no Supabase configured)" : "Supabase"} warn={DEMO_MODE} />
-          <Row label="Monday board" value={MONDAY_READY ? `Connected · ${env.mondayBoardId}` : "No MONDAY_TOKEN set"} warn={!MONDAY_READY} />
+          <Row label="Data Store" value={DEMO_MODE ? "Demo (no Supabase configured)" : "Supabase"} warn={DEMO_MODE} />
+          <Row label="Monday Board" value={MONDAY_READY ? `Connected · ${env.mondayBoardId}` : "No MONDAY_TOKEN set"} warn={!MONDAY_READY} />
           <Row label="SharePoint (Graph)" value={GRAPH_READY ? "Connected" : "No Graph credentials set"} warn={!GRAPH_READY} />
           <Row label="Retention" value={`${env.retentionMonths} months from first download`} />
         </div>
@@ -85,7 +85,7 @@ export default async function AdminHome() {
         <section>
           <div className="mb-2.5 flex items-center gap-3">
             <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-              Submissions awaiting review
+              Submissions Awaiting Review
             </h2>
             <span className="h-px flex-1 bg-rule" />
             <span className="font-mono text-[12px] text-ink/45">{pending.length}</span>

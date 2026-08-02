@@ -80,7 +80,7 @@ export function PhotoBucket({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="font-display text-[13px] font-semibold text-ink">
-            Site photos (optional)
+            Site Photos (optional)
           </p>
           <p className="mt-0.5 text-[12px] leading-snug text-ink/55">
             JPEG or PNG photos straight from your phone — we&apos;ll bundle them
@@ -91,7 +91,7 @@ export function PhotoBucket({
         <button type="button" onClick={() => input.current?.click()}
           disabled={compiling !== null} className="btn-ghost shrink-0">
           {compiling !== null ? `Compiling ${compiling} photo${compiling === 1 ? "" : "s"}…`
-            : pdf ? "Change photos" : "Choose photos"}
+            : pdf ? "Change Photos" : "Choose Photos"}
         </button>
       </div>
 

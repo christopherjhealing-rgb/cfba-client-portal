@@ -117,7 +117,7 @@ export function SyncHealth({
       {bySpelling.size > 0 && (
         <div className="card mt-3 p-4">
           <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-            Unmatched Monday clients ({bySpelling.size})
+            Unmatched Monday Clients ({bySpelling.size})
           </h2>
           <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
             These board cards didn&apos;t match any client here, so their jobs and

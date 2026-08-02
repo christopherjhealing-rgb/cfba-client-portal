@@ -23,14 +23,14 @@ export default async function Details() {
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
-      <PageHead hero="/heroes/letterbox.jpg" title="My details" sub="How your company is recorded with us." />
+      <PageHead hero="/heroes/letterbox.jpg" title="My Details" sub="How your company is recorded with us." />
 
       <div className="card mb-6 divide-y divide-rule overflow-hidden">
-        <Field label="Company name" value={company?.name || session.companyName} />
+        <Field label="Company Name" value={company?.name || session.companyName} />
         <Field label="Username" value={session.username} mono />
-        <Field label="Email addresses we match your jobs on"
+        <Field label="Email Addresses We Match Your Jobs On"
           value={company?.emails?.length ? company.emails.join("\n") : "None recorded"} />
-        <Field label="Jobs on your account" value={String(jobCount)} />
+        <Field label="Jobs on Your Account" value={String(jobCount)} />
       </div>
 
       <LibraryManager initial={docs} />
@@ -51,14 +51,14 @@ export default async function Details() {
             we&apos;ll change them the same day.
           </p>
           <a href="mailto:admin@cfba.com.au"
-            className="btn-ghost mt-4">Email the office</a>
+            className="btn-ghost mt-4">Email the Office</a>
         </div>
       </div>
 
       <div className="mt-6">
         <p className="text-[13px] text-ink/55">
           To change your password, sign out and use{" "}
-          <span className="font-medium text-ink/75">Forgot password?</span>{" "}
+          <span className="font-medium text-ink/75">Forgot Password?</span>{" "}
           on the sign-in screen — we&apos;ll issue a new setup code.
         </p>
       </div>

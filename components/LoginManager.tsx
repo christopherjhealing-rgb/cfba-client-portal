@@ -37,12 +37,12 @@ export function LoginManager({
     <div className="mt-3 border-t border-rule pt-3">
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-[160px] flex-1">
-          <label className="label">New username for {companyName}</label>
+          <label className="label">New Username for {companyName}</label>
           <input className="field" value={username} autoCapitalize="none"
             onChange={(e) => setUsername(e.target.value)} placeholder="yourcompany" />
         </div>
         <div className="min-w-[140px] flex-1">
-          <label className="label">Person&apos;s name (optional)</label>
+          <label className="label">Person&apos;s Name (optional)</label>
           <input className="field" value={displayName}
             onChange={(e) => setDisplayName(e.target.value)} placeholder="Joe Bloggs" />
         </div>

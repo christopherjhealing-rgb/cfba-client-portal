@@ -21,7 +21,7 @@ export function StaffLogin({ demo }: { demo?: boolean }) {
 
   return (
     <form onSubmit={submit} className="card p-6">
-      <label className="label" htmlFor="pc">Office passcode</label>
+      <label className="label" htmlFor="pc">Office Passcode</label>
       <input id="pc" type="password" required autoFocus value={passcode}
         onChange={(e) => setPasscode(e.target.value)} className="field" />
       <button className="btn mt-5 w-full" disabled={busy}>

@@ -66,7 +66,7 @@ export function EngineeringControl({
   return (
     <div className="card mb-8 p-4">
       <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-        Engineering checkers (client access)
+        Engineering Checkers (Client Access)
       </h2>
       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
         When on, <strong>Engineering</strong> appears in the client menu and each
@@ -126,7 +126,7 @@ export function EngineeringControl({
           className="text-[13px] file:mr-3 file:rounded-md file:border file:border-rule file:bg-white file:px-3 file:py-1.5 file:text-[12.5px]" />
         <div>
           <button className="btn" disabled={busy} onClick={upload}>
-            {busy ? "Working…" : "Upload checker set"}
+            {busy ? "Working…" : "Upload Checker Set"}
           </button>
         </div>
       </div>

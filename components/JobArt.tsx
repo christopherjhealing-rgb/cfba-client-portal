@@ -19,7 +19,7 @@ const RULES: { key: ArtKey; label: string; words: string[] }[] = [
   { key: "retaining", label: "Retaining", words: ["retaining", "retain"] },
   { key: "fence", label: "Fence", words: ["fence", "fencing", "wall to boundary"] },
   { key: "alterations", label: "Alterations", words: ["alteration", "addition", "extension", "renovation", "reno", "convert"] },
-  { key: "dwelling", label: "New dwelling", words: ["dwelling", "residence", "house", "home", "ancillary"] },
+  { key: "dwelling", label: "New Dwelling", words: ["dwelling", "residence", "house", "home", "ancillary"] },
 ];
 
 export function classifyJob(description?: string, jobClass?: string) {

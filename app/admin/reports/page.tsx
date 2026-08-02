@@ -64,7 +64,7 @@ export default async function Reports() {
 
   return (
     <StaffShell title="Reports" sub="Throughput and turnaround." active="/admin">
-      <Link href="/admin" className="text-[13px] text-seal underline">← Back to admin</Link>
+      <Link href="/admin" className="text-[13px] text-seal underline">← Back to Admin</Link>
       <h1 className="mb-1 mt-4 font-display text-[26px] font-semibold">Reports</h1>
       <p className="mb-6 max-w-2xl text-[14px] leading-relaxed text-ink/65">
         From the jobs mirrored off the board. Turnaround is business days from the
@@ -72,11 +72,11 @@ export default async function Reports() {
       </p>
 
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Issued (30 days)" value={String(issuedIn(30))} />
-        <Stat label="Issued (90 days)" value={String(issuedIn(90))} />
-        <Stat label="Median turnaround" value={med !== null ? `${med} days` : "—"}
+        <Stat label="Issued (30 Days)" value={String(issuedIn(30))} />
+        <Stat label="Issued (90 Days)" value={String(issuedIn(90))} />
+        <Stat label="Median Turnaround" value={med !== null ? `${med} days` : "—"}
           sub={`over ${turnarounds.length} jobs, last 90 days`} />
-        <Stat label="You publish" value={`${published} days`}
+        <Stat label="You Publish" value={`${published} days`}
           sub={avg !== null ? `actual average ${avg}` : "no data yet"} />
       </div>
 
@@ -93,7 +93,7 @@ export default async function Reports() {
 
       <div className="mb-2.5 flex items-center gap-3">
         <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-          Busiest clients (active jobs)
+          Busiest Clients (Active Jobs)
         </h2>
         <span className="h-px flex-1 bg-rule" />
       </div>

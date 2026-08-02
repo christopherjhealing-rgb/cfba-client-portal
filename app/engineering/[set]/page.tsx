@@ -36,7 +36,7 @@ export default async function EngineeringSet({
       <PageHead
         title={set.name}
         sub="A guide, not a certification — CFBA's assessment is what counts."
-        action={<Link href="/engineering" className="btn-ghost">← All checkers</Link>}
+        action={<Link href="/engineering" className="btn-ghost">← All Checkers</Link>}
       />
       <CheckerFrame
         src={`/api/engineering/${encodeURIComponent(set.key)}`}

@@ -47,7 +47,7 @@ export default async function Amend({
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead
         hero="/heroes/shed.jpg"
-        title="Amend a job"
+        title="Amend a Job"
         sub="Tell us what's changed on a job you already have with us."
       />
 
@@ -56,7 +56,7 @@ export default async function Amend({
 
         <div className="card p-5">
           <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
-            How this works
+            How This Works
           </p>
           <ol className="mt-3 space-y-3 text-[13px] leading-relaxed text-ink/70">
             <li>

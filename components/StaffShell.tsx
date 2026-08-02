@@ -38,7 +38,7 @@ export function StaffShell({
           <form action="/api/admin/login" method="post" className="ml-auto">
             <input type="hidden" name="signout" value="1" />
             <button className="rounded-md px-3 py-1.5 text-[13px] text-white/65 transition hover:bg-white/10 hover:text-white">
-              Sign out
+              Sign Out
             </button>
           </form>
         </div>
