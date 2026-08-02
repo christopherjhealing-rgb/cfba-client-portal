@@ -5,7 +5,8 @@ import {
   ringToGround, accessLegEdge, inferFrontage, ringToPlan, buildLot, reorientLot,
 } from "../lib/cadastre.mjs";
 import {
-  edgeLabels, lotEdges, lotSetbacks, polygonArea, polygonInside,
+  edgeLabels, groundToPlanVector, lotEdges, lotSetbacks, metresBetween,
+  polyBounds, polygonArea, polygonInside, underlayAnchor,
 } from "../lib/site-plan.mjs";
 import {
   SUBURBAN, SUBURBAN_RING, SUBURBAN_STREET, SUBURBAN_ESRI,
@@ -360,6 +361,39 @@ test("reorienting a lot with no ground ring behind it only moves the labels", ()
   assert.equal(turned.frontage, 2);
   assert.deepEqual(turned.pts, traced.pts);
   assert.equal(turned.north, 0);
+});
+
+test("the aerial lands on the lot with nothing to drag", () => {
+  // The claim this whole feature rests on: with the photo centred on the
+  // parcel's own point, turned by the north the parcel derives, every corner
+  // of the drawn lot sits over the same ground the cadastre put it on.
+  for (const [fc, street] of [[SUBURBAN, SUBURBAN_STREET], [CORNER, CORNER_STREET],
+    [BATTLEAXE, BATTLEAXE_STREET], [IRREGULAR, IRREGULAR_STREET]]) {
+    const lot = buildLot(parseParcel(fc), street, {});
+    const b = polyBounds(lot.pts);
+    // What the builder computes: no hand offset, the parcel's point as base.
+    const anchor = underlayAnchor(b.maxX, b.maxY, 0, 0, lot.anchor);
+    for (let i = 0; i < lot.ring.length; i++) {
+      const g = metresBetween(
+        { lat: lot.lat, lng: lot.lng },
+        { lat: lot.ring[i][0], lng: lot.ring[i][1] },
+      );
+      const p = groundToPlanVector(g.east, g.north, lot.north);
+      // A tenth of a millimetre: the corners are stored to four decimal
+      // places, and that rounding is the whole of the disagreement.
+      close(anchor.x + p.dx, lot.pts[i].x, 1e-4);
+      close(anchor.y + p.dy, lot.pts[i].y, 1e-4);
+    }
+  }
+});
+
+test("underlayAnchor still centres on the lot when there is no parcel point", () => {
+  assert.deepEqual(underlayAnchor(20, 40, 0, 0), { x: 10, y: 20 });
+  assert.deepEqual(underlayAnchor(20, 40, 0, 0, null), { x: 10, y: 20 });
+  // With one, the base is the parcel's point and the nudge still applies.
+  assert.deepEqual(underlayAnchor(20, 40, 0, 0, { x: 6.25, y: 16 }), { x: 6.25, y: 16 });
+  assert.deepEqual(underlayAnchor(20, 40, -1.5, 2.25, { x: 6.25, y: 16 }),
+    { x: 4.75, y: 18.25 });
 });
 
 // ---------------------------------------------------------------------------

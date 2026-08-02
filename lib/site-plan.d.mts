@@ -52,6 +52,7 @@ export function setbackMarks(
 
 export function defaultPlacement(
   w: number, d: number, lotW: number, lotD: number, count?: number,
+  centre?: Pt | null,
 ): { x: number; y: number };
 
 export function normalisePts(pts: Pt[]): Pt[];

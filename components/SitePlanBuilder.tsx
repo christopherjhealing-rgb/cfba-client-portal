@@ -11,7 +11,8 @@ import {
   defaultPlacement, deriveStreet, edgeLabels, fitScale, fmtM, fmtM2, footprint,
   isSimplePolygon, lotEdges, lotFrontage, lotPts, lotSetbacks, mToMmOnPaper,
   mmOnPaperToM, normalisePts, parseMetres, polyBounds, polyFromFootprint,
-  polygonArea, polygonInside, resizeBounds, rotateStructure, sanitiseLot,
+  polygonArea, polygonCentroid, polygonInside, resizeBounds, rotateStructure,
+  sanitiseLot,
   sanitiseUnderlay, scaleBarMetres, setbackMarks, setbacks, snap,
   structureArea, underlayAnchor, underlayCentre, underlayMapSize,
   underlayScale, underlayZoom, type Lot, type Underlay,
@@ -727,8 +728,15 @@ export function SitePlanBuilder(
     canvasRef.current?.focus({ preventScroll: true });
   }
 
+  /** New structures land on the lot's own middle. For a rectangle that is
+   *  the middle of the sheet; for a battleaxe it is inside the block, not
+   *  out on the neighbour's where the bounding box's centre falls. */
+  const dropAt = (w: number, d: number) =>
+    defaultPlacement(w, d, lotW, lotD, design.structures.length,
+      isPoly ? polygonCentroid(lotOutline) : null);
+
   function addStructure(preset: (typeof STRUCTURE_PRESETS)[number]) {
-    const at = defaultPlacement(preset.w, preset.d, lotW, lotD, design.structures.length);
+    const at = dropAt(preset.w, preset.d);
     pushStructure({
       id: uid(), kind: preset.kind, label: preset.label,
       w: preset.w, d: preset.d, rot: 0, shape: "rect", ...at,
@@ -737,7 +745,7 @@ export function SitePlanBuilder(
 
   function addLShape() {
     const w = 6, d = 4;
-    const at = defaultPlacement(w, d, lotW, lotD, design.structures.length);
+    const at = dropAt(w, d);
     pushStructure({
       id: uid(), kind: "lshape", label: "L-shape",
       w, d, rot: 0, shape: "lshape", notchW: 3, notchD: 2, ...at,

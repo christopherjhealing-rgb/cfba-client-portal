@@ -74,6 +74,33 @@ test("defaultPlacement staggers but never leaves the lot", () => {
   }
 });
 
+test("defaultPlacement centres on the lot's own middle when it has one", () => {
+  // A battleaxe: rear block up the top, a 4 m access leg down to the street.
+  // The bounding box's centre is out in the leg's neighbour's yard; the lot's
+  // own centroid is in the block, which is where a new shed belongs.
+  const flag = [
+    { x: 8, y: 55 }, { x: 12, y: 55 }, { x: 12, y: 25 }, { x: 20, y: 25 },
+    { x: 20, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 25 }, { x: 8, y: 25 },
+  ];
+  const c = polygonCentroid(flag);
+  const shed = ({ x, y }) =>
+    [{ x, y }, { x: x + 3, y }, { x: x + 3, y: y + 3 }, { x, y: y + 3 }];
+  let boxMisses = 0;
+  for (let count = 0; count < 5; count++) {
+    const at = defaultPlacement(3, 3, 20, 55, count, c);
+    assert.ok(polygonInside(shed(at), flag),
+      `shed ${count} at ${at.x}, ${at.y} lands inside the lot`);
+    if (!polygonInside(shed(defaultPlacement(3, 3, 20, 55, count)), flag)) boxMisses++;
+  }
+  // The bounding box's centre is out in the access leg, and the stagger walks
+  // it straight through the side fence.
+  assert.ok(boxMisses > 0, "the bounding-box centre would have missed the lot");
+  // And with no centre given, nothing about the old behaviour moves.
+  assert.deepEqual(defaultPlacement(3, 3, 20, 40, 0), { x: 8.5, y: 18.5 });
+  assert.deepEqual(defaultPlacement(3, 3, 20, 40, 0, null),
+    defaultPlacement(3, 3, 20, 40, 0));
+});
+
 test("snap rounds to the step", () => {
   close(snap(1.234, 0.05), 1.25);
   close(snap(0.04, 0.1), 0);
