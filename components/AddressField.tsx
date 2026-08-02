@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { stripCountry, suggestionRequest, type SuggestionRequest } from "@/lib/address.mjs";
+import { GOOGLE_MAPS_KEY, loadMapsLibrary } from "@/lib/google-maps";
 
 // The site-address input with Google suggestions laid over it — the new
 // Places API (AutocompleteSuggestion + session tokens), because the legacy
@@ -13,13 +14,15 @@ import { stripCountry, suggestionRequest, type SuggestionRequest } from "@/lib/a
 // the plain input it replaced: new lots that aren't on the maps yet must
 // never be blocked, and a missing optional key must never show.
 
-const KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || "";
+const KEY = GOOGLE_MAPS_KEY;
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 250;
 const MAX_STRIKES = 3; // consecutive fetch failures before we stop asking
 
 // ---------------------------------------------------------------------------
-// Maps loader — once per page, and only once someone touches the field.
+// The places library. The script bootstrap itself lives in lib/google-maps —
+// one loader for the whole portal — and this only checks that the two members
+// we actually call turned up.
 // ---------------------------------------------------------------------------
 
 // The slice of the places library we call. The full @types/google.maps is a
@@ -33,11 +36,6 @@ interface PlacesLibrary {
   };
 }
 
-type MapsNamespace = Record<string, unknown> & {
-  importLibrary?: (name: string) => Promise<unknown>;
-};
-type MapsWindow = { google?: { maps?: MapsNamespace } };
-
 let placesOnce: Promise<PlacesLibrary | null> | null = null;
 
 /** Resolves the places library, or null when there's no key or Google can't
@@ -48,52 +46,11 @@ function loadPlaces(): Promise<PlacesLibrary | null> {
 }
 
 async function bootPlaces(): Promise<PlacesLibrary | null> {
-  if (!KEY || typeof window === "undefined") return null;
-  try {
-    const w = window as unknown as MapsWindow;
-    const g = (w.google ??= {});
-    const maps: MapsNamespace = (g.maps ??= {});
-
-    if (!maps.importLibrary) {
-      // Google's dynamic bootstrap, written out readably: park a stub that
-      // injects the real script on first use. The script replaces the stub
-      // with the real importLibrary, which the stub then defers to.
-      let script: Promise<void> | null = null;
-      const inject = () =>
-        (script ??= new Promise<void>((resolve, reject) => {
-          const params = new URLSearchParams({
-            key: KEY,
-            v: "weekly",
-            libraries: "places",
-            loading: "async",
-            callback: "google.maps.__boot__",
-          });
-          maps.__boot__ = resolve;
-          const s = document.createElement("script");
-          s.src = "https://maps.googleapis.com/maps/api/js?" + params.toString();
-          s.async = true;
-          s.onerror = () => reject(new Error("Google Maps script failed to load"));
-          const nonced = document.querySelector<HTMLScriptElement>("script[nonce]");
-          if (nonced?.nonce) s.nonce = nonced.nonce;
-          document.head.append(s);
-        }));
-      const stub = (name: string): Promise<unknown> =>
-        inject().then(() => {
-          const real = w.google?.maps?.importLibrary;
-          if (!real || real === stub) throw new Error("Maps bootstrap incomplete");
-          return real(name);
-        });
-      maps.importLibrary = stub;
-    }
-
-    const lib = (await maps.importLibrary("places")) as Partial<PlacesLibrary> | null;
-    if (!lib?.AutocompleteSessionToken || !lib.AutocompleteSuggestion?.fetchAutocompleteSuggestions) {
-      return null;
-    }
-    return lib as PlacesLibrary;
-  } catch {
+  const lib = await loadMapsLibrary<Partial<PlacesLibrary>>("places");
+  if (!lib?.AutocompleteSessionToken || !lib.AutocompleteSuggestion?.fetchAutocompleteSuggestions) {
     return null;
   }
+  return lib as PlacesLibrary;
 }
 
 // ---------------------------------------------------------------------------
