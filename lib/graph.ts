@@ -103,8 +103,11 @@ function toRemote(it: Record<string, unknown>): RemoteFile | null {
   const file = it.file as { mimeType?: string } | undefined;
   if (!file) return null;
   if (EXCLUDED_FILE.test((it.name as string) || "")) return null; // templates / temp
-  const dl = it["@microsoft.graph.downloadUrl"] as string | undefined;
-  if (!dl) return null;
+  // No download link is NOT a reason to drop the file. SharePoint omits the
+  // annotation for plenty of healthy items; downloadFile falls back to
+  // /content, which always works. Dropping them here is what left a job's
+  // certificate package empty with the PDFs sitting in the folder.
+  const dl = (it["@microsoft.graph.downloadUrl"] as string | undefined) || "";
   const parent = (it.parentReference as { path?: string })?.path || "";
   const decoded = decodeURIComponent(parent).replace(/^\/drive(s)?\/[^/]+\/root:?/, "");
   const rel = decoded.replace(new RegExp("^/?" + env.clientFilesRoot + "/?"), "");
@@ -198,9 +201,31 @@ export async function findIssuedFiles(ref: string): Promise<RemoteFile[]> {
   return [];
 }
 
+/** Fetch a file's bytes.
+ *
+ *  Prefers the pre-signed link when SharePoint hands one out, but never
+ *  depends on it: on this tenant `@microsoft.graph.downloadUrl` comes back
+ *  absent for perfectly good PDFs, which silently emptied a job's certificate
+ *  package. /content always works — it answers with a redirect to storage,
+ *  which we follow ourselves so the bearer token is never forwarded to a
+ *  pre-authenticated URL that doesn't want it. */
 export async function downloadFile(f: RemoteFile): Promise<Buffer> {
-  const r = await fetch(f.downloadUrl);
-  if (!r.ok) throw new Error(`Download ${f.name} -> ${r.status}`);
+  if (f.downloadUrl) {
+    const direct = await fetch(f.downloadUrl);
+    if (direct.ok) return Buffer.from(await direct.arrayBuffer());
+  }
+  const r = await fetch(
+    `${GRAPH}/drives/${env.graphDriveId}/items/${f.itemId}/content`,
+    { headers: { Authorization: `Bearer ${await token()}` }, redirect: "manual" }
+  );
+  if (r.status >= 300 && r.status < 400) {
+    const loc = r.headers.get("location");
+    if (!loc) throw new Error(`Download ${f.name} -> ${r.status} with no location`);
+    const followed = await fetch(loc);
+    if (!followed.ok) throw new Error(`Download ${f.name} -> ${followed.status}`);
+    return Buffer.from(await followed.arrayBuffer());
+  }
+  if (!r.ok) throw new Error(`Download ${f.name} -> ${r.status} ${await r.text()}`);
   return Buffer.from(await r.arrayBuffer());
 }
 
@@ -274,10 +299,6 @@ export async function inspectIssued(jobFolderId: string): Promise<{
     if (f.folder) { skipped.push({ name, why: "a folder, not a file" }); continue; }
     if (EXCLUDED_FILE.test(name)) {
       skipped.push({ name, why: "Word document or temp file — excluded on purpose" });
-      continue;
-    }
-    if (!f["@microsoft.graph.downloadUrl"]) {
-      skipped.push({ name, why: "SharePoint gave no download link (still uploading?)" });
       continue;
     }
     usable.push({ name, size: Number(f.size || 0) });
