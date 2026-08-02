@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import {
   groupJobs, clientStatusLabel, isClientVisible, needsClientInfo,
-  businessDaysSince, PAUSED_STATUSES,
+  elapsedBusinessDays, PAUSED_STATUSES,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -17,14 +17,18 @@ import { EmptyState, fmtDate } from "@/components/JobBits";
 
 export const dynamic = "force-dynamic";
 
+// "Current" leads and is the default: the everyday question is "what's still
+// with them", not "everything I've ever lodged". Finished work is still one
+// click away.
 const FILTERS = [
-  { key: "all", label: "All" },
+  { key: "progress", label: "Current" },
   { key: "action", label: "Needs You" },
-  { key: "progress", label: "In Progress" },
   { key: "ready", label: "Ready" },
   { key: "past", label: "Past" },
+  { key: "all", label: "All" },
 ] as const;
 type FilterKey = (typeof FILTERS)[number]["key"];
+const DEFAULT_FILTER: FilterKey = "progress";
 
 export default async function MyJobs({
   searchParams,
@@ -35,7 +39,7 @@ export default async function MyJobs({
   const unread = await unreadCount(session.companyId);
 
   const show = (FILTERS.find((f) => f.key === sp.show)?.key ||
-    "all") as FilterKey;
+    DEFAULT_FILTER) as FilterKey;
   const q = (sp.q || "").trim().toLowerCase();
   // Carry the current search into the filter-chip links so the two combine.
   const withQ = (href: string) => q ? `${href}${href.includes("?") ? "&" : "?"}q=${encodeURIComponent(q)}` : href;
@@ -80,10 +84,14 @@ export default async function MyJobs({
   // shown while the job is with the client, paused or cancelled. Just the day
   // count: the published turnaround belongs where it is a statement of
   // service, not hung off one job's status line.
+  //
+  // Days the job spent waiting on the client come back OUT of the count: only
+  // the running jobs show a counter, so only they need their clock read.
+  const pauses = await repo.clientPauses(g.in_progress.map((j) => j.ref as string));
   const elapsedFor = (j: (typeof all)[number]) => {
     if (needsClientInfo(j) || PAUSED_STATUSES.has(j.mondayStatus as string) ||
       j.mondayStatus === "Cancelled" || !j.receivedAt) return null;
-    return businessDaysSince(j.receivedAt as string);
+    return elapsedBusinessDays(j.receivedAt as string, pauses[j.ref as string]);
   };
 
   return (
@@ -108,7 +116,7 @@ export default async function MyJobs({
 
       <div className="mb-5 flex flex-wrap gap-1.5">
         {FILTERS.map((f) => (
-          <Link key={f.key} href={withQ(f.key === "all" ? "/jobs" : `/jobs?show=${f.key}`)}
+          <Link key={f.key} href={withQ(f.key === DEFAULT_FILTER ? "/jobs" : `/jobs?show=${f.key}`)}
             className={`rounded-md border px-3 py-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.07em] transition ${
               show === f.key
                 ? "border-seal bg-seal text-white"

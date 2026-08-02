@@ -32,14 +32,33 @@ export async function GET(
     return new Response("This job has no files to download yet.", { status: 409 });
   }
 
+  // Skipping an unreadable blob keeps a partly-good package downloadable, but
+  // skipping ALL of them used to hand the client a valid, empty zip and call
+  // it done — which looks exactly like "nothing happened". Count them.
   const zip = new JSZip();
+  let added = 0;
+  const failed: string[] = [];
   for (const f of files) {
     try {
       const bytes = await repo.readFile(f.storagePath);
+      if (!bytes.length) throw new Error("stored file is empty");
       zip.file(f.filename, bytes);
-    } catch {
-      // Skip a missing blob rather than failing the whole download.
+      added++;
+    } catch (e) {
+      failed.push(`${f.filename}: ${(e as Error).message}`);
     }
+  }
+  if (added === 0) {
+    console.error(`download ${ref}: nothing readable of ${files.length} file(s) — ${failed.join(" | ")}`);
+    return new Response(
+      "We can't put your package together at the moment — the files are listed " +
+      "but we can't read them back. We've been told about it; ring us on " +
+      "1300 029 074 and we'll email them straight over.",
+      { status: 500 }
+    );
+  }
+  if (failed.length) {
+    console.warn(`download ${ref}: ${failed.length} file(s) skipped — ${failed.join(" | ")}`);
   }
   const buf = await zip.generateAsync({ type: "nodebuffer" });
 

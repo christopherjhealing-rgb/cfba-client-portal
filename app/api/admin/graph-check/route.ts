@@ -14,6 +14,24 @@ import { NextResponse } from "next/server";
 import { isStaff } from "@/lib/session";
 import { env, GRAPH_READY } from "@/lib/env";
 import * as graph from "@/lib/graph";
+import * as repo from "@/lib/repo";
+
+/** What the portal has actually stored for this job, as opposed to what
+ *  SharePoint holds. A row here with an unreadable blob is the difference
+ *  between "the client sees a Download button" and "the client gets bytes". */
+async function storedFor(ref: string) {
+  const rows = await repo.jobFiles(ref).catch(() => []);
+  return Promise.all(
+    rows.map(async (f) => {
+      try {
+        const bytes = await repo.readFile(f.storagePath);
+        return { filename: f.filename, recorded: f.size, readable: true, bytes: bytes.length };
+      } catch (e) {
+        return { filename: f.filename, recorded: f.size, readable: false, why: (e as Error).message };
+      }
+    })
+  );
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,6 +91,7 @@ export async function GET(req: Request) {
     }
     const inspected = await graph.inspectIssued(found.id);
     out.issued = inspected;
+    out.stored = await storedFor(ref);
     return NextResponse.json({
       ...out,
       ok: inspected.usable.length > 0,

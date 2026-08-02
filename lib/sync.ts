@@ -9,7 +9,10 @@
 // Idempotent and additive: a job already downloaded is never dropped, even once
 // Monday later moves it to Invoiced / Completed.
 import { DEMO_MODE, MONDAY_READY, GRAPH_READY, env } from "./env";
-import { matchCompany, READY_STATUS, CLIENT_ACTION_STATUSES, retention, surveyorFor } from "./core.mjs";
+import {
+  matchCompany, READY_STATUS, CLIENT_ACTION_STATUSES, retention, surveyorFor,
+  nextClientPause,
+} from "./core.mjs";
 import * as monday from "./monday";
 import { sendMail, updateEmail, issuedEmail } from "./mail";
 import * as graph from "./graph";
@@ -35,6 +38,8 @@ export interface SyncResult {
   holding: string[];
   emailsSent: number;
   emailFails: string[];
+  /** Jobs whose with-the-client clock started or stopped this cycle. */
+  pausesUpdated: number;
   note?: string;
 }
 
@@ -54,6 +59,7 @@ export async function runSync(): Promise<SyncResult> {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
     issuedNoFiles: [], stillSyncing: [], holding: [], emailsSent: 0, emailFails: [],
+    pausesUpdated: 0,
   };
 
   if (!MONDAY_READY) {
@@ -63,6 +69,11 @@ export async function runSync(): Promise<SyncResult> {
 
   const companies = await repo.companiesForMatch();
   const now = new Date().toISOString();
+  const nowDate = new Date(now);
+  // Every card that matched a client this cycle, for the with-the-client clock
+  // in step 3. Collected rather than handled inline so the whole lot costs one
+  // read instead of one per card.
+  const seen: { ref: string; status: string }[] = [];
 
   // 1. Issued -> copy files
   const issued = await monday.listByStatus(READY_STATUS);
@@ -70,6 +81,7 @@ export async function runSync(): Promise<SyncResult> {
   for (const card of issued) {
     const companyId = matchCompany({ clientName: card.clientName, email: card.email }, companies);
     if (!companyId) { res.unmatched.push({ ref: card.ref, client: card.clientName }); continue; }
+    seen.push({ ref: card.ref, status: card.status });
 
     const existing = await repo.getJob(card.ref);
     // The client's own reference arrives via the lodgement (stashed against
@@ -130,6 +142,14 @@ export async function runSync(): Promise<SyncResult> {
         files = [];
         for (const rf of remote) {
           const bytes = await graph.downloadFile(rf);
+          // A zero-byte read is a failed read, not a file. Recording it would
+          // put a row in the job's package that downloads as nothing, and the
+          // client would meet an empty zip with no idea why.
+          if (!bytes.length) {
+            throw new Error(
+              `${rf.name} came back empty from SharePoint — not recording it against ${card.ref}`
+            );
+          }
           const storagePath = `${job.storagePrefix}/${rf.name}`;
           await repo.writeFile(storagePath, bytes, rf.contentType);
           files.push({ filename: rf.name, size: rf.size || bytes.length, storagePath, contentType: rf.contentType });
@@ -175,6 +195,7 @@ export async function runSync(): Promise<SyncResult> {
     if (!companyId) continue;
     const existing = await repo.getJob(card.ref);
     if (card.status === READY_STATUS) continue; // handled above
+    seen.push({ ref: card.ref, status: card.status });
     const clientRef = existing
       ? existing.clientRef ?? null
       : (await repo.getSetting<{ ref?: string }>(`clientref:${card.itemId}`))?.ref || null;
@@ -192,10 +213,15 @@ export async function runSync(): Promise<SyncResult> {
     res.jobsUpserted++;
   }
 
-  // 3. Client-visible updates -> messages
+  // 3. The with-the-client clock. A job's "Day N" must not run while we are
+  //    waiting on the client, so every card's current status is folded into
+  //    its pause record here.
+  res.pausesUpdated = await trackClientPauses(seen, nowDate);
+
+  // 4. Client-visible updates -> messages
   res.messagesPulled = await pullMessages(active, companies);
 
-  // 4. Retention. We tell clients the download stays available for a set
+  // 5. Retention. We tell clients the download stays available for a set
   //    window; that has to be true, not just hidden from the UI.
   res.filesPurged = await purgeExpired();
 
@@ -211,12 +237,51 @@ export async function runSync(): Promise<SyncResult> {
       issuedNoFiles: res.issuedNoFiles, stillSyncing: res.stillSyncing,
       holding: res.holding,
       emailsSent: res.emailsSent, emailFails: res.emailFails,
+      pausesUpdated: res.pausesUpdated,
     });
   } catch (e) {
     console.warn("sync: could not persist health record:", (e as Error).message);
   }
 
   return res;
+}
+
+/**
+ * Fold this cycle's statuses into each job's with-the-client clock.
+ *
+ * The transition is the whole thing: a card ARRIVING at a client-action status
+ * stamps when it went out, and a card LEAVING one banks the working days it
+ * was gone. Cards that haven't moved cost nothing — nextClientPause returns
+ * null and we don't write.
+ *
+ * One read for every ref, and a write only where the state actually changed,
+ * so a few hundred active cards cost one query and a handful of upserts.
+ *
+ * Never throws. A job whose clock we couldn't update shows the elapsed days it
+ * showed before — the old behaviour, which is wrong but not broken.
+ */
+async function trackClientPauses(
+  cards: { ref: string; status: string }[], now: Date
+): Promise<number> {
+  const latest = new Map<string, string>();
+  for (const c of cards) if (c.ref) latest.set(c.ref, c.status);
+  if (latest.size === 0) return 0;
+
+  let written = 0;
+  try {
+    const current = await repo.clientPauses([...latest.keys()]);
+    for (const [ref, status] of latest) {
+      const next = nextClientPause(
+        current[ref], CLIENT_ACTION_STATUSES.has(status), now);
+      if (!next) continue;
+      await repo.setSetting(repo.pauseKey(ref), next);
+      written++;
+    }
+  } catch (e) {
+    console.warn("sync: could not update the with-the-client clock:",
+      (e as Error).message);
+  }
+  return written;
 }
 
 /** Delete stored files for jobs past their retention window. */

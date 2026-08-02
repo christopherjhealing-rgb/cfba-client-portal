@@ -42,7 +42,10 @@ export function JobTimeline({ job }: { job: PortalJob }) {
             <span
               className={`relative z-10 grid h-[19px] w-[19px] place-items-center rounded-full border-2 ${DOT[state]}`}
             >
-              {state === "done" && (
+              {/* The last stage being "current" means the job has arrived, not
+                  that it's mid-flight — Issued deserves its tick like every
+                  step before it. */}
+              {(state === "done" || (state === "current" && i === states.length - 1)) && (
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                   strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M20 6 9 17l-5-5" />
