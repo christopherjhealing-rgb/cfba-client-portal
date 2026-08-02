@@ -533,6 +533,20 @@ export function SitePlanBuilder(
 
   /** Geocode the typed address and drop the photo behind the plan. */
   async function findSite() {
+    // With a real parcel on the sheet, the photo belongs on the parcel's own
+    // point rather than on the geocode — that is what keeps it lined up.
+    // Nothing to look up, and nothing to line up either.
+    if (isPoly && boundary.lat !== null && boundary.lng !== null) {
+      setAerialNote("");
+      setSelected(null);
+      setDraw(null);
+      patchUnderlay({
+        lat: boundary.lat, lng: boundary.lng,
+        zoom: underlayZoom(boundary.lat, pxPerM),
+        offsetX: 0, offsetY: 0, rot: 0, visible: true, locked: true,
+      });
+      return;
+    }
     const address = design.address.trim();
     if (!address) {
       setAerialNote("Pop the site address in above and we'll go looking for it.");
