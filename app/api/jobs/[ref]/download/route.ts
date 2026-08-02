@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
+import { SENT_STATUS, READY_STATUS } from "@/lib/core.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,6 +80,30 @@ export async function GET(
       );
     } catch (e) {
       console.warn(`download: could not post receipt for ${ref}:`, (e as Error).message);
+    }
+
+    // …and move the card to Sent, so the board shows the job has gone out
+    // without anyone having to open the updates to find out.
+    //
+    // Nothing here may cost the client their files. The zip is already built;
+    // a board that is down, slow or shaped differently than we expect is the
+    // office's problem to hear about in the log, not the client's to be told
+    // about at the moment they click Download.
+    try {
+      const r = await monday.setStatus(job.mondayItemId, SENT_STATUS, [READY_STATUS]);
+      if (!r.ok && r.reason === "no-such-label") {
+        console.warn(
+          `download ${ref}: the board's status column has no "${SENT_STATUS}" label, ` +
+          `so the status was left alone. Labels on the column: ${r.labels.join(", ")}.`
+        );
+      } else if (!r.ok && r.reason === "moved-on") {
+        console.info(
+          `download ${ref}: card is at "${r.status}", not "${READY_STATUS}" — ` +
+          `left as the office has it.`
+        );
+      }
+    } catch (e) {
+      console.warn(`download: could not set status for ${ref}:`, (e as Error).message);
     }
   }
 

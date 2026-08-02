@@ -5,7 +5,17 @@ import {
   addMonths, retention, jobBucket, groupJobs, isClientVisible,
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
+  canCancel, downloadStatusWrite, SENT_STATUS,
 } from "../lib/core.mjs";
+
+// The labels the live board's status column actually carries, read from
+// board 7129862365 on 2 Aug 2026. Note what is NOT here: "Sent".
+const BOARD_LABELS = [
+  "To Assess", "Invoiced / Completed", "To CDC", "To Invoice", "On Hold",
+  "FIR", "To FIR", "Amendment", "New Info Received", "To Issue", "To Check",
+  "Cancelled", "To Do", "QUERY", "FIR - ENG", "KACIE DOCS", "Chris CDC",
+  "Issued",
+];
 
 test("aliasKey collapses the messy client variants onto one key", () => {
   const k = aliasKey("GVF");
@@ -68,6 +78,67 @@ test("isClientVisible hides Query unless downloaded", () => {
   assert.equal(isClientVisible({ mondayStatus: "Cancelled", fileCount: 0 }), true);
   // once downloaded, always visible even if later moved to a hidden status
   assert.equal(isClientVisible({ mondayStatus: "Query", fileCount: 1, firstDownloadedAt: "2026-07-01T00:00:00Z" }), true);
+});
+
+// --- moving a card to Sent on download ------------------------------------
+
+test("downloadStatusWrite refuses a label the board doesn't carry", () => {
+  // The live board has no "Sent" today. Skipping is the whole point: the
+  // portal must never add a label to the firm's board to make a write work.
+  assert.equal(downloadStatusWrite("Issued", BOARD_LABELS), "no-such-label");
+  assert.equal(
+    downloadStatusWrite("Issued", BOARD_LABELS, "Downloaded"), "no-such-label");
+});
+
+test("downloadStatusWrite writes only from Issued", () => {
+  const withSent = [...BOARD_LABELS, "Sent"];
+  assert.equal(downloadStatusWrite("Issued", withSent), "write");
+  // Already moved on by the office — leave the card where they put it.
+  assert.equal(downloadStatusWrite("To Invoice", withSent), "moved-on");
+  assert.equal(downloadStatusWrite("Invoiced / Completed", withSent), "moved-on");
+  assert.equal(downloadStatusWrite("Cancelled", withSent), "moved-on");
+  assert.equal(downloadStatusWrite("", withSent), "moved-on");
+  assert.equal(downloadStatusWrite(null, withSent), "moved-on");
+});
+
+test("downloadStatusWrite takes a Set as readily as an array", () => {
+  assert.equal(downloadStatusWrite("Issued", new Set([...BOARD_LABELS, SENT_STATUS])), "write");
+  assert.equal(downloadStatusWrite("Issued", new Set()), "no-such-label");
+  assert.equal(downloadStatusWrite("Issued", null), "no-such-label");
+});
+
+// --- cancelling a job from the portal --------------------------------------
+
+test("canCancel allows a job that is still running", () => {
+  for (const s of ["To Assess", "To CDC", "FIR", "FIR - ENG", "To Check",
+                   "To Issue", "Amendment", "On Hold", "QUERY", "To Do"]) {
+    assert.equal(canCancel({ mondayStatus: s, fileCount: 0 }), true, s);
+  }
+});
+
+test("canCancel refuses once the CDC Package is issued", () => {
+  // Not just "Issued" — the office moves the card on after issuing, and to a
+  // client To Invoice and Invoiced / Completed mean exactly the same thing.
+  for (const s of ["Issued", "To Invoice", "Invoiced / Completed"]) {
+    assert.equal(canCancel({ mondayStatus: s, fileCount: 1 }), false, s);
+  }
+});
+
+test("canCancel refuses a job already cancelled", () => {
+  assert.equal(canCancel({ mondayStatus: "Cancelled", fileCount: 0 }), false);
+});
+
+test("canCancel refuses a downloaded job whatever the card now says", () => {
+  // Downloaded means it was issued, even if the card has since been moved
+  // somewhere unrecognised.
+  assert.equal(
+    canCancel({ mondayStatus: "To CDC", fileCount: 1, firstDownloadedAt: "2026-07-01T00:00:00Z" }),
+    false);
+});
+
+test("canCancel is false for nothing at all", () => {
+  assert.equal(canCancel(null), false);
+  assert.equal(canCancel(undefined), false);
 });
 
 test("addMonths clamps end-of-month correctly", () => {

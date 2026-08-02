@@ -33,6 +33,16 @@ export const READY_STATUS: string;
 export const HIDDEN_STATUSES: Set<string>;
 export function clientStatusLabel(mondayStatus: string | null | undefined, fileCount?: number): string;
 export function isClientVisible(job: PortalJob): boolean;
+export const SENT_STATUS: string;
+export type StatusWriteDecision = "write" | "no-such-label" | "moved-on";
+export function downloadStatusWrite(
+  currentStatus: string | null | undefined,
+  boardLabels: Iterable<string> | Set<string>,
+  label?: string,
+): StatusWriteDecision;
+export const CANCELLED_STATUS: string;
+export const ISSUED_STATUSES: Set<string>;
+export function canCancel(job: PortalJob | null | undefined): boolean;
 export function addMonths(iso: string, months: number): string | null;
 export function retention(firstDownloadedAt: string | null | undefined, now?: Date | string, months?: number): Retention;
 export function jobBucket(job: PortalJob, now?: Date | string, months?: number): Bucket;

@@ -1,8 +1,13 @@
 // Monday client. Reads the board for status and writes a new card when a
 // portal submission is accepted. Column ids match the live CFBA / EWA board.
-import { env, MONDAY_READY } from "./env";
+import { env, MONDAY_READY, DEMO_MODE } from "./env";
 
 const API = "https://api.monday.com/v2";
+
+// Writes that change a card the office is working from. Demo mode must never
+// reach the real board even if a token happens to be in the environment —
+// that's the rule the whole dry-run workflow rests on.
+const CAN_WRITE = MONDAY_READY && !DEMO_MODE;
 
 const COL = {
   status: "status",
@@ -129,6 +134,97 @@ export async function createCard(input: {
     vals: JSON.stringify(values),
   });
   return d.create_item.id;
+}
+
+// ---------------------------------------------------------------------------
+// Writing the main status column.
+//
+// The board is the office's working record of ~3,700 jobs, so a status write
+// from the portal is deliberately timid. It reads the column's real labels and
+// the card's current status first, and only writes when both say it should.
+// `create_labels_if_missing` is OFF: the portal must never add a label to the
+// firm's board, so an unknown label is a skip the caller can log, not a guess.
+// ---------------------------------------------------------------------------
+
+export type StatusWrite =
+  /** Written. */
+  | { ok: true }
+  /** Demo mode, or no Monday token — nothing was sent anywhere. */
+  | { ok: false; reason: "off" }
+  /** The board's status column has no such label. `labels` is what it does have. */
+  | { ok: false; reason: "no-such-label"; labels: string[] }
+  /** The card is no longer at a status we're willing to move it from. */
+  | { ok: false; reason: "moved-on"; status: string };
+
+/** Labels defined on the board's main status column, in one call with the
+ *  card's current status so a write costs one read, not two. Blank slots (a
+ *  status column always has unused indices) are dropped. */
+async function statusContext(itemId: string): Promise<{ labels: string[]; status: string }> {
+  const q = `
+    query ($board: ID!, $item: ID!) {
+      boards(ids: [$board]) { columns(ids: ["${COL.status}"]) { settings_str } }
+      items(ids: [$item]) { column_values(ids: ["${COL.status}"]) { text } }
+    }`;
+  const d = await gql<{
+    boards: { columns: { settings_str: string }[] }[];
+    items: { column_values: { text: string | null }[] }[];
+  }>(q, { board: env.mondayBoardId, item: itemId });
+
+  const raw = d.boards?.[0]?.columns?.[0]?.settings_str || "{}";
+  const parsed = JSON.parse(raw) as { labels?: Record<string, string> };
+  const labels = Object.values(parsed.labels || {})
+    .map((l) => (l || "").trim())
+    .filter(Boolean);
+  const status = (d.items?.[0]?.column_values?.[0]?.text || "").trim();
+  return { labels, status };
+}
+
+/** Board labels on the main status column. Exposed so callers can report what
+ *  the column actually offers when a label they wanted isn't there. */
+export async function statusLabels(): Promise<string[]> {
+  if (!MONDAY_READY) return [];
+  const q = `
+    query ($board: ID!) {
+      boards(ids: [$board]) { columns(ids: ["${COL.status}"]) { settings_str } }
+    }`;
+  const d = await gql<{ boards: { columns: { settings_str: string }[] }[] }>(
+    q, { board: env.mondayBoardId });
+  const parsed = JSON.parse(d.boards?.[0]?.columns?.[0]?.settings_str || "{}") as
+    { labels?: Record<string, string> };
+  return Object.values(parsed.labels || {}).map((l) => (l || "").trim()).filter(Boolean);
+}
+
+/**
+ * Move a card's main status to `label`.
+ *
+ * `onlyWhenAt`, when given, is the set of statuses we're prepared to move the
+ * card FROM — read live from the board rather than from the portal's copy, so
+ * a card the office moved on since the last sync is left where it is.
+ */
+export async function setStatus(
+  itemId: string, label: string, onlyWhenAt?: string[]
+): Promise<StatusWrite> {
+  if (!CAN_WRITE) return { ok: false, reason: "off" };
+
+  const { labels, status } = await statusContext(itemId);
+  if (!labels.includes(label)) return { ok: false, reason: "no-such-label", labels };
+  if (onlyWhenAt && !onlyWhenAt.includes(status)) {
+    return { ok: false, reason: "moved-on", status };
+  }
+  if (status === label) return { ok: true }; // already there — no need to write
+
+  const q = `
+    mutation ($board: ID!, $item: ID!, $col: String!, $val: JSON!) {
+      change_column_value(board_id: $board, item_id: $item, column_id: $col,
+                          value: $val, create_labels_if_missing: false) { id }
+    }`;
+  await gql(q, {
+    board: env.mondayBoardId,
+    item: itemId,
+    col: COL.status,
+    val: JSON.stringify({ label }),
+  });
+  return { ok: true };
 }
 
 /** Post a note into the card's Updates (conversation) section — not a column.
