@@ -336,10 +336,13 @@ export function PageHead({
       </div>
     );
   }
+  // White is right over the photo band above; here there is no band, so the
+  // heading was pure white on pale paper — about 1.1:1, effectively invisible.
+  // Every page without a hero was showing its title to nobody.
   return (
     <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="font-display text-[28px] font-semibold leading-tight text-white">
+        <h1 className="font-display text-[28px] font-semibold leading-tight text-ink">
           {title}
         </h1>
         {sub && <p className="mt-1 text-[14px] text-ink/60">{sub}</p>}
