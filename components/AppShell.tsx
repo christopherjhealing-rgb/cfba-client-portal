@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "./Icon";
+import { Notifications } from "./Notifications";
 
 interface NavItem {
   href: string;
@@ -91,6 +92,11 @@ export function AppShell({
 }) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  // The badge starts at whatever the page rendered and is kept live by the
+  // poller. Every page change hands down a fresh count, which wins — the
+  // server is always the better answer when we have one.
+  const [live, setLive] = useState(unread);
+  useEffect(() => setLive(unread), [unread]);
   const pathname = usePathname();
 
   // BOOT has already set the attribute; this only brings React's idea of the
@@ -112,7 +118,7 @@ export function AppShell({
   }
 
   const nav = NAV.filter((n) => !hidden.includes(n.href)).map((n) =>
-    n.href === "/messages" && unread > 0 ? { ...n, badge: unread } : n
+    n.href === "/messages" && live > 0 ? { ...n, badge: live } : n
   );
 
   return (
@@ -286,6 +292,11 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Not while a staff member is looking over the client's shoulder: the
+          news isn't theirs, and the record of what's been seen belongs in the
+          client's own browser, not in ours. */}
+      {!impersonated && <Notifications company={company} onUnread={setLive} />}
     </div>
   );
 }
