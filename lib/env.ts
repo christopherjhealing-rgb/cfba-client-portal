@@ -49,7 +49,18 @@ export const env = {
   issueHoldMinutes: Number(process.env.ISSUE_HOLD_MINUTES || "10"),
   resendApiKey: process.env.RESEND_API_KEY || "",
   fromEmail: process.env.FROM_EMAIL || "no-reply@cfbuildingapprovals.com.au",
-  appUrl: process.env.APP_URL || "http://localhost:3000",
+  // Every link a client is emailed hangs off this. A wrong value here doesn't
+  // break a build or throw anything — it just sends people somewhere that
+  // isn't there, which is the worst kind of fault this system can have. So it
+  // falls back to the deployment's own address rather than to localhost: an
+  // unset (or aspirational) APP_URL can no longer send a client nowhere.
+  appUrl:
+    process.env.APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000"),
 
   // Landgate / SLIP cadastre, for the site plan tool's lot boundaries.
   //

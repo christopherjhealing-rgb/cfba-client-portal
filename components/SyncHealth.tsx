@@ -7,7 +7,7 @@ interface LastSync {
   messagesPulled?: number; filesPurged?: number;
   unmatched?: { ref: string; client: string }[];
   issuedNoFiles?: string[]; stillSyncing?: string[]; holding?: string[];
-  emailsSent?: number; emailFails?: string[];
+  emailsSent?: number; emailFails?: string[]; boardWriteFails?: string[];
 }
 
 function ago(iso?: string): string {
@@ -111,6 +111,15 @@ export function SyncHealth({
           in the portal, but the client wasn&apos;t told:{" "}
           {last?.emailFails?.join("; ")}. Fix the cause (client email address /
           mailbox), then tell the client yourself — this email won&apos;t retry.
+        </div>
+      )}
+
+      {(last?.boardWriteFails?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+          <strong>Board Not Marked Sent</strong> — the client has these and was
+          emailed, but Monday&apos;s <em>Send?</em> column still doesn&apos;t
+          say so: {last?.boardWriteFails?.join("; ")}. Set it to SENT by hand so
+          nobody chases a job that already went.
         </div>
       )}
 

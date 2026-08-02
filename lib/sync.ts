@@ -38,6 +38,9 @@ export interface SyncResult {
   holding: string[];
   emailsSent: number;
   emailFails: string[];
+  /** Jobs the client was told about but whose "Send?" column we couldn't
+      stamp SENT. The client has the package; the board doesn't say so. */
+  boardWriteFails: string[];
   /** Jobs whose with-the-client clock started or stopped this cycle. */
   pausesUpdated: number;
   note?: string;
@@ -59,7 +62,7 @@ export async function runSync(): Promise<SyncResult> {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
     issuedNoFiles: [], stillSyncing: [], holding: [], emailsSent: 0, emailFails: [],
-    pausesUpdated: 0,
+    boardWriteFails: [], pausesUpdated: 0,
   };
 
   if (!MONDAY_READY) {
@@ -201,6 +204,7 @@ export async function runSync(): Promise<SyncResult> {
     // upsert and preserved thereafter, so it never re-sends.
     const isNewIssue = existing && !existing.issuedAt && files.length > 0;
     if (isNewIssue) {
+      let emailed = false;
       try {
         const company = await repo.companyById(companyId);
         if (company?.emails?.length) {
@@ -208,12 +212,26 @@ export async function runSync(): Promise<SyncResult> {
             clientRef: job.clientRef ?? undefined });
           await sendMail(company.emails, mail.subject, mail.html);
           res.emailsSent++;
+          emailed = true;
         } else {
           res.emailFails.push(`${card.ref} — no email recorded on the client`);
         }
       } catch (e) {
         res.emailFails.push(`${card.ref} — ${(e as Error).message}`);
         console.warn(`sync: could not send issued email for ${card.ref}:`, (e as Error).message);
+      }
+
+      // The board's own record that the package reached the client: "Send?"
+      // to SENT, "Job Sent" to today. Only once the email actually went — a
+      // card marked sent for a client who was never told is the one wrong
+      // answer this column can give. The client downloading marks it too
+      // (app/api/jobs/[ref]/download), so whichever lands first wins and the
+      // second is a no-op.
+      if (emailed) {
+        const r = await monday.markSent(card.itemId);
+        if (!r.ok && r.reason === "failed") {
+          res.boardWriteFails.push(`${card.ref} — ${r.detail}`);
+        }
       }
     }
   }
@@ -267,6 +285,7 @@ export async function runSync(): Promise<SyncResult> {
       issuedNoFiles: res.issuedNoFiles, stillSyncing: res.stillSyncing,
       holding: res.holding,
       emailsSent: res.emailsSent, emailFails: res.emailFails,
+      boardWriteFails: res.boardWriteFails,
       pausesUpdated: res.pausesUpdated,
     });
   } catch (e) {

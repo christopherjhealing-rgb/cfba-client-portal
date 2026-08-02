@@ -33,13 +33,10 @@ export const READY_STATUS: string;
 export const HIDDEN_STATUSES: Set<string>;
 export function clientStatusLabel(mondayStatus: string | null | undefined, fileCount?: number): string;
 export function isClientVisible(job: PortalJob): boolean;
-export const SENT_STATUS: string;
-export type StatusWriteDecision = "write" | "no-such-label" | "moved-on";
-export function downloadStatusWrite(
-  currentStatus: string | null | undefined,
-  boardLabels: Iterable<string> | Set<string>,
-  label?: string,
-): StatusWriteDecision;
+export const SEND_SENT: string;
+export const SEND_DONE: Set<string>;
+export type SendWriteDecision = "write" | "already";
+export function sendColumnWrite(currentLabel: string | null | undefined): SendWriteDecision;
 export const CANCELLED_STATUS: string;
 export const ISSUED_STATUSES: Set<string>;
 /** All canCancel needs. Both repo.Job and PortalJob satisfy it. */

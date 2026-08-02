@@ -1,6 +1,7 @@
 // Monday client. Reads the board for status and writes a new card when a
 // portal submission is accepted. Column ids match the live CFBA / EWA board.
 import { env, MONDAY_READY, DEMO_MODE } from "./env";
+import { sendColumnWrite, SEND_SENT } from "./core.mjs";
 
 const API = "https://api.monday.com/v2";
 
@@ -18,6 +19,11 @@ const COL = {
   description: "text0__1",
   files: "file_mksmhvsk", // "Files" column — lodged documents land here
   people: "multiple_person_mkstvc5z",
+  // "Send?" (NO / YES / SENT) and its date partner "Job Sent". These are the
+  // office's own record of the package reaching the client — not the main
+  // Status column, which tracks the assessment and has no Sent label.
+  sendStatus: "status_16__1",
+  sentDate: "date__1",
 };
 
 async function gql<T = Record<string, unknown>>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -324,4 +330,70 @@ export async function listUpdates(itemIds: string[]): Promise<MondayUpdate[]> {
     }
   }
   return out;
+}
+
+/** Mark the card as delivered: "Send?" -> SENT and "Job Sent" -> today.
+ *
+ *  The office tracks delivery in its own pair of columns, separate from the
+ *  Status column that follows the assessment. Whichever happens first — the
+ *  portal emailing the client that it's ready, or the client downloading it —
+ *  is the moment the package reached them, so either can call this. Writing
+ *  SENT twice is a no-op.
+ *
+ *  Never throws: a card that won't take the write must not cost the client
+ *  their download or their email. */
+export type SendWrite =
+  | { ok: true; wrote: boolean }
+  | { ok: false; reason: "off" | "failed"; detail?: string };
+
+/**
+ * Mark a card as sent on the board's "Send?" column, and stamp "Job Sent".
+ *
+ * Called from two places — the issued email going out, and the client
+ * downloading the package — because either one means the client has it, and
+ * whichever happens first should be what the board shows.
+ *
+ * Never throws. Nothing here is worth costing a client their files or an
+ * office their sync run: a board that is down is something to read in the log.
+ */
+export async function markSent(itemId: string): Promise<SendWrite> {
+  if (!CAN_WRITE) return { ok: false, reason: "off" };
+  try {
+    const board = env.mondayBoardId;
+    const read = `query ($ids: [ID!]) {
+      items (ids: $ids) { column_values (ids: ["${COL.sendStatus}"]) { text } } }`;
+    const got = await gql<{ items: { column_values: { text: string | null }[] }[] }>(
+      read, { ids: [itemId] });
+    const current = got.items?.[0]?.column_values?.[0]?.text || "";
+    if (sendColumnWrite(current) === "already") return { ok: true, wrote: false };
+
+    const q = `
+      mutation ($board: ID!, $item: ID!, $col: String!, $val: JSON!) {
+        change_column_value(board_id: $board, item_id: $item, column_id: $col,
+                            value: $val, create_labels_if_missing: false) { id }
+      }`;
+    await gql(q, {
+      board, item: itemId, col: COL.sendStatus,
+      val: JSON.stringify({ label: SEND_SENT }),
+    });
+    // The date is a nicety — if it fails, SENT is still on the board.
+    // Perth, not UTC: before 8am here the UTC date is still yesterday, and a
+    // board that says a job went out the day before it did is worse than no
+    // date at all.
+    try {
+      const today = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Australia/Perth",
+      }).format(new Date());
+      await gql(q, {
+        board, item: itemId, col: COL.sentDate, val: JSON.stringify({ date: today }),
+      });
+    } catch (e) {
+      console.warn(`monday: Job Sent date not written for ${itemId}:`, (e as Error).message);
+    }
+    return { ok: true, wrote: true };
+  } catch (e) {
+    const detail = (e as Error).message;
+    console.warn(`monday: could not mark ${itemId} SENT:`, detail);
+    return { ok: false, reason: "failed", detail };
+  }
 }

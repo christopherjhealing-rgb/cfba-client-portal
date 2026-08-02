@@ -5,11 +5,12 @@ import {
   addMonths, retention, jobBucket, groupJobs, isClientVisible,
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
-  canCancel, downloadStatusWrite, SENT_STATUS,
+  canCancel, sendColumnWrite, SEND_SENT,
 } from "../lib/core.mjs";
 
 // The labels the live board's status column actually carries, read from
-// board 7129862365 on 2 Aug 2026. Note what is NOT here: "Sent".
+// board 7129862365 on 2 Aug 2026. Note what is NOT here: "Sent" — that lives
+// on its own column, "Send?", which is what the portal writes to.
 const BOARD_LABELS = [
   "To Assess", "Invoiced / Completed", "To CDC", "To Invoice", "On Hold",
   "FIR", "To FIR", "Amendment", "New Info Received", "To Issue", "To Check",
@@ -82,29 +83,35 @@ test("isClientVisible hides Query unless downloaded", () => {
 
 // --- moving a card to Sent on download ------------------------------------
 
-test("downloadStatusWrite refuses a label the board doesn't carry", () => {
-  // The live board has no "Sent" today. Skipping is the whole point: the
-  // portal must never add a label to the firm's board to make a write work.
-  assert.equal(downloadStatusWrite("Issued", BOARD_LABELS), "no-such-label");
-  assert.equal(
-    downloadStatusWrite("Issued", BOARD_LABELS, "Downloaded"), "no-such-label");
+test("every label the live board carries reaches the client as words", () => {
+  // The office adds labels to Status without telling anyone. Whatever they
+  // add, a builder must see readable words rather than a blank or undefined.
+  for (const s of BOARD_LABELS) {
+    const label = clientStatusLabel(s, 1);
+    assert.equal(typeof label, "string", s);
+    assert.ok(label.trim().length > 0, s);
+  }
 });
 
-test("downloadStatusWrite writes only from Issued", () => {
-  const withSent = [...BOARD_LABELS, "Sent"];
-  assert.equal(downloadStatusWrite("Issued", withSent), "write");
-  // Already moved on by the office — leave the card where they put it.
-  assert.equal(downloadStatusWrite("To Invoice", withSent), "moved-on");
-  assert.equal(downloadStatusWrite("Invoiced / Completed", withSent), "moved-on");
-  assert.equal(downloadStatusWrite("Cancelled", withSent), "moved-on");
-  assert.equal(downloadStatusWrite("", withSent), "moved-on");
-  assert.equal(downloadStatusWrite(null, withSent), "moved-on");
+test("sendColumnWrite stamps a card the office hasn't marked sent", () => {
+  // The three labels the live "Send?" column carries, read from board
+  // 7129862365 on 2 Aug 2026.
+  assert.equal(sendColumnWrite("NO"), "write");
+  assert.equal(sendColumnWrite("YES"), "write");
+  // Nothing recorded yet is the commonest case of all.
+  assert.equal(sendColumnWrite(""), "write");
+  assert.equal(sendColumnWrite(null), "write");
+  assert.equal(sendColumnWrite(undefined), "write");
 });
 
-test("downloadStatusWrite takes a Set as readily as an array", () => {
-  assert.equal(downloadStatusWrite("Issued", new Set([...BOARD_LABELS, SENT_STATUS])), "write");
-  assert.equal(downloadStatusWrite("Issued", new Set()), "no-such-label");
-  assert.equal(downloadStatusWrite("Issued", null), "no-such-label");
+test("sendColumnWrite leaves a card that already records the client having it", () => {
+  assert.equal(sendColumnWrite(SEND_SENT), "already");
+  assert.equal(sendColumnWrite("SENT"), "already");
+  // Monday hands back whatever the label reads as, so match on shape not case.
+  assert.equal(sendColumnWrite(" sent "), "already");
+  // The office is adding DOWNLOADED to the column. The day it lands, a client
+  // re-download must not drag the card back to SENT.
+  assert.equal(sendColumnWrite("Downloaded"), "already");
 });
 
 // --- cancelling a job from the portal --------------------------------------
