@@ -7,6 +7,11 @@ import {
   deriveStreet, normalisePts, rotatePts, polyBounds, lShapePts, shapePts,
   footprint, boundsOf, polygonArea, structureArea, isSimplePolygon,
   polyFromFootprint, rotateStructure, setbackMarks, alignSnap, resizeBounds,
+  MERCATOR_M_PER_PX_Z0, UNDERLAY_DEFAULT_OPACITY, UNDERLAY_MAX_ZOOM,
+  metresPerPixel, zoomForMetresPerPixel, underlayZoom, underlayScale,
+  rotationCoverScale, underlayMapSize, groundToPlanVector, planToGroundVector,
+  offsetLatLng, metresBetween, underlayAnchor, underlayCentre,
+  clampUnderlayOpacity, clampUnderlayRot, sanitiseUnderlay,
 } from "../lib/site-plan.mjs";
 
 const close = (a, b, eps = 1e-9) =>
@@ -281,4 +286,214 @@ test("resizeBounds drags one edge, snaps the size to 0.1 m and respects limits",
   assert.equal(resizeBounds(b, "e", 1, 0, 20, 40).w, 0.1);
   assert.equal(resizeBounds(b, "e", 99, 0, 20, 40).w, 18);
   assert.equal(resizeBounds(b, "w", -5, 0, 20, 40).x, 0);
+});
+
+// ---------------------------------------------------------------------------
+// The aerial underlay: Web Mercator, and lining a photo up with the drawing.
+// Perth sits at about -31.95°, so that latitude carries most of these.
+// ---------------------------------------------------------------------------
+
+const PERTH_LAT = -31.95;
+
+test("metresPerPixel is the Web Mercator ground resolution", () => {
+  // Zoom 0 on the equator is the constant itself.
+  close(metresPerPixel(0, 0), MERCATOR_M_PER_PX_Z0);
+  // Every zoom step halves it.
+  for (let z = 0; z < 22; z++) close(metresPerPixel(PERTH_LAT, z + 1), metresPerPixel(PERTH_LAT, z) / 2);
+  // At Perth, zoom 20 is about 12.7 cm on the ground per pixel.
+  close(metresPerPixel(PERTH_LAT, 20), 0.12667499863177872, 1e-12);
+  close(metresPerPixel(PERTH_LAT, 21), 0.06333749931588936, 1e-12);
+  // Latitude enters as cos, so north and south of the equator match.
+  close(metresPerPixel(-PERTH_LAT, 18), metresPerPixel(PERTH_LAT, 18));
+  // Away from the equator a pixel covers less ground.
+  assert.ok(metresPerPixel(PERTH_LAT, 18) < metresPerPixel(0, 18));
+});
+
+test("zoomForMetresPerPixel inverts metresPerPixel exactly", () => {
+  for (const lat of [0, PERTH_LAT, -12.46, 51.5]) {
+    for (const z of [1, 12, 17.5, 21.708]) {
+      close(zoomForMetresPerPixel(lat, metresPerPixel(lat, z)), z, 1e-9);
+    }
+  }
+});
+
+test("underlayZoom asks for the zoom that draws one metre as one plan metre", () => {
+  // A 20 x 40 m lot at 1:200 gives a 24.8 m wide canvas; 640 px of screen
+  // across it is 25.8 px per drawing metre.
+  const pxPerM = 640 / 24.8;
+  const z = underlayZoom(PERTH_LAT, pxPerM);
+  close(z, 21.70886359777834, 1e-9);
+  // At that zoom the correction is a no-op: the map is already exact.
+  close(underlayScale(PERTH_LAT, z, pxPerM), 1, 1e-12);
+  // Clamped at both ends rather than asking for a zoom that cannot exist.
+  assert.equal(underlayZoom(PERTH_LAT, 1e9), UNDERLAY_MAX_ZOOM);
+  assert.equal(underlayZoom(PERTH_LAT, 0), 1);
+  assert.equal(underlayZoom(PERTH_LAT, -3), 1);
+});
+
+test("underlayScale corrects whatever zoom the map really settled on", () => {
+  const pxPerM = 640 / 24.8;
+  // Satellite imagery runs out around 21: the photo goes soft, not wrong.
+  close(underlayScale(PERTH_LAT, 21, pxPerM), 1.63451611137779, 1e-9);
+  // A whole zoom step is a factor of two either way.
+  close(underlayScale(PERTH_LAT, 20, pxPerM), 2 * underlayScale(PERTH_LAT, 21, pxPerM), 1e-9);
+  assert.ok(underlayScale(PERTH_LAT, 22, pxPerM) < 1);
+  // The invariant that matters: screen pixels per ground metre after the
+  // correction equal the drawing's own pixels per metre, at any zoom at all.
+  for (const z of [17, 19, 20, 21, 21.7, 22]) {
+    close((1 / metresPerPixel(PERTH_LAT, z)) * underlayScale(PERTH_LAT, z, pxPerM), pxPerM, 1e-9);
+  }
+  // And on a phone-width canvas, where the ideal zoom lands almost exactly
+  // on a whole number.
+  const phonePx = 390 / 24.8;
+  close((1 / metresPerPixel(PERTH_LAT, 21)) * underlayScale(PERTH_LAT, 21, phonePx), phonePx, 1e-9);
+});
+
+test("rotationCoverScale is how much bigger a turned box has to be", () => {
+  assert.equal(rotationCoverScale(100, 200, 0), 1);
+  assert.equal(rotationCoverScale(100, 200, 180), 1);
+  close(rotationCoverScale(300, 300, 45), Math.SQRT2, 1e-12);
+  // A quarter turn on a 2:1 box has to double to cover its old self.
+  close(rotationCoverScale(100, 200, 90), 2, 1e-12);
+  // Symmetric in sign, and never below 1.
+  close(rotationCoverScale(300, 500, -30), rotationCoverScale(300, 500, 30), 1e-12);
+  for (let d = -360; d <= 360; d += 7) assert.ok(rotationCoverScale(300, 500, d) >= 1 - 1e-12);
+  assert.equal(rotationCoverScale(0, 0, 45), 1);
+});
+
+test("underlayMapSize covers the clip once rotated and scaled", () => {
+  // No rotation, exact zoom: the map element is just the clip box.
+  assert.deepEqual(underlayMapSize(400, 700, 0, 1), { w: 400, h: 700 });
+  // Scaled up by the zoom correction, the element itself shrinks to match.
+  const half = underlayMapSize(400, 700, 0, 2);
+  assert.deepEqual(half, { w: 200, h: 350 });
+  // Turned 45°, it grows by the cover factor.
+  const turned = underlayMapSize(400, 700, 45, 1);
+  assert.ok(turned.w >= 400 * rotationCoverScale(400, 700, 45) - 1);
+  // Whatever the angle or scale, element × scale covers clip × cover.
+  for (const deg of [0, 12, 45, 90, 135, 270]) {
+    for (const k of [0.6, 1, 1.63, 3]) {
+      const { w, h } = underlayMapSize(400, 700, deg, k);
+      const cover = rotationCoverScale(400, 700, deg);
+      assert.ok(w * k >= 400 * cover - 1, `w at ${deg}° x${k}`);
+      assert.ok(h * k >= 700 * cover - 1, `h at ${deg}° x${k}`);
+    }
+  }
+  // Clamped so a silly canvas never asks Google for a wall of tiles.
+  assert.deepEqual(underlayMapSize(4, 4, 0, 1), { w: 64, h: 64 });
+  assert.deepEqual(underlayMapSize(99999, 99999, 0, 1), { w: 4096, h: 4096 });
+});
+
+test("ground metres map onto the sheet through the north arrow", () => {
+  // North arrow straight up: north is up the page, east is to the right.
+  assert.deepEqual(groundToPlanVector(0, 10, 0), { dx: 0, dy: -10 });
+  const east0 = groundToPlanVector(10, 0, 0);
+  close(east0.dx, 10); close(east0.dy, 0);
+  // North arrow turned a quarter clockwise: north points right, east down.
+  const n90 = groundToPlanVector(0, 10, 90);
+  close(n90.dx, 10); close(n90.dy, 0);
+  const e90 = groundToPlanVector(10, 0, 90);
+  close(e90.dx, 0); close(e90.dy, 10);
+  // Half turn: north is down the page.
+  const n180 = groundToPlanVector(0, 10, 180);
+  close(n180.dx, 0); close(n180.dy, 10);
+});
+
+test("planToGroundVector reads the same numbers back", () => {
+  for (const deg of [0, 45, 90, 137.5, 270, 315]) {
+    const { dx, dy } = groundToPlanVector(12.5, -7.25, deg);
+    const back = planToGroundVector(dx, dy, deg);
+    close(back.east, 12.5, 1e-9);
+    close(back.north, -7.25, 1e-9);
+    // Rotation preserves length — the photo is turned, never stretched.
+    close(Math.hypot(dx, dy), Math.hypot(12.5, 7.25), 1e-9);
+  }
+});
+
+test("offsetLatLng and metresBetween are exact inverses over a lot", () => {
+  const site = { lat: PERTH_LAT, lng: 115.86 };
+  // 100 m north is about 0.000898° of latitude anywhere.
+  const north100 = offsetLatLng(site.lat, site.lng, 0, 100);
+  close(north100.lat - site.lat, 0.0008983152841195215, 1e-12);
+  close(north100.lng, site.lng);
+  // 100 m east is a bigger step in longitude this far from the equator.
+  const east100 = offsetLatLng(site.lat, site.lng, 100, 0);
+  close(east100.lng - site.lng, 0.0010586970766628936, 1e-12);
+  for (const [e, n] of [[0, 0], [12.5, -30], [-240, 180], [3, 3]]) {
+    const to = offsetLatLng(site.lat, site.lng, e, n);
+    const back = metresBetween(site, to);
+    close(back.east, e, 1e-6);
+    close(back.north, n, 1e-6);
+  }
+});
+
+test("underlayAnchor puts the geocoded point in the middle of the lot", () => {
+  assert.deepEqual(underlayAnchor(20, 40), { x: 10, y: 20 });
+  // Dragging the photo moves the anchor, in drawing metres.
+  assert.deepEqual(underlayAnchor(20, 40, -1.5, 2.25), { x: 8.5, y: 22.25 });
+});
+
+test("underlayCentre lands the geocoded site exactly where the plan wants it", () => {
+  const site = { lat: PERTH_LAT, lng: 115.8613 };
+  // The canvas for a 20 x 40 m lot at 1:200, in the drawing's own metres.
+  const elementCentre = { x: -3.2 + 24.8 / 2, y: -2.8 + 46 / 2 };
+  for (const deg of [0, 45, 90, 180, 292.5]) {
+    for (const [ox, oy] of [[0, 0], [2.4, -1.1], [-12, 6]]) {
+      const anchor = underlayAnchor(20, 40, ox, oy);
+      const centre = underlayCentre(site, anchor, elementCentre, deg);
+      // Walk it back: where does the site actually appear, relative to the
+      // element's centre, once the imagery is turned by deg?
+      // A tenth of a millimetre: the tangent plane is taken at the site's
+      // latitude and read back at the map centre's, and over a lot that is
+      // the whole of the disagreement.
+      const g = metresBetween(centre, site);
+      const p = groundToPlanVector(g.east, g.north, deg);
+      close(elementCentre.x + p.dx, anchor.x, 1e-4);
+      close(elementCentre.y + p.dy, anchor.y, 1e-4);
+    }
+  }
+});
+
+test("underlay clamps keep opacity readable and the fine turn small", () => {
+  assert.equal(clampUnderlayOpacity(0.55), 0.55);
+  assert.equal(clampUnderlayOpacity(0), 0.15);
+  assert.equal(clampUnderlayOpacity(9), 1);
+  assert.equal(clampUnderlayOpacity("x"), UNDERLAY_DEFAULT_OPACITY);
+  assert.equal(clampUnderlayRot(3.14), 3.1);
+  assert.equal(clampUnderlayRot(-90), -45);
+  assert.equal(clampUnderlayRot(90), 45);
+  assert.equal(clampUnderlayRot(undefined), 0);
+});
+
+test("sanitiseUnderlay: a design saved before the aerial existed loads unchanged", () => {
+  const blank = sanitiseUnderlay(undefined);
+  assert.deepEqual(blank, {
+    lat: null, lng: null, zoom: null, offsetX: 0, offsetY: 0, rot: 0,
+    opacity: UNDERLAY_DEFAULT_OPACITY, visible: true, locked: true,
+  });
+  // Same for junk, a null, or a record with no site in it.
+  assert.deepEqual(sanitiseUnderlay(null), blank);
+  assert.deepEqual(sanitiseUnderlay("nope"), blank);
+  assert.deepEqual(sanitiseUnderlay({ offsetX: 5, rot: 12, locked: false }), blank);
+});
+
+test("sanitiseUnderlay keeps a real alignment and defaults to locked", () => {
+  const u = sanitiseUnderlay({
+    lat: PERTH_LAT, lng: 115.86, zoom: 21.7, offsetX: 1.2345678,
+    offsetY: -0.5, rot: 62, opacity: 0.02, visible: false,
+  });
+  assert.equal(u.lat, PERTH_LAT);
+  assert.equal(u.lng, 115.86);
+  assert.equal(u.zoom, 21.7);
+  assert.equal(u.offsetX, 1.235);
+  assert.equal(u.offsetY, -0.5);
+  assert.equal(u.rot, 45);          // clamped
+  assert.equal(u.opacity, 0.15);    // clamped, still readable
+  assert.equal(u.visible, false);   // the client hid it; keep it hidden
+  assert.equal(u.locked, true);     // locked unless the record says otherwise
+  assert.equal(sanitiseUnderlay({ lat: PERTH_LAT, lng: 115.86, locked: false }).locked, false);
+  // Nonsense coordinates are no site at all.
+  assert.equal(sanitiseUnderlay({ lat: 99, lng: 115.86 }).lat, null);
+  assert.equal(sanitiseUnderlay({ lat: PERTH_LAT, lng: 900 }).lng, null);
+  assert.equal(sanitiseUnderlay({ lat: PERTH_LAT, lng: 115.86, zoom: 99 }).zoom, UNDERLAY_MAX_ZOOM);
 });

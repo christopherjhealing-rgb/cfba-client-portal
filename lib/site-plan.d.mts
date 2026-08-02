@@ -91,6 +91,66 @@ export function resizeBounds(
 
 export function deriveStreet(address: string | null | undefined): string;
 
+// --- the aerial underlay (screen only) -------------------------------------
+
+export const MERCATOR_M_PER_PX_Z0: number;
+export const EARTH_RADIUS_M: number;
+export const UNDERLAY_MIN_ZOOM: number;
+export const UNDERLAY_MAX_ZOOM: number;
+export const UNDERLAY_DEFAULT_OPACITY: number;
+export const UNDERLAY_MIN_OPACITY: number;
+export const UNDERLAY_MAX_ROT: number;
+
+export function metresPerPixel(latitude: number, zoom: number): number;
+export function zoomForMetresPerPixel(latitude: number, mpp: number): number;
+export function underlayZoom(
+  latitude: number, pxPerMetre: number, opts?: { min?: number; max?: number },
+): number;
+export function underlayScale(latitude: number, zoom: number, pxPerMetre: number): number;
+export function rotationCoverScale(w: number, h: number, deg: number): number;
+export function underlayMapSize(
+  clipW: number, clipH: number, deg: number, scale: number,
+  opts?: { min?: number; max?: number },
+): { w: number; h: number };
+
+export function groundToPlanVector(
+  east: number, north: number, deg: number,
+): { dx: number; dy: number };
+export function planToGroundVector(
+  dx: number, dy: number, deg: number,
+): { east: number; north: number };
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+export function offsetLatLng(lat: number, lng: number, east: number, north: number): LatLng;
+export function metresBetween(from: LatLng, to: LatLng): { east: number; north: number };
+export function underlayAnchor(
+  lotW: number, lotD: number, offsetX?: number, offsetY?: number,
+): Pt;
+export function underlayCentre(
+  site: LatLng, anchor: Pt, elementCentre: Pt, deg: number,
+): LatLng;
+
+export function clampUnderlayOpacity(v: unknown): number;
+export function clampUnderlayRot(v: unknown): number;
+
+/** The underlay as it is stored on a design. No site means no photo — which
+ *  is every design saved before the aerial existed. */
+export interface Underlay {
+  lat: number | null;
+  lng: number | null;
+  zoom: number | null;
+  offsetX: number;
+  offsetY: number;
+  rot: number;
+  opacity: number;
+  visible: boolean;
+  locked: boolean;
+}
+export function sanitiseUnderlay(raw: unknown): Underlay;
+
 export function parseMetres(s: string | null | undefined): number | null;
 export function fmtM(n: number): string;
 export function fmtM2(n: number): string;

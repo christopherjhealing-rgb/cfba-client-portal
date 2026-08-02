@@ -6,14 +6,59 @@
 // pointers and SVG. The tool measures and labels — it never judges.
 import { useEffect, useRef, useState } from "react";
 import {
-  DRAW_MARGIN_MM, STRUCTURE_PRESETS, alignSnap, boundsOf, clampToLot,
+  DRAW_MARGIN_MM, STRUCTURE_PRESETS, UNDERLAY_MAX_ROT, UNDERLAY_MIN_OPACITY,
+  alignSnap, boundsOf, clampToLot, clampUnderlayOpacity, clampUnderlayRot,
   defaultPlacement, deriveStreet, fitScale, fmtM, fmtM2, footprint,
   isSimplePolygon, mToMmOnPaper, mmOnPaperToM, normalisePts, parseMetres,
   polyBounds, polyFromFootprint, resizeBounds, rotateStructure,
-  scaleBarMetres, setbackMarks, setbacks, snap, structureArea,
+  sanitiseUnderlay, scaleBarMetres, setbackMarks, setbacks, snap,
+  structureArea, underlayAnchor, underlayCentre, underlayMapSize,
+  underlayScale, underlayZoom, type Underlay,
 } from "@/lib/site-plan.mjs";
+import { WA_BOUNDS } from "@/lib/address.mjs";
+import { GOOGLE_MAPS_KEY, loadMapsLibrary } from "@/lib/google-maps";
 
 type Pt = { x: number; y: number };
+
+// ---------------------------------------------------------------------------
+// The aerial underlay. A real photo of the site, sitting behind the drawing at
+// the drawing's own scale, so the client can trace their lot over what's
+// actually there. Screen only: it is a tracing guide, never part of the sheet
+// that gets lodged — Google's imagery may not be redistributed inside a lodged
+// document, and a photo has no place on a plan that says it was measured.
+//
+// The projection maths is all in lib/site-plan.mjs and tested there. What
+// lives here is the wiring: one Google map element behind the SVG, clipped to
+// the canvas, turned and scaled by CSS, and a set of controls for shoving it
+// into place by hand — because geocoding lands on a rooftop, not a lot corner.
+// ---------------------------------------------------------------------------
+
+/** The slice of the Maps API we call. @types/google.maps is a heavy
+ *  dependency for four members, so the shapes are declared here. */
+interface GoogleMapLike {
+  setCenter(c: { lat: number; lng: number }): void;
+  setZoom(z: number): void;
+  getZoom(): number | undefined;
+}
+interface MapsLibrary {
+  Map: new (el: HTMLElement, opts: Record<string, unknown>) => GoogleMapLike;
+}
+interface GeocodingLibrary {
+  Geocoder: new () => {
+    geocode(req: Record<string, unknown>): Promise<{
+      results?: Array<{ geometry?: { location?: { lat(): number; lng(): number } } }>;
+    }>;
+  };
+}
+
+const AERIAL_MISS =
+  "We couldn't find that address on the map — you can still draw your plan by hand.";
+
+/** Alignment buttons get pressed with a thumb, on site, in the sun: 40 px
+ *  minimum on both axes and a press you can see. */
+const NUDGE =
+  "flex h-10 items-center justify-center rounded-md border border-rule bg-white " +
+  "font-display text-[15px] leading-none text-ink transition hover:bg-wash active:bg-[#E7EDE7]";
 
 interface Structure {
   id: string;
@@ -42,6 +87,9 @@ interface Design {
   /** North arrow bearing, degrees clockwise from straight up, steps of 45. */
   north: number;
   structures: Structure[];
+  /** Screen-only aerial. No site in it means no photo — which is every
+   *  design saved before this existed. */
+  underlay: Underlay;
 }
 
 interface Guide {
@@ -51,7 +99,10 @@ interface Guide {
   to: number;
 }
 
-const BLANK: Design = { address: "", street: "", lotW: 20, lotD: 40, north: 0, structures: [] };
+const BLANK: Design = {
+  address: "", street: "", lotW: 20, lotD: 40, north: 0, structures: [],
+  underlay: sanitiseUnderlay(undefined),
+};
 
 const INK = "#101A15";
 const SEAL = "#1E5B3C";
@@ -139,6 +190,7 @@ function sanitise(raw: unknown): Design {
     lotD: dim(d.lotD, BLANK.lotD),
     north,
     structures,
+    underlay: sanitiseUnderlay(d.underlay),
   };
 }
 
@@ -176,11 +228,28 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
   const [pxPerM, setPxPerM] = useState(30);
+  /** Aerial: what the geocoder is doing, what the map really zoomed to, and
+   *  whether a map element exists at all. All three stay false-y when there's
+   *  no key, so nothing below this line ever renders. */
+  const [finding, setFinding] = useState(false);
+  const [aerialNote, setAerialNote] = useState("");
+  const [mapReady, setMapReady] = useState(false);
+  const [liveZoom, setLiveZoom] = useState<number | null>(null);
   const keyRef = useRef(designKey(companyId, ""));
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const mapElRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<GoogleMapLike | null>(null);
+  /** Claimed synchronously so a re-render mid-import can't build two maps. */
+  const buildingRef = useRef(false);
   const dragRef = useRef<{ id: string; dx: number; dy: number } | null>(null);
   const resizeRef = useRef<{ id: string; handle?: string; vertex?: number } | null>(null);
+  /** Live pointers on the alignment overlay, so one finger drags the photo
+   *  and two fingers also turn it. Pinching deliberately does nothing: the
+   *  photo's size is what keeps it true to scale. */
+  const gestureRef = useRef<{
+    pts: Map<number, Pt>; cx: number; cy: number; angle: number | null;
+  }>({ pts: new Map(), cx: 0, cy: 0, angle: null });
   /** True once the client has typed their own street name — their word wins
    *  over the derived one until they clear the field again. */
   const streetEditedRef = useRef(false);
@@ -262,6 +331,187 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     return () => ro.disconnect();
   }, [vbW]);
 
+  // ---- the aerial underlay -------------------------------------------------
+
+  const under = design.underlay;
+  const sited = GOOGLE_MAPS_KEY !== "" && under.lat !== null && under.lng !== null;
+  const showing = sited && under.visible;
+  /** Imagery on screen, so the drawing can go see-through over it. */
+  const tracing = showing && mapReady;
+  /** Lining the photo up: the plan is frozen and the overlay takes the drags. */
+  const aligning = tracing && !under.locked;
+
+  // How far the imagery is turned: the sheet's north, plus the client's own
+  // fine turn for a frontage that isn't square to the photo.
+  const imageryDeg = (((north + under.rot) % 360) + 360) % 360;
+  // The clip is the canvas box; the map element sits behind it, centred on it.
+  const clipW = pxPerM * vbW, clipH = pxPerM * vbH;
+  const wantZoom = under.lat !== null ? underlayZoom(under.lat, pxPerM) : null;
+  const mapScale = under.lat !== null && liveZoom !== null
+    ? underlayScale(under.lat, liveZoom, pxPerM) : 1;
+  const mapBox = underlayMapSize(clipW, clipH, imageryDeg, mapScale);
+  // Where the map element's own centre sits in the drawing's metres, and
+  // where the geocoded point should land.
+  const elCentre = { x: -mL + vbW / 2, y: -mT + vbH / 2 };
+  const anchor = underlayAnchor(lotW, lotD, under.offsetX, under.offsetY);
+  const centre = under.lat !== null && under.lng !== null
+    ? underlayCentre({ lat: under.lat, lng: under.lng }, anchor, elCentre, imageryDeg)
+    : null;
+
+  const patchUnderlay = (patch: Partial<Underlay> | ((u: Underlay) => Partial<Underlay>)) =>
+    setDesign((p) => ({
+      ...p,
+      underlay: { ...p.underlay, ...(typeof patch === "function" ? patch(p.underlay) : patch) },
+    }));
+
+  // Taking the photo off throws the map element away with it, so let the map
+  // go too — the next one has to build into the element that's really there.
+  useEffect(() => {
+    if (sited) return;
+    mapRef.current = null;
+    buildingRef.current = false;
+    setMapReady(false);
+    setLiveZoom(null);
+  }, [sited]);
+
+  // Build the map once, and only once there's somewhere to put it. Google
+  // failing to arrive leaves mapReady false and the tool exactly as it was.
+  useEffect(() => {
+    if (!showing || mapRef.current || buildingRef.current) return;
+    buildingRef.current = true;
+    let dead = false;
+    void (async () => {
+      const lib = await loadMapsLibrary<MapsLibrary>("maps");
+      const el = mapElRef.current;
+      if (dead || !lib?.Map || !el || mapRef.current) { buildingRef.current = false; return; }
+      try {
+        mapRef.current = new lib.Map(el, {
+          center: { lat: under.lat, lng: under.lng },
+          zoom: under.zoom ?? 19,
+          mapTypeId: "satellite",
+          tilt: 0,
+          // No map UI of our own on top of the drawing — but Google's own
+          // logo and imagery credit are its to draw, and are never touched.
+          disableDefaultUI: true,
+          gestureHandling: "none",
+          keyboardShortcuts: false,
+          isFractionalZoomEnabled: true,
+          clickableIcons: false,
+          backgroundColor: "#EEF0EA",
+        });
+        setMapReady(true);
+      } catch {
+        /* a map that won't build is a plan drawn by hand — say nothing */
+      } finally {
+        buildingRef.current = false;
+      }
+    })();
+    return () => { dead = true; };
+  }, [showing, under.lat, under.lng, under.zoom]);
+
+  // Hold the map on the point the alignment says, at the zoom that makes one
+  // drawing metre one metre of ground. Raster maps round the zoom; whatever
+  // they land on is read straight back and corrected in CSS.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || wantZoom === null || !centre) return;
+    try {
+      map.setZoom(wantZoom);
+      const got = map.getZoom();
+      setLiveZoom(typeof got === "number" && Number.isFinite(got) ? got : wantZoom);
+      map.setCenter(centre);
+    } catch { /* ignore — the drawing is unaffected */ }
+    // centre is rebuilt every render; its two numbers are the real inputs.
+  }, [mapReady, wantZoom, centre?.lat, centre?.lng]);
+
+  /** Geocode the typed address and drop the photo behind the plan. Quiet on
+   *  every failure: no address on the map is not the client's mistake. */
+  async function findSite() {
+    const address = design.address.trim();
+    if (!address) {
+      setAerialNote("Pop the site address in above and we'll go looking for it.");
+      return;
+    }
+    setFinding(true);
+    setAerialNote("");
+    try {
+      const lib = await loadMapsLibrary<GeocodingLibrary>("geocoding");
+      if (!lib?.Geocoder) throw new Error("no geocoder");
+      const { results } = await new lib.Geocoder().geocode({
+        address,
+        componentRestrictions: { country: "AU" },
+        bounds: WA_BOUNDS,
+        region: "au",
+      });
+      const loc = results?.[0]?.geometry?.location;
+      const lat = typeof loc?.lat === "function" ? loc.lat() : NaN;
+      const lng = typeof loc?.lng === "function" ? loc.lng() : NaN;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("no result");
+      setSelected(null);
+      setDraw(null);
+      patchUnderlay({
+        lat, lng, zoom: underlayZoom(lat, pxPerM),
+        offsetX: 0, offsetY: 0, rot: 0, visible: true,
+        // Straight into alignment: the pin lands on a roof, not a corner.
+        locked: false,
+      });
+    } catch {
+      setAerialNote(AERIAL_MISS);
+    } finally {
+      setFinding(false);
+    }
+  }
+
+  const nudgeUnderlay = (dx: number, dy: number) =>
+    patchUnderlay((u) => ({
+      offsetX: Math.round((u.offsetX + dx) * 1000) / 1000,
+      offsetY: Math.round((u.offsetY + dy) * 1000) / 1000,
+    }));
+
+  /** Centroid and spread angle of every finger currently on the overlay. */
+  function gestureNow() {
+    const arr = [...gestureRef.current.pts.values()];
+    const n = arr.length || 1;
+    const cx = arr.reduce((a, p) => a + p.x, 0) / n;
+    const cy = arr.reduce((a, p) => a + p.y, 0) / n;
+    const angle = arr.length >= 2
+      ? (Math.atan2(arr[1].y - arr[0].y, arr[1].x - arr[0].x) * 180) / Math.PI
+      : null;
+    return { cx, cy, angle };
+  }
+  const rebaseGesture = () => Object.assign(gestureRef.current, gestureNow());
+
+  function alignDown(e: React.PointerEvent) {
+    e.preventDefault();
+    canvasRef.current?.focus({ preventScroll: true });
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    gestureRef.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    rebaseGesture();
+  }
+
+  function alignMove(e: React.PointerEvent) {
+    const g = gestureRef.current;
+    if (!g.pts.has(e.pointerId)) return;
+    g.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const now = gestureNow();
+    const dx = (now.cx - g.cx) / pxPerM, dy = (now.cy - g.cy) / pxPerM;
+    let turn = 0;
+    if (now.angle !== null && g.angle !== null) {
+      turn = ((now.angle - g.angle + 540) % 360) - 180;
+    }
+    g.cx = now.cx; g.cy = now.cy; g.angle = now.angle;
+    patchUnderlay((u) => ({
+      offsetX: Math.round((u.offsetX + dx) * 1000) / 1000,
+      offsetY: Math.round((u.offsetY + dy) * 1000) / 1000,
+      rot: turn ? clampUnderlayRot(u.rot + turn) : u.rot,
+    }));
+  }
+
+  function alignUp(e: React.PointerEvent) {
+    gestureRef.current.pts.delete(e.pointerId);
+    rebaseGesture();
+  }
+
   const patchStructure = (id: string, patch: Partial<Structure>) =>
     setDesign((prev) => ({
       ...prev,
@@ -337,6 +587,8 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
   function startDraw() {
     setDraw({ pts: [], hint: "" });
     setSelected(null);
+    // Corners get tapped on the plan, so the photo has to stop taking taps.
+    if (aligning) patchUnderlay({ locked: true });
     canvasRef.current?.focus({ preventScroll: true });
   }
 
@@ -374,10 +626,30 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     });
   }
 
+  const ARROWS: Record<string, [number, number]> = {
+    ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+  };
+
   function onKeyDown(e: React.KeyboardEvent) {
     if (draw) {
       if (e.key === "Escape") { e.preventDefault(); setDraw(null); }
       if (e.key === "Enter") { e.preventDefault(); finishDraw(); }
+      return;
+    }
+    // While the photo is being lined up it owns the arrow keys — that's the
+    // adjustment in hand, and nothing on the plan can be selected anyway.
+    if (aligning) {
+      if (e.key === "Escape" || e.key === "Enter") {
+        e.preventDefault();
+        patchUnderlay({ locked: true });
+        return;
+      }
+      const a = ARROWS[e.key];
+      if (a) {
+        e.preventDefault();
+        const step = e.shiftKey ? 1 : 0.1;
+        nudgeUnderlay(a[0] * step, a[1] * step);
+      }
       return;
     }
     if (!sel) return;
@@ -385,14 +657,13 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     if (e.key === "Escape") { setSelected(null); return; }
     if (e.key === "r" || e.key === "R") { e.preventDefault(); rotateSelected(); return; }
     const step = e.shiftKey ? 1 : 0.1;
-    const move: Record<string, [number, number]> = {
-      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
-    };
-    const d = move[e.key];
+    const d = ARROWS[e.key];
     if (!d) return;
     e.preventDefault();
     // Nudging is the precise path — it never magnet-snaps.
-    patchStructure(sel.id, { x: snap(sel.x + d[0], 0.01), y: snap(sel.y + d[1], 0.01) });
+    patchStructure(sel.id, {
+      x: snap(sel.x + d[0] * step, 0.01), y: snap(sel.y + d[1] * step, 0.01),
+    });
   }
 
   // ---- drawing ------------------------------------------------------------
@@ -648,17 +919,22 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
     );
   }
 
-  function plan(interactive: boolean) {
+  /** `seeThrough` is the screen view with the aerial behind it: the paper
+   *  whites drop away so the photo reads, and every line and figure stays
+   *  exactly where it was. The printed sheet is never drawn this way. */
+  function plan(interactive: boolean, seeThrough = false) {
     return (
       <>
         {/* street along the bottom edge */}
-        <rect x={-mL} y={lotD} width={vbW} height={mB} fill="#E9ECE6" />
+        <rect x={-mL} y={lotD} width={vbW} height={mB} fill="#E9ECE6"
+          fillOpacity={seeThrough ? 0.35 : 1} />
         <text x={lotW / 2} y={lotD + mm(11.8)} textAnchor="middle" fontFamily={FONT_LAB}
           fontWeight={600} fontSize={mm(3.2)} letterSpacing={mm(0.5)} fill={INK} fillOpacity={0.55}>
           {(street.trim() || "Street").toUpperCase()}
         </text>
         {/* the lot */}
-        <rect x={0} y={0} width={lotW} height={lotD} fill="#FFFFFF" stroke={INK} strokeWidth={mm(0.5)} />
+        <rect x={0} y={0} width={lotW} height={lotD} fill="#FFFFFF"
+          fillOpacity={seeThrough ? 0 : 1} stroke={INK} strokeWidth={mm(0.5)} />
         {dimTexts()}
         {sel && setbackLines(sel)}
         {design.structures.map((s) => structureNode(s, interactive && !draw))}
@@ -739,6 +1015,21 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           <MetresField label="Lot width (m)" value={lotW} onCommit={(n) => setLot({ lotW: n })} />
           <MetresField label="Lot depth (m)" value={lotD} onCommit={(n) => setLot({ lotD: n })} />
         </div>
+        {/* The aerial is only ever offered where it can actually turn up —
+            with no key there is nothing here to promise or explain. */}
+        {GOOGLE_MAPS_KEY !== "" && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <button type="button" onClick={findSite} disabled={finding}
+              className="btn-ghost min-h-[40px] !py-2">
+              {finding ? "Looking…" : sited ? "Find this site again" : "Show the aerial photo"}
+            </button>
+            <p className={`min-w-[200px] flex-1 text-[12.5px] leading-snug ${aerialNote ? "text-brass-deep" : "text-ink/55"}`}>
+              {aerialNote || (sited
+                ? "Line the photo up with your lot, then lock it and draw over the top."
+                : "Puts an aerial photo of the site behind your plan to trace over. It never appears on the printed plan.")}
+            </p>
+          </div>
+        )}
         <p className="mt-2.5 text-[12.5px] text-ink/50">
           Lots stay rectangular in this version, street frontage along the
           bottom — structures can be rectangles, L-shapes, or any outline you
@@ -751,6 +1042,96 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
       <div className="grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]">
         {/* toolbox + selected structure */}
         <div className="space-y-5">
+          {/* Aerial alignment — only once there's a photo to line up. */}
+          {sited && (
+            <div className="card p-4">
+              <h2 className="sectionhead !mb-2">Aerial photo</h2>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => patchUnderlay((u) => ({ visible: !u.visible }))}
+                  className="btn-ghost min-h-[40px] flex-1 !px-2 !py-2">
+                  {under.visible ? "Hide photo" : "Show photo"}
+                </button>
+                <button type="button"
+                  onClick={() => patchUnderlay((u) => ({ locked: !u.locked, visible: true }))}
+                  className={`min-h-[40px] flex-1 rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
+                    aligning ? "border-brass bg-[#F6EEDA] text-brass-deep" : "border-rule bg-white text-ink hover:bg-wash"
+                  }`}>
+                  {under.locked ? "Line it up" : "Lock it"}
+                </button>
+              </div>
+
+              {under.visible && (
+                <div className="mt-3 space-y-3">
+                  {/* nudge pad — 44 px targets, arrow keys do the same job */}
+                  <div>
+                    <span className="label">Nudge the photo</span>
+                    <div className="mx-auto grid w-[152px] grid-cols-3 gap-1">
+                      <span />
+                      <button type="button" aria-label="Nudge the photo up"
+                        onClick={() => nudgeUnderlay(0, -0.1)} className={NUDGE}>↑</button>
+                      <span />
+                      <button type="button" aria-label="Nudge the photo left"
+                        onClick={() => nudgeUnderlay(-0.1, 0)} className={NUDGE}>←</button>
+                      <button type="button" aria-label="Put the photo back where it landed"
+                        onClick={() => patchUnderlay({ offsetX: 0, offsetY: 0, rot: 0 })}
+                        className={`${NUDGE} text-[10px]`}>reset</button>
+                      <button type="button" aria-label="Nudge the photo right"
+                        onClick={() => nudgeUnderlay(0.1, 0)} className={NUDGE}>→</button>
+                      <span />
+                      <button type="button" aria-label="Nudge the photo down"
+                        onClick={() => nudgeUnderlay(0, 0.1)} className={NUDGE}>↓</button>
+                      <span />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="label !mb-0">Turn the photo</span>
+                      <span className="font-mono text-[11.5px] text-ink/55">{under.rot.toFixed(1)}°</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <button type="button" aria-label="Turn the photo anticlockwise"
+                        onClick={() => patchUnderlay((u) => ({ rot: clampUnderlayRot(u.rot - 0.5) }))}
+                        className={`${NUDGE} w-10 shrink-0`}>↺</button>
+                      <input type="range" className="h-10 flex-1 accent-[#1E5B3C]"
+                        min={-UNDERLAY_MAX_ROT} max={UNDERLAY_MAX_ROT} step={0.5}
+                        aria-label="Photo rotation in degrees"
+                        value={under.rot}
+                        onChange={(e) => patchUnderlay({ rot: clampUnderlayRot(Number(e.target.value)) })} />
+                      <button type="button" aria-label="Turn the photo clockwise"
+                        onClick={() => patchUnderlay((u) => ({ rot: clampUnderlayRot(u.rot + 0.5) }))}
+                        className={`${NUDGE} w-10 shrink-0`}>↻</button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="label !mb-0">How strong</span>
+                      <span className="font-mono text-[11.5px] text-ink/55">{Math.round(under.opacity * 100)}%</span>
+                    </div>
+                    <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
+                      min={UNDERLAY_MIN_OPACITY} max={1} step={0.05}
+                      aria-label="How strongly the photo shows through"
+                      value={under.opacity}
+                      onChange={(e) => patchUnderlay({ opacity: clampUnderlayOpacity(Number(e.target.value)) })} />
+                  </div>
+                </div>
+              )}
+
+              <button type="button"
+                onClick={() => patchUnderlay(sanitiseUnderlay(undefined))}
+                className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
+                Take the photo off
+              </button>
+              <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                {aligning
+                  ? "Drag the photo to line it up — two fingers to turn it, arrow keys to nudge (Shift for a metre). Lock it when it sits right."
+                  : "A tracing guide only. It won't appear on the printed plan, it may be a year or two old, and it isn't a survey — your own measurements win."}
+              </p>
+            </div>
+          )}
+
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Add a structure</h2>
             <div className="grid grid-cols-2 gap-2">
@@ -884,22 +1265,72 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
             </div>
           )}
           <div ref={canvasRef} tabIndex={0} onKeyDown={onKeyDown} aria-label="Site plan drawing area"
-            className="mx-auto select-none rounded-md" style={{ maxWidth: `${maxCanvasPx}px` }}>
+            className="relative mx-auto select-none rounded-md" style={{ maxWidth: `${maxCanvasPx}px` }}>
+            {/* The aerial, behind everything and clipped to the canvas. Marked
+                out for the print stylesheet twice over: it is off the printed
+                sheet's ancestor path, and cfba-underlay is struck out
+                explicitly below. Never any part of what gets lodged. */}
+            {sited && (
+              <div className="cfba-underlay pointer-events-none absolute inset-0 overflow-hidden rounded-[3px]"
+                aria-hidden="true"
+                style={{
+                  zIndex: 0,
+                  opacity: under.visible ? under.opacity : 0,
+                  transition: "opacity 0.15s ease",
+                }}>
+                <div ref={mapElRef}
+                  style={{
+                    position: "absolute", left: "50%", top: "50%",
+                    width: `${mapBox.w}px`, height: `${mapBox.h}px`,
+                    marginLeft: `${-mapBox.w / 2}px`, marginTop: `${-mapBox.h / 2}px`,
+                    transform: `rotate(${imageryDeg}deg) scale(${mapScale})`,
+                    transformOrigin: "50% 50%",
+                    backgroundColor: "#EEF0EA",
+                  }} />
+              </div>
+            )}
             <svg ref={svgRef} viewBox={viewBox} role="img" aria-label="Site plan"
               style={{
                 width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`,
-                display: "block", touchAction: "none",
+                display: "block", touchAction: "none", position: "relative", zIndex: 1,
                 cursor: draw ? "crosshair" : undefined,
               }}
               onPointerDown={(e) => {
                 if (draw) { addDrawPoint(e); return; }
                 setSelected(null);
               }}>
-              {plan(true)}
+              {plan(true, tracing)}
             </svg>
+            {/* Alignment only exists while it's unlocked. Locked, this is
+                gone from the tree entirely and every structure is as
+                draggable as it ever was. */}
+            {aligning && (
+              <div
+                className="absolute inset-0 cursor-move rounded-[3px] ring-2 ring-brass/70"
+                style={{ zIndex: 3, touchAction: "none" }}
+                role="application"
+                aria-label="Drag to line the aerial photo up with your lot"
+                onPointerDown={alignDown}
+                onPointerMove={alignMove}
+                onPointerUp={alignUp}
+                onPointerCancel={alignUp}
+              />
+            )}
           </div>
+          {/* Google draws its own logo and imagery credit inside the map, and
+              we never cover or strip them. This line sits outside the canvas
+              so the credit is still upright and legible in the states where
+              turning and scaling the photo pushes Google's own out of the
+              clip — it adds to Google's attribution, it never replaces it. */}
+          {tracing && (
+            <p className="mt-1.5 text-right text-[10.5px] leading-none text-ink/45">
+              Imagery © Google
+            </p>
+          )}
           <p className="mt-2 text-center text-[12px] text-ink/50">
-            Select the proposed structure before printing to include its boundary distances on the sheet.
+            {aligning
+              ? "Drag the photo until it sits under your lot, then lock it — the plan is on hold until you do."
+              : "Select the proposed structure before printing to include its boundary distances on the sheet."}
           </p>
         </div>
       </div>
@@ -933,7 +1364,8 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
         </div>
         <p style={{ marginTop: "3mm", fontSize: "2.6mm", lineHeight: 1.5, color: INK, opacity: 0.75, fontFamily: FONT_LAB }}>
           Prepared by the applicant using the CFBA plan tool — boundaries and
-          dimensions as entered by the applicant. Not a certified document.
+          dimensions as entered by the applicant. Not a certified document and
+          not a survey.
         </p>
       </div>
 
@@ -967,6 +1399,11 @@ export function SitePlanBuilder({ companyId }: { companyId: string }) {
           }
           #site-plan-sheet { display: block !important; }
           html, body { background: #fff !important; }
+          /* Said twice on purpose. The aerial is a tracing guide on screen and
+             nothing more: licensed imagery has no place inside a lodged
+             document, and a photograph has no place on a sheet whose whole
+             claim is that the figures on it were measured. */
+          .cfba-underlay, .cfba-underlay * { display: none !important; }
         }
       `}</style>
     </div>

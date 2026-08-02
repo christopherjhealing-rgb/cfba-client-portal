@@ -46,6 +46,15 @@ export default async function SitePlan() {
           drawn complies is judged during assessment, so if you&apos;re unsure
           about a distance or a detail, ask us before you lodge.
         </p>
+        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
+          <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
+            Put your address in and the tool can drop an aerial photo of the
+            site behind your plan to trace over. It&apos;s a guide only — line
+            it up with your lot yourself, remember the photo may be a year or
+            two old, and it isn&apos;t a survey. It never appears on the
+            printed plan.
+          </p>
+        )}
         <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-ink/60">
           Printed your plan? It goes in the drawings bucket when you{" "}
           <Link href="/submit" className="font-medium text-seal underline underline-offset-2">
