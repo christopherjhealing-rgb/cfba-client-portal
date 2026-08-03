@@ -26,7 +26,11 @@ export const RATE_MM_RETAINED: number;
 export const MAX_WELLS: number;
 export const SOAKWELLS: readonly SoakwellSize[];
 
-export function requiredVolume(areaM2: number): number;
+export function requiredVolume(areaM2: number, rate?: number): number;
+export function validRate(rate: number): number;
+export function ratePerM2(areaPerCube: number): number;
+export function areaPerCube(rate: number): number;
+export function mmRetained(rate: number): number;
 export function sizeLabel(s: SoakwellSize): string;
 export function sizeKey(s: SoakwellSize): string;
 export function findSize(key: string): SoakwellSize | null;
@@ -45,12 +49,13 @@ export type NewResult =
   | {
       ok: true;
       area: number;
+      rate: number;
       required: number;
       options: SoakwellOption[];
       best: SoakwellOption | null;
     };
 
-export function sizeNew(input?: { roofM2?: number; pavedM2?: number }): NewResult;
+export function sizeNew(input?: { roofM2?: number; rate?: number }): NewResult;
 
 export type ExistingResult =
   | { ok: false; reason: "incomplete" }
@@ -59,6 +64,7 @@ export type ExistingResult =
       existingArea: number;
       proposedArea: number;
       area: number;
+      rate: number;
       required: number;
       have: number;
       shortfall: number;
@@ -71,8 +77,8 @@ export type ExistingResult =
 export function sizeExisting(input?: {
   existingRoofM2?: number;
   proposedRoofM2?: number;
-  pavedM2?: number;
   existingWells?: readonly WellCount[];
+  rate?: number;
 }): ExistingResult;
 
 export const SOAKWELL_SOURCE: string;

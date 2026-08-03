@@ -2,13 +2,17 @@
 import { useMemo, useState } from "react";
 import { Icon } from "./Icon";
 import {
-  SOAKWELLS, RATE_M3_PER_M2, RATE_MM_RETAINED,
+  SOAKWELLS, RATE_M3_PER_M2,
   SOAKWELL_SOURCE, SOAKWELL_CAVEAT, SOAKWELL_SOIL_NOTE, SOAKWELL_SITE_PLAN,
   sizeNew, sizeExisting, sizeKey, sizeLabel, findSize,
+  ratePerM2, areaPerCube, mmRetained,
   type SoakwellOption, type WellCount,
 } from "@/lib/soakwell.mjs";
 
 type Mode = "new" | "existing";
+
+/** Bayswater's 0.0125 said the way councils mostly publish it: 1 m³ per 80 m². */
+const DEFAULT_PER_CUBE = areaPerCube(RATE_M3_PER_M2);
 
 /**
  * Soakwell sizing, in the two shapes people actually arrive with.
@@ -29,27 +33,29 @@ export function SoakwellCheck() {
 
   // New work
   const [roof, setRoof] = useState("");
-  const [paved, setPaved] = useState("");
 
   // Existing lot
   const [existingRoof, setExistingRoof] = useState("");
   const [proposedRoof, setProposedRoof] = useState("");
-  const [existingPaved, setExistingPaved] = useState("");
   const [wells, setWells] = useState<{ key: string; count: number }[]>([]);
 
-  const newResult = useMemo(
-    () => sizeNew({ roofM2: n(roof), pavedM2: n(paved) }),
-    [roof, paved]
-  );
+  // The sizing rate. Held as "1 m³ per N m²" because that is how councils
+  // publish it and how a builder repeats it, rather than as a decimal nobody
+  // says out loud.
+  const [perCube, setPerCube] = useState(String(DEFAULT_PER_CUBE));
+  const rate = useMemo(() => ratePerM2(parseFloat(perCube)), [perCube]);
+  const standard = Math.abs(rate - RATE_M3_PER_M2) < 1e-9;
+
+  const newResult = useMemo(() => sizeNew({ roofM2: n(roof), rate }), [roof, rate]);
 
   const existingResult = useMemo(
     () => sizeExisting({
       existingRoofM2: n(existingRoof),
       proposedRoofM2: n(proposedRoof),
-      pavedM2: n(existingPaved),
       existingWells: wells as WellCount[],
+      rate,
     }),
-    [existingRoof, proposedRoof, existingPaved, wells]
+    [existingRoof, proposedRoof, wells, rate]
   );
 
   function addWell(key: string) {
@@ -68,9 +74,10 @@ export function SoakwellCheck() {
   }
 
   function reset() {
-    setRoof(""); setPaved("");
-    setExistingRoof(""); setProposedRoof(""); setExistingPaved("");
+    setRoof("");
+    setExistingRoof(""); setProposedRoof("");
     setWells([]);
+    setPerCube(String(DEFAULT_PER_CUBE));
   }
 
   return (
@@ -82,11 +89,43 @@ export function SoakwellCheck() {
         </h2>
       </div>
       <p className="mb-4 max-w-2xl text-[13.5px] leading-relaxed text-ink/65">
-        Every square metre of new roof or paving has to hold its own stormwater
-        on the lot. The rule is one multiplication —{" "}
-        <span className="font-mono text-[12.5px]">area × {RATE_M3_PER_M2}</span>{" "}
-        — then round <em>up</em> to the next standard well.
+        Every square metre of new roof has to hold its own stormwater on the
+        lot. It&apos;s one multiplication, then round <em>up</em> to the next
+        standard well.
       </p>
+
+      {/* The rate is the one thing that changes between councils, and the
+          spread is wide enough to change the answer — so it's a field, set to
+          the one figure we've read off a council's own sheet. */}
+      <div className="mb-5 rounded-md border border-rule bg-wash px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px]">
+          <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+            Your council asks for
+          </span>
+          <span className="text-ink/70">1 m³ per</span>
+          <input
+            type="text" inputMode="decimal" value={perCube}
+            aria-label="Square metres of roof per cubic metre of soakwell"
+            onChange={(e) => setPerCube(e.target.value.replace(/[^\d.]/g, ""))}
+            className="field w-16 px-2 py-1 text-center font-mono text-[13.5px]" />
+          <span className="text-ink/70">m² of roof</span>
+          <span className="font-mono text-[12.5px] text-ink/45">
+            = {mmRetained(rate)} mm retained
+          </span>
+          {!standard && (
+            <button type="button" onClick={() => setPerCube(String(DEFAULT_PER_CUBE))}
+              className="text-[12.5px] text-seal underline">Back to {DEFAULT_PER_CUBE}</button>
+          )}
+        </div>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">
+          {standard
+            ? <>The City of Bayswater&apos;s published figure, and the one this opens on.
+                Councils differ — if yours publishes another, put it in and everything
+                below follows it. Not sure? <strong>Ask us.</strong></>
+            : <>Sizing on your figure rather than Bayswater&apos;s. Worth checking it&apos;s
+                the one your council actually publishes before it goes on a plan.</>}
+        </p>
+      </div>
 
       {/* Which question is being asked. These are different sums, not the same
           sum with an extra field, so they're a choice rather than a tick. */}
@@ -101,11 +140,9 @@ export function SoakwellCheck() {
 
       {mode === "new" ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="max-w-xs">
             <Area label="Proposed roof area" hint="The new structure only — patio, shed, extension."
               value={roof} onChange={setRoof} />
-            <Area label="Paving that drains to it" hint="Optional. New hardstand going to the same wells."
-              value={paved} onChange={setPaved} />
           </div>
 
           <Answer>
@@ -114,8 +151,8 @@ export function SoakwellCheck() {
             ) : (
               <>
                 <Working rows={[
-                  ["Area draining to the wells", `${fmt(newResult.area)} m²`],
-                  [`× ${RATE_M3_PER_M2} (${RATE_MM_RETAINED} mm retained)`, ""],
+                  ["Roof draining to the wells", `${fmt(newResult.area)} m²`],
+                  [`÷ ${areaPerCube(rate)} (${mmRetained(rate)} mm retained)`, ""],
                 ]} />
                 <Required volume={newResult.required} />
                 <Options best={newResult.best} all={newResult.options} />
@@ -125,16 +162,11 @@ export function SoakwellCheck() {
         </>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Area label="Existing roof area" hint="What's already on the lot."
               value={existingRoof} onChange={setExistingRoof} />
             <Area label="Proposed roof area" hint="What you're adding."
               value={proposedRoof} onChange={setProposedRoof} />
-            {/* Which side of the sum paving lands on doesn't change the total —
-                the council sizes the whole catchment — but the breakdown shows
-                it with the proposed area, so the hint says so. */}
-            <Area label="Paving" hint="Optional. Counted with the proposed area."
-              value={existingPaved} onChange={setExistingPaved} />
           </div>
 
           {/* The council sizes the whole catchment, and this is the sentence
@@ -213,9 +245,9 @@ export function SoakwellCheck() {
               <>
                 <Working rows={[
                   ["Existing roof", `${fmt(existingResult.existingArea)} m²`],
-                  ["Proposed roof and paving", `+ ${fmt(existingResult.proposedArea)} m²`],
+                  ["Proposed roof", `+ ${fmt(existingResult.proposedArea)} m²`],
                   ["Total draining to the wells", `${fmt(existingResult.area)} m²`],
-                  [`× ${RATE_M3_PER_M2} (${RATE_MM_RETAINED} mm retained)`, ""],
+                  [`÷ ${areaPerCube(rate)} (${mmRetained(rate)} mm retained)`, ""],
                 ]} />
                 <Required volume={existingResult.required} />
 

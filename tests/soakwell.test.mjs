@@ -4,6 +4,7 @@ import {
   RATE_M3_PER_M2, RATE_MM_RETAINED, SOAKWELLS, MAX_WELLS,
   requiredVolume, options, bestOption, totalCapacity,
   sizeNew, sizeExisting, sizeKey, sizeLabel, findSize,
+  validRate, ratePerM2, areaPerCube, mmRetained,
 } from "../lib/soakwell.mjs";
 
 // ---------------------------------------------------------------------------
@@ -76,7 +77,7 @@ test("the rate is 0.0125 m3/m2, which is 12.5 mm retained", () => {
   assert.equal(RATE_M3_PER_M2 * 1000, RATE_MM_RETAINED);
 });
 
-test("the sheet's worked example: 60 m2 paved gives 0.75 m3 and a 900 x 1200", () => {
+test("the sheet's worked example: 60 m2 gives 0.75 m3 and a 900 x 1200", () => {
   const v = requiredVolume(60);
   assert.equal(v, 0.75);
   const best = bestOption(v);
@@ -158,14 +159,19 @@ test("an area past every combination returns nothing rather than a wrong answer"
 // Calculator 1 — a new structure, nothing existing
 // ---------------------------------------------------------------------------
 
-test("new work: roof and paved are summed, then sized as one catchment", () => {
-  const r = sizeNew({ roofM2: 120, pavedM2: 40 });
+test("new work: the roof going on, sized on its own", () => {
+  const r = sizeNew({ roofM2: 160 });
   assert.equal(r.area, 160);
   assert.equal(r.required, 2);
-  assert.equal(r.best.total >= 2, true);
-  // Sizing them separately would under-buy: 120 -> 1.5 and 40 -> 0.5 can be met
-  // by two wells holding 1.7 + 0.54, which is 2.24. Together it's still 2.
-  assert.equal(requiredVolume(120) + requiredVolume(40), r.required);
+  assert.ok(r.best.total >= 2);
+});
+
+test("new work: roof area is the only input — nothing else moves the answer", () => {
+  const plain = sizeNew({ roofM2: 160 });
+  // Anything else handed in is ignored rather than quietly added.
+  const noisy = sizeNew({ roofM2: 160, pavedM2: 40, hardstandM2: 90 });
+  assert.equal(noisy.area, plain.area);
+  assert.equal(noisy.required, plain.required);
 });
 
 test("new work: a typical patio", () => {
@@ -235,8 +241,10 @@ test("existing: no wells at all is the same answer as calculator 1", () => {
   assert.equal(a.best.label, b.best.label);
 });
 
-test("existing: paving joins the proposed side of the sum", () => {
-  const r = sizeExisting({ existingRoofM2: 100, proposedRoofM2: 30, pavedM2: 20 });
+test("existing: the sum is the two roof areas and nothing else", () => {
+  const r = sizeExisting({
+    existingRoofM2: 100, proposedRoofM2: 50, pavedM2: 20,
+  });
   assert.equal(r.existingArea, 100);
   assert.equal(r.proposedArea, 50);
   assert.equal(r.area, 150);
@@ -271,4 +279,56 @@ test("labels read the way a supplier says them", () => {
   // 4 m³ is past the 1800 × 1500 (3.82), so it takes the 1800 × 1800.
   assert.equal(bestOption(4).label, "1800 × 1800");
   assert.equal(bestOption(9).label, "2 × 1800 × 1800");
+});
+
+// ---------------------------------------------------------------------------
+// The rate, which is the one thing that changes between councils
+// ---------------------------------------------------------------------------
+
+test("Bayswater's rate said the way councils publish it: 1 m3 per 80 m2", () => {
+  assert.equal(areaPerCube(RATE_M3_PER_M2), 80);
+  assert.equal(ratePerM2(80), RATE_M3_PER_M2);
+  assert.equal(mmRetained(RATE_M3_PER_M2), RATE_MM_RETAINED);
+});
+
+test("the two ways of saying a rate round-trip", () => {
+  for (const per of [50, 60, 65, 80, 100]) {
+    assert.equal(areaPerCube(ratePerM2(per)), per);
+  }
+});
+
+test("a different rate changes the answer, and by the right amount", () => {
+  // 1 m³ per 60 m² is half again as much storage as 1 per 80 for the same roof.
+  const bays = sizeNew({ roofM2: 240 });
+  const tighter = sizeNew({ roofM2: 240, rate: ratePerM2(60) });
+  assert.equal(bays.required, 3);
+  assert.equal(tighter.required, 4);
+  assert.equal(tighter.required / bays.required, 4 / 3);
+});
+
+test("the rate flows through the existing-wells calculator too", () => {
+  const wells = [{ key: "1800x1200", count: 1 }];           // 3.05
+  const at80 = sizeExisting({ existingRoofM2: 180, proposedRoofM2: 40, existingWells: wells });
+  const at60 = sizeExisting({
+    existingRoofM2: 180, proposedRoofM2: 40, existingWells: wells, rate: ratePerM2(60),
+  });
+  assert.equal(at80.covered, true);                          // 2.75 needed
+  assert.equal(at60.covered, false);                         // 3.67 needed
+  assert.equal(at60.shortfall, 0.62);
+  assert.equal(at60.rate, ratePerM2(60));
+});
+
+test("a junk rate falls back to the verified one rather than to zero", () => {
+  // Zero would read on screen as "no soakwell needed", which is the one wrong
+  // answer this thing must never give.
+  for (const bad of [0, -1, NaN, undefined, null, "", "abc"]) {
+    assert.equal(validRate(bad), RATE_M3_PER_M2);
+    assert.equal(requiredVolume(100, bad), requiredVolume(100));
+  }
+  assert.equal(sizeNew({ roofM2: 100, rate: 0 }).required, 1.25);
+});
+
+test("the rate used is reported back, so a screen can't show one and apply another", () => {
+  assert.equal(sizeNew({ roofM2: 100 }).rate, RATE_M3_PER_M2);
+  assert.equal(sizeNew({ roofM2: 100, rate: ratePerM2(50) }).rate, 0.02);
 });
