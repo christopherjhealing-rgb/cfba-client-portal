@@ -90,28 +90,97 @@ export async function listByStatus(label: string): Promise<MondayCard[]> {
   return (d.items_page_by_column_values?.items || []).map(readCard);
 }
 
-/** Active cards for the in-progress view — everything except closed states. */
+const CLOSED_LABELS = ["Invoiced / Completed", "Cancelled"];
+
+/**
+ * The label indexes for the closed statuses, read off the board.
+ *
+ * Filtering has to be done by INDEX — Monday's status rules ignore label text
+ * and fail silently when given it, which is its own trap: `any_of` with text
+ * matches nothing and `not_any_of` with text matches everything. So the
+ * indexes are looked up rather than hard-coded, and if the labels can't be
+ * found the caller walks the whole board like it always did. A filter that
+ * might exclude the wrong cards is worse than no filter: it would make live
+ * jobs disappear from clients' portals.
+ */
+async function closedIndexes(): Promise<number[] | null> {
+  try {
+    const d = await gql<{ boards: { columns: { settings_str: string }[] }[] }>(
+      `query ($board: ID!) {
+         boards(ids: [$board]) { columns(ids: ["${COL.status}"]) { settings_str } } }`,
+      { board: env.mondayBoardId }
+    );
+    const labels = (JSON.parse(d.boards?.[0]?.columns?.[0]?.settings_str || "{}")
+      .labels || {}) as Record<string, string>;
+    const key = (x: string) => x.trim().toLowerCase().replace(/\s+/g, " ");
+    const want = new Set(CLOSED_LABELS.map(key));
+    const found = Object.entries(labels)
+      .filter(([, name]) => want.has(key(name || "")))
+      .map(([i]) => Number(i))
+      .filter(Number.isFinite);
+    // Every closed label has to be accounted for, or the filter would let
+    // closed cards through and we'd be walking most of the board anyway.
+    return found.length === CLOSED_LABELS.length ? found : null;
+  } catch (e) {
+    console.warn("monday: couldn't read the status labels, walking the whole board:", (e as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Active cards for the in-progress view — everything except closed states.
+ *
+ * Asked of the board rather than filtered here. On the live board that is 230
+ * items instead of 3,827, which is one query every five minutes instead of
+ * sixteen. The client-side check below stays as a second gate: cheap, and it
+ * means a filter that drifts can only ever cost us efficiency, never
+ * correctness.
+ */
 export async function listActive(): Promise<MondayCard[]> {
   if (!MONDAY_READY) return [];
-  const closed = ["Invoiced / Completed", "Cancelled"];
-  const q = `
-    query ($board: ID!, $cursor: String) {
-      boards(ids: [$board]) {
-        items_page(limit: 250, cursor: $cursor) { cursor items { ${CARD_FIELDS} } }
-      }
-    }`;
+  const closedIdx = await closedIndexes();
+
+  const first = closedIdx
+    ? `query ($board: ID!, $rules: [ItemsQueryRule!]) {
+         boards(ids: [$board]) {
+           items_page(limit: 500, query_params: { rules: $rules }) {
+             cursor items { ${CARD_FIELDS} } } } }`
+    : `query ($board: ID!) {
+         boards(ids: [$board]) {
+           items_page(limit: 250) { cursor items { ${CARD_FIELDS} } } } }`;
+
   const out: MondayCard[] = [];
-  let cursor: string | null = null;
-  do {
-    const d: { boards: { items_page: { cursor: string | null; items: Record<string, unknown>[] } }[] } =
-      await gql(q, { board: env.mondayBoardId, cursor });
-    const page = d.boards[0].items_page;
-    for (const it of page.items) {
+  const take = (items: Record<string, unknown>[]) => {
+    for (const it of items) {
       const c = readCard(it);
-      if (!closed.includes(c.status)) out.push(c);
+      if (!CLOSED_LABELS.some((l) => l.toLowerCase() === (c.status || "").trim().toLowerCase())) {
+        out.push(c);
+      }
     }
-    cursor = page.cursor;
-  } while (cursor);
+  };
+
+  const d = await gql<{ boards: { items_page: { cursor: string | null; items: Record<string, unknown>[] } }[] }>(
+    first,
+    closedIdx
+      ? { board: env.mondayBoardId,
+          rules: [{ column_id: COL.status, compare_value: closedIdx, operator: "not_any_of" }] }
+      : { board: env.mondayBoardId }
+  );
+  const page = d.boards?.[0]?.items_page;
+  take(page?.items || []);
+
+  // Later pages travel on the cursor alone — it carries the query with it.
+  let cursor = page?.cursor ?? null;
+  while (cursor) {
+    const nxt: { next_items_page: { cursor: string | null; items: Record<string, unknown>[] } } =
+      await gql(
+        `query ($c: String!) {
+           next_items_page(cursor: $c, limit: 500) { cursor items { ${CARD_FIELDS} } } }`,
+        { c: cursor }
+      );
+    take(nxt.next_items_page?.items || []);
+    cursor = nxt.next_items_page?.cursor ?? null;
+  }
   return out;
 }
 
