@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { uploadDirect } from "@/lib/upload-client";
 
 export interface AmendableJob {
@@ -23,7 +23,18 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
   const [instant, setInstant] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // Our reference, for a job the portal doesn't hold. Only jobs still in
+  // progress are synced here, so anything we've completed — which is most of
+  // what a client has ever had from us — can't be picked from the list above
+  // and has to be looked up.
+  const [oldRef, setOldRef] = useState("");
+  const [found, setFound] =
+    useState<{ ref: string; address: string; historic: boolean } | null>(null);
+  const [looking, setLooking] = useState(false);
+
   const job = jobs.find((j) => j.ref === ref);
+  // What the form will actually lodge against.
+  const target = ref || found?.ref || "";
 
   // Some clients have hundreds of jobs, so this is a text field that filters as
   // you type rather than a dropdown. Anything typed is accepted — if it doesn't
@@ -38,6 +49,25 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
     setQuery(`${j.ref} — ${j.address}`);
     setOpen(false);
   }
+
+  // Checked as they type, so they find out the reference is good BEFORE
+  // filling the rest in — not after pressing Lodge. Debounced because every
+  // miss costs a query against the board.
+  useEffect(() => {
+    const q = oldRef.trim();
+    setFound(null);
+    if (ref || q.replace(/[\s\-\/._#]/g, "").length < 3) { setLooking(false); return; }
+    setLooking(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/jobs/lookup?ref=${encodeURIComponent(q)}`);
+        const d = await r.json().catch(() => ({}));
+        setFound(d?.found ? d : null);
+      } catch { setFound(null); }
+      setLooking(false);
+    }, 450);
+    return () => clearTimeout(t);
+  }, [oldRef, ref]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,8 +85,8 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amendmentOf: ref || query.trim(),
-          address: job?.address || query.trim(),
+          amendmentOf: target,
+          address: job?.address || found?.address || query.trim(),
           jobClass: "Amendment",
           description,
           notes,
@@ -66,8 +96,8 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       });
     } else {
       const fd = new FormData();
-      fd.set("amendmentOf", ref || query.trim());
-      fd.set("address", job?.address || query.trim());
+      fd.set("amendmentOf", target);
+      fd.set("address", job?.address || found?.address || query.trim());
       fd.set("jobClass", "Amendment");
       fd.set("description", description);
       fd.set("notes", notes);
@@ -130,10 +160,46 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       <p className="mt-1.5 text-[12px] text-ink/50">
         {ref
           ? `Linked to job ${ref}.`
-          : query.trim()
-            ? "Not one of your current jobs — we'll look this reference up on our system. Older and completed jobs work too."
-            : "Type a few characters of the job number or the address. For an older job that isn't listed, type its reference exactly as it appears on your certificate."}
+          : "This list is your jobs still in progress with us. For one we've already completed, use the box below."}
       </p>
+
+      {/* Only jobs still in progress are in the portal. Everything we've
+          finished — which for most clients is nearly everything they've ever
+          had from us — has to be found by its reference. Checked as they type
+          so nobody discovers it was wrong after filling the whole form in. */}
+      {!ref && (
+        <div className="mt-4 rounded-md border border-rule bg-wash p-4">
+          <label className="label" htmlFor="oldRef">
+            Amending a completed job? Enter our reference
+            <span className="ml-1.5 font-normal text-ink/45">(optional)</span>
+          </label>
+          <input
+            id="oldRef" value={oldRef} autoComplete="off" spellCheck={false}
+            onChange={(e) => setOldRef(e.target.value)}
+            className="field" placeholder="e.g. 51205 or BA2025094" />
+          <p className="mt-1.5 text-[12px] leading-relaxed">
+            {looking ? (
+              <span className="text-ink/45">Checking…</span>
+            ) : found ? (
+              <span className="text-seal">
+                Found — <strong>{found.ref}</strong>
+                {found.address ? `, ${found.address}` : ""}.
+                {found.historic ? " A completed job." : ""}
+              </span>
+            ) : oldRef.trim().length >= 3 ? (
+              <span className="text-flag">
+                We can&apos;t find that reference on your account. Check it against
+                your certificate — or message us and we&apos;ll track it down.
+              </span>
+            ) : (
+              <span className="text-ink/45">
+                It&apos;s on your certificate and on our emails. Spaces and dashes
+                don&apos;t matter.
+              </span>
+            )}
+          </p>
+        </div>
+      )}
 
       {job?.issued && (
         <p className="mt-3 rounded-sm border-l-[3px] border-brass bg-[#FBF6EA] px-3 py-2.5 text-[13px] leading-relaxed text-ink/75">
@@ -168,9 +234,17 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         Send the amended plans, and the engineering if it changed too. Up to 40 MB.
       </p>
 
-      <button className="btn mt-6 w-full" disabled={busy || !query.trim()}>
+      {/* A resolved job, not merely something typed. An amendment against
+          nothing has nobody to route to and no card to note, and the client
+          would only find that out from a 404 after uploading their drawings. */}
+      <button className="btn mt-6 w-full" disabled={busy || !target}>
         {busy ? "Sending…" : "Request the Amendment"}
       </button>
+      {!target && (query.trim() || oldRef.trim()) && !looking && (
+        <p className="mt-2 text-center text-[12.5px] text-ink/50">
+          Pick a job from the list, or enter a reference we can find.
+        </p>
+      )}
 
       {msg && (
         <p className="mt-4 rounded-sm border-l-[3px] border-flag bg-[#FBECEC] px-3 py-2 text-[13px] text-ink/80">
