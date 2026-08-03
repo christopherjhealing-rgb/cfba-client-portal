@@ -79,7 +79,7 @@ export function TeamsCard({
         <input
           value={cfg.webhook}
           onChange={(e) => edit({ webhook: e.target.value })}
-          placeholder="https://…logic.azure.com/workflows/…"
+          placeholder="https://…powerplatform.com/…/triggers/manual/paths/invoke?…"
           spellCheck={false}
           className="mt-1 w-full rounded-md border border-rule px-3 py-2 font-mono text-[12px] outline-none focus:border-seal"
         />
@@ -142,16 +142,25 @@ export function TeamsCard({
         <button onClick={save} disabled={busy || !dirty} className="btn-ghost">
           {busy ? "…" : dirty ? "Save" : "Saved"}
         </button>
+        {/* A test only means something against what's saved, so the button is
+            unavailable until there IS something saved to test — and it says
+            which of the two things is missing rather than erroring on click. */}
         <button
           onClick={() => post({ test: true }, "Sent — go and look at the channel.")}
-          disabled={busy || dirty}
-          title={dirty ? "Save first — the test uses what's saved, not what's on screen." : undefined}
+          disabled={busy || dirty || !cfg.enabled}
           className="btn-ghost">
           Send a Test
         </button>
-        {dirty && (
-          <span className="text-[12px] text-brass">Unsaved changes.</span>
-        )}
+        {dirty ? (
+          <span className="text-[12px] text-brass">
+            Unsaved changes — press Save, then you can test.
+          </span>
+        ) : !cfg.enabled ? (
+          <span className="text-[12px] text-ink/50">
+            Paste a webhook, switch it <strong>ON</strong>, then Save — the test
+            sends through whatever is saved.
+          </span>
+        ) : null}
       </div>
 
       {msg && (

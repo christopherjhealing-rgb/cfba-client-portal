@@ -500,6 +500,12 @@ test("a webhook may only point at Microsoft", () => {
     "https://prod-23.australiasoutheast.logic.azure.com/workflows/abc/triggers/manual/paths/invoke?sig=x",
     "https://cfba.webhook.office.com/webhookb2/abc@def/IncomingWebhook/ghi/jkl",
     "https://something.powerplatform.com/hook/abc",
+    // The shape Teams Workflows actually hands out (signature redacted): a deep
+    // powerplatform.com subdomain, an explicit :443, and a query string. Pinned
+    // because it's the real one — the URL a person will actually paste.
+    "https://default8b057b28bec04ab38ff2789d27a710.a8.environment.api.powerplatform.com:443" +
+      "/powerautomate/automations/direct/cu/17/workflows/8f5d7072/triggers/manual/paths/invoke" +
+      "?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=REDACTED",
   ];
   for (const u of good) assert.equal(checkWebhook(u).ok, true, `should allow ${u}`);
 
