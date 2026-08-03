@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isStaff } from "@/lib/session";
 import * as repo from "@/lib/repo";
+import { refreshPastJobs } from "@/lib/history";
 import {
   issueAmendment, getAmendmentConfig, setAmendmentConfig, lodgeAmendment,
   AMENDMENT_OPEN, type AmendmentConfig,
@@ -18,6 +19,14 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}));
+
+    // --- rebuild the past-jobs index ---------------------------------------
+    if (body.rebuildHistory === true) {
+      const r = await refreshPastJobs();
+      await repo.setSetting("last_history", { at: new Date().toISOString(), ok: true, ...r })
+        .catch(() => {});
+      return NextResponse.json({ ok: true, ...r });
+    }
 
     // --- routing config ----------------------------------------------------
     if (body.config) {

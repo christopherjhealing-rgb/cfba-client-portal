@@ -146,6 +146,42 @@ export async function findByRef(ref: string): Promise<MondayCard[]> {
   return out.filter((c) => sameRef(c.ref, ref));
 }
 
+/**
+ * Every card on the board, closed ones included.
+ *
+ * Only used to build the past-jobs index — the thing that lets a client pick a
+ * job we finished years ago instead of typing its reference from memory. Eight
+ * pages on a board of 3,856, run once for all clients rather than once each,
+ * and never on a request a person is waiting for.
+ */
+export async function listAllCards(): Promise<MondayCard[]> {
+  if (!MONDAY_READY) return [];
+  const out: MondayCard[] = [];
+  const d = await gql<{ boards: { items_page: { cursor: string | null; items: Record<string, unknown>[] } }[] }>(
+    `query ($board: ID!) {
+       boards(ids: [$board]) {
+         items_page(limit: 500) { cursor items { ${CARD_FIELDS} } } } }`,
+    { board: env.mondayBoardId }
+  );
+  const page = d.boards?.[0]?.items_page;
+  for (const it of page?.items || []) out.push(readCard(it));
+  let cursor = page?.cursor ?? null;
+
+  // A hard stop, not a expectation. A paging bug that never returns a null
+  // cursor would otherwise walk until the function times out.
+  for (let guard = 0; cursor && guard < 40; guard++) {
+    const nxt: { next_items_page: { cursor: string | null; items: Record<string, unknown>[] } } =
+      await gql(
+        `query ($c: String!) {
+           next_items_page(cursor: $c, limit: 500) { cursor items { ${CARD_FIELDS} } } }`,
+        { c: cursor }
+      );
+    for (const it of nxt.next_items_page?.items || []) out.push(readCard(it));
+    cursor = nxt.next_items_page?.cursor ?? null;
+  }
+  return out;
+}
+
 const CLOSED_LABELS = ["Invoiced / Completed", "Cancelled"];
 
 /**

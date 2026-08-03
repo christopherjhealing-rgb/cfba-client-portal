@@ -3,6 +3,7 @@ import { isStaff } from "@/lib/session";
 import { env } from "@/lib/env";
 import { sendMail, dailyReportEmail } from "@/lib/mail";
 import { buildDailyReport } from "@/lib/watchdog";
+import { refreshPastJobs } from "@/lib/history";
 import * as repo from "@/lib/repo";
 
 export const runtime = "nodejs";
@@ -67,6 +68,30 @@ export async function POST(req: Request) {
   return send();
 }
 
+/**
+ * Rebuild the past-jobs index while we're here.
+ *
+ * Riding on the 5pm cron rather than having its own: it already runs on a
+ * schedule, already authorises, and a list of jobs we finished is nothing like
+ * urgent enough to need its own. Never allowed to affect the report — a board
+ * that won't answer must not stop the one email that notices things going
+ * wrong.
+ */
+async function refreshHistoryQuietly() {
+  try {
+    const r = await refreshPastJobs();
+    console.log(`past jobs: ${r.matched}/${r.scanned} cards matched to ${r.companies} clients`);
+    await repo.setSetting("last_history", {
+      at: new Date().toISOString(), ok: true, ...r,
+    }).catch(() => {});
+  } catch (e) {
+    console.warn("past jobs: refresh failed —", (e as Error).message);
+    await repo.setSetting("last_history", {
+      at: new Date().toISOString(), ok: false, error: (e as Error).message,
+    }).catch(() => {});
+  }
+}
+
 async function send() {
   if (!env.dailyReportEnabled) {
     return NextResponse.json({ skipped: "DAILY_REPORT_ENABLED is not set." });
@@ -77,6 +102,7 @@ async function send() {
   try {
     const { report, mail } = await build();
     const sent = await sendMail([env.officeEmail], mail.subject, mail.html);
+    await refreshHistoryQuietly();
     // A report that can't send is the one failure nothing else would catch —
     // it exists to be the thing that notices. Loud in the log, and written
     // down so /admin can show when one last actually went.

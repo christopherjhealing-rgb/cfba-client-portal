@@ -5,6 +5,7 @@ import {
   isClientVisible, READY_STATUS, AMENDMENT_OPEN, AMENDMENT_DONE,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
+import { getPastJobs } from "@/lib/history";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
@@ -19,10 +20,11 @@ export default async function Amend({
   if (!session) redirect("/");
   const sp = await searchParams;
 
-  const [all, unread, subs] = await Promise.all([
+  const [all, unread, subs, past] = await Promise.all([
     repo.listJobsForCompany(session.companyId),
     unreadCount(session.companyId),
     repo.listSubmissionsForCompany(session.companyId).catch(() => []),
+    getPastJobs(session.companyId).catch(() => []),
   ]);
 
   // A historical job was never synced, so it has no job page — this list is
@@ -44,6 +46,21 @@ export default async function Amend({
       issued: j.mondayStatus === READY_STATUS || !!j.firstDownloadedAt,
     }));
 
+  // Jobs we've finished, from the past-jobs index rather than the jobs table —
+  // see lib/history. Anything already in the portal wins, so a job that's both
+  // current and in the index isn't offered twice.
+  const live = new Set(jobs.map((j) => j.ref));
+  const older: AmendableJob[] = past
+    .filter((p) => p.ref && !live.has(p.ref))
+    .map((p) => ({
+      ref: p.ref,
+      address: p.address,
+      description: "",
+      status: p.status,
+      issued: true,
+      past: true,
+    }));
+
   const hidden = await disabledPages();
 
   if (hidden.has("amend")) {
@@ -63,7 +80,7 @@ export default async function Amend({
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_290px] lg:items-start">
-        <AmendForm jobs={jobs} preselect={sp.ref} />
+        <AmendForm jobs={[...jobs, ...older]} preselect={sp.ref} />
 
         <div className="card p-5">
           <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">

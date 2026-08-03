@@ -4,6 +4,7 @@ import { isStaff } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import { StaffShell } from "@/components/StaffShell";
 import { AmendmentList, type AmendmentRow } from "@/components/AmendmentList";
+import { PastJobsCard } from "@/components/PastJobsCard";
 import {
   getAmendmentConfig, AMENDMENT_OPEN, AMENDMENT_DONE,
 } from "@/lib/amendments";
@@ -15,11 +16,13 @@ const DAY = 86_400_000;
 export default async function AmendmentsPage() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [open, recentlyDone, companies, cfg] = await Promise.all([
+  const [open, recentlyDone, companies, cfg, history] = await Promise.all([
     repo.listSubmissions(AMENDMENT_OPEN).catch(() => []),
     repo.listSubmissions(AMENDMENT_DONE).catch(() => []),
     repo.listCompanies().catch(() => []),
     getAmendmentConfig(),
+    repo.getSetting<{ at?: string; ok?: boolean; matched?: number; companies?: number; error?: string }>(
+      "last_history").catch(() => null),
   ]);
 
   const nameOf = new Map(companies.map((c) => [c.id, c.name]));
@@ -78,6 +81,8 @@ export default async function AmendmentsPage() {
           <span className="text-seal underline">Set it up in Settings →</span>
         </Link>
       )}
+
+      <PastJobsCard last={history} />
 
       <div className="mb-2.5 flex items-center gap-3">
         <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">

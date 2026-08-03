@@ -3,6 +3,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
 import { matchCompany, sameRef } from "@/lib/core.mjs";
+import { getPastJobs } from "@/lib/history";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,6 +65,18 @@ export async function GET(req: Request) {
     if (mineAlready) {
       return NextResponse.json({
         found: true, ref: mineAlready.ref, address: mineAlready.address, historic: false,
+      });
+    }
+
+    // The past-jobs index, which already knows every job we've done for them.
+    // Answers instantly and costs nothing, and covers the case this endpoint
+    // exists for. The board is only troubled when the index doesn't have it —
+    // a job finished since the index was last built.
+    const past = await getPastJobs(session.companyId).catch(() => []);
+    const known = past.find((j) => sameRef(j.ref, ref));
+    if (known) {
+      return NextResponse.json({
+        found: true, ref: known.ref, address: known.address, historic: true,
       });
     }
 
