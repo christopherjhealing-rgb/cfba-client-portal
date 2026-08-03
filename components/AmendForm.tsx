@@ -164,7 +164,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       <p className="mt-1.5 text-[12px] text-ink/50">
         {ref
           ? `Linked to job ${ref}.`
-          : "This list is your jobs still in progress with us. For one we've already completed, use the box below."}
+          : "Every job you've had with us, completed ones included. Type the address or our reference."}
       </p>
 
       {/* Only jobs still in progress are in the portal. Everything we've
@@ -174,7 +174,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       {!ref && (
         <div className="mt-4 rounded-md border border-rule bg-wash p-4">
           <label className="label" htmlFor="oldRef">
-            Amending a completed job? Enter our reference
+            Can&apos;t see it? Enter our reference
             <span className="ml-1.5 font-normal text-ink/45">(optional)</span>
           </label>
           <input
@@ -197,8 +197,8 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
               </span>
             ) : (
               <span className="text-ink/45">
-                It&apos;s on your certificate and on our emails. Spaces and dashes
-                don&apos;t matter.
+                For a job too old to be in the list above. It&apos;s on your
+                certificate and on our emails — spaces and dashes don&apos;t matter.
               </span>
             )}
           </p>
