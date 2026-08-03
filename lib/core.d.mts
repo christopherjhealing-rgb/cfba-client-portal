@@ -146,3 +146,6 @@ export function routeExplanation(
 
 export const AMENDMENT_OPEN: string;
 export const AMENDMENT_DONE: string;
+
+export function refSearchTerms(ref: string | null | undefined): string[];
+export function sameRef(a: string | null | undefined, b: string | null | undefined): boolean;

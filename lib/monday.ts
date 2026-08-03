@@ -3,6 +3,7 @@
 import { env, MONDAY_READY, DEMO_MODE } from "./env";
 import {
   portalColumnWrite, portalLadder, INFO_RECEIVED_STATUS, AWAITING_REPLY_STATUSES,
+  refSearchTerms, sameRef,
 } from "./core.mjs";
 
 const API = "https://api.monday.com/v2";
@@ -92,6 +93,57 @@ export async function listByStatus(label: string): Promise<MondayCard[]> {
   const d = await gql<{ items_page_by_column_values: { items: Record<string, unknown>[] } }>(
     q, { board: env.mondayBoardId, col: COL.status, vals: [label] });
   return (d.items_page_by_column_values?.items || []).map(readCard);
+}
+
+/**
+ * Find a card by its reference — including one the portal has never seen.
+ *
+ * The sync only ever pulls issued and non-closed cards, so a job invoiced
+ * before the portal existed simply isn't here: on a board of 3,827 items that
+ * is most of them. A council asking for a change to a job from six months ago
+ * is the ordinary case for an amendment, and it would otherwise be told the
+ * job isn't theirs.
+ *
+ * Widening rather than exact, because `contains_text` is literal and clients
+ * type their reference the way it appears on their paperwork, not the way the
+ * board stores it. The caller still has to prove the card is theirs — this
+ * finds candidates, it does not authorise anything.
+ */
+export async function findByRef(ref: string): Promise<MondayCard[]> {
+  if (!MONDAY_READY) return [];
+  const q = `
+    query ($board: ID!, $rules: [ItemsQueryRule!]) {
+      boards(ids: [$board]) {
+        items_page(limit: 25, query_params: { rules: $rules }) {
+          items { ${CARD_FIELDS} }
+        }
+      }
+    }`;
+  const seen = new Set<string>();
+  const out: MondayCard[] = [];
+  for (const term of refSearchTerms(ref)) {
+    try {
+      const d = await gql<{ boards: { items_page: { items: Record<string, unknown>[] } }[] }>(
+        q,
+        {
+          board: env.mondayBoardId,
+          rules: [{ column_id: COL.ref, compare_value: [term], operator: "contains_text" }],
+        }
+      );
+      for (const it of d.boards?.[0]?.items_page?.items || []) {
+        const c = readCard(it);
+        if (seen.has(c.itemId)) continue;
+        seen.add(c.itemId);
+        out.push(c);
+      }
+    } catch (e) {
+      console.warn(`monday: ref search failed for ${JSON.stringify(term)}:`, (e as Error).message);
+    }
+    // Stop as soon as the exact reference is in hand — no need to widen, and
+    // widening past a precise hit is how you pick up a neighbouring job.
+    if (out.some((c) => sameRef(c.ref, ref))) break;
+  }
+  return out.filter((c) => sameRef(c.ref, ref));
 }
 
 const CLOSED_LABELS = ["Invoiced / Completed", "Cancelled"];

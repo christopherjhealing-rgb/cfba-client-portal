@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
-import { isClientVisible, READY_STATUS } from "@/lib/core.mjs";
+import {
+  isClientVisible, READY_STATUS, AMENDMENT_OPEN, AMENDMENT_DONE,
+} from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
@@ -17,10 +19,19 @@ export default async function Amend({
   if (!session) redirect("/");
   const sp = await searchParams;
 
-  const [all, unread] = await Promise.all([
+  const [all, unread, subs] = await Promise.all([
     repo.listJobsForCompany(session.companyId),
     unreadCount(session.companyId),
+    repo.listSubmissionsForCompany(session.companyId).catch(() => []),
   ]);
+
+  // A historical job was never synced, so it has no job page — this list is
+  // the only place its amendment can appear, and the only way the client gets
+  // the revised certificate back.
+  const mine = subs
+    .filter((s) => s.amendmentOf &&
+      (s.status === AMENDMENT_OPEN || s.status === AMENDMENT_DONE))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const jobs: AmendableJob[] = all
     .map(repo.toPortalJob)
@@ -64,13 +75,15 @@ export default async function Amend({
               Pick the job, say what&apos;s different and attach the revised drawings.
             </li>
             <li>
-              <span className="font-medium text-ink">2. We open it as a new job.</span>{" "}
-              An amendment gets its own reference and its own assessment, linked back
-              to the original so the history stays together.
+              <span className="font-medium text-ink">2. It goes to your surveyor.</span>{" "}
+              Straight to the person who certified the original — not into a queue.
+              They confirm the change is acceptable and we re-issue.
             </li>
             <li>
-              <span className="font-medium text-ink">3. The original stays put.</span>{" "}
-              Its certificate is unchanged and still covers the plans it was issued against.
+              <span className="font-medium text-ink">3. You get the new certificate.</span>{" "}
+              We email you when it&apos;s ready and it appears below. Until then your
+              original certificate stands and still covers the plans it was issued
+              against.
             </li>
           </ol>
           <p className="mt-4 border-t border-rule pt-4 text-[13px] leading-relaxed text-ink/60">
@@ -79,6 +92,44 @@ export default async function Amend({
           </p>
         </div>
       </div>
+
+      {mine.length > 0 && (
+        <section className="mt-8">
+          <div className="mb-2.5 flex items-center gap-3">
+            <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+              Amendments You&apos;ve Sent
+            </h2>
+            <span className="h-px flex-1 bg-rule" />
+          </div>
+          <div className="card divide-y divide-rule">
+            {mine.map((a) => (
+              <div key={a.id} className="px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[12px] text-seal">{a.amendmentOf}</span>
+                  <span className="text-[14px] font-medium">{a.address}</span>
+                  {a.status === AMENDMENT_DONE
+                    ? <span className="chip chip-seal">Ready</span>
+                    : <span className="chip chip-brass">With your surveyor</span>}
+                </div>
+                <div className="mt-0.5 text-[12.5px] text-ink/55">{a.description}</div>
+                {a.status === AMENDMENT_DONE && a.files.length > 0 && (
+                  <ul className="mt-1.5 flex flex-wrap gap-3">
+                    {a.files.map((f) => (
+                      <li key={f.name}>
+                        <a href={`/api/amendments/${a.id}/${encodeURIComponent(f.name)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-[13px] font-medium text-seal underline">
+                          {f.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </AppShell>
   );
 }

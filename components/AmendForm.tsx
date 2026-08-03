@@ -55,7 +55,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amendmentOf: ref,
+          amendmentOf: ref || query.trim(),
           address: job?.address || query.trim(),
           jobClass: "Amendment",
           description,
@@ -66,9 +66,8 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       });
     } else {
       const fd = new FormData();
-      fd.set("amendmentOf", ref);
+      fd.set("amendmentOf", ref || query.trim());
       fd.set("address", job?.address || query.trim());
-      if (!ref) fd.set("originalJobText", query.trim());
       fd.set("jobClass", "Amendment");
       fd.set("description", description);
       fd.set("notes", notes);
@@ -91,28 +90,13 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         </div>
         <h2 className="font-display text-[21px] font-semibold">Amendment Sent</h2>
         <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-ink/65">
-          {instant ? (
-            <>It&apos;s been opened as a new job{ref ? ` linked to ${ref}` : ""} and will
-            appear in your job list shortly. The original job stays exactly as it is.
-            We&apos;ll reply to the email address on your account.</>
-          ) : (
-            <>The office will open it as a new job{ref ? ` linked to ${ref}` : ""}, and it
-            will appear in your job list once accepted. The original job stays exactly
-            as it is. We&apos;ll reply to the email address on your account.</>
-          )}
+          It&apos;s with your building surveyor now, along with the documents you
+          sent. They&apos;ll confirm the change is acceptable, then we&apos;ll
+          re-issue the certificate and email you when it&apos;s ready to download.
+          Your original certificate stays valid until that happens — don&apos;t
+          build to the change before then.
         </p>
         <a href="/jobs" className="btn mt-6">Back to My Jobs</a>
-      </div>
-    );
-  }
-
-  if (jobs.length === 0) {
-    return (
-      <div className="card px-6 py-10 text-center">
-        <p className="font-display text-[16px] font-semibold">Nothing to Amend Yet</p>
-        <p className="mx-auto mt-1 max-w-sm text-[13px] text-ink/55">
-          Once you have a job with us, you can request a change to it here.
-        </p>
       </div>
     );
   }
@@ -147,8 +131,8 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         {ref
           ? `Linked to job ${ref}.`
           : query.trim()
-            ? "We couldn't match that to a job automatically — the office will link it when they review."
-            : "Type a few characters of the job number or the address."}
+            ? "Not one of your current jobs — we'll look this reference up on our system. Older and completed jobs work too."
+            : "Type a few characters of the job number or the address. For an older job that isn't listed, type its reference exactly as it appears on your certificate."}
       </p>
 
       {job?.issued && (

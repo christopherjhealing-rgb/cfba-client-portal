@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
-import { tidyAddress } from "@/lib/core.mjs";
+import * as monday from "@/lib/monday";
+import { tidyAddress, matchCompany } from "@/lib/core.mjs";
 import { acceptSubmission } from "@/lib/accept";
 import { env } from "@/lib/env";
 import { pageDisabled } from "@/lib/pages";
@@ -78,6 +79,42 @@ async function acceptAndAnnounce(id: string, companyName: string): Promise<boole
   });
   return accepted;
 }
+
+/**
+ * Can this client amend this job?
+ *
+ * Their portal jobs first — that's the common case and costs nothing. But the
+ * sync only ever pulls issued and non-closed cards, so a job invoiced before
+ * the portal existed isn't in the portal at all, and on a board of 3,827 items
+ * that is most of them. An amendment six months after issue is the ordinary
+ * case, not the exception, so a reference the portal doesn't know is looked up
+ * on the board instead of being refused.
+ *
+ * Finding the card is not permission to amend it. The card has to match the
+ * signed-in company by the same rule the sync matches everything else, or a
+ * client could amend a stranger's job by typing their reference — and
+ * references are sequential, so guessing one is trivial.
+ */
+async function amendableRef(
+  companyId: string, ref: string
+): Promise<{ ok: true; historic: boolean } | { ok: false }> {
+  const own = await repo.listJobsForCompany(companyId);
+  if (own.some((j) => j.ref === ref)) return { ok: true, historic: false };
+
+  const cards = await monday.findByRef(ref).catch(() => []);
+  if (!cards.length) return { ok: false };
+
+  const companies = await repo.companiesForMatch();
+  const mine = companies.filter((c) => c.id === companyId);
+  const isMine = cards.some(
+    (c) => matchCompany({ clientName: c.clientName, email: c.email }, mine) === companyId
+  );
+  return isMine ? { ok: true, historic: true } : { ok: false };
+}
+
+const NOT_YOURS = {
+  error: "We can't find that job on your account — check the reference on your certificate, or message us and we'll track it down.",
+};
 
 const PDF_ONLY = (name: string, type: string) =>
   /\.pdf$/i.test(name) || type === "application/pdf";
@@ -172,12 +209,10 @@ async function handle(req: Request) {
     return NextResponse.json({ error: "We just need a site address, class and a short description to lodge this." }, { status: 400 });
   }
 
-  // An amendment must point at a job this company actually has.
-  if (amendmentOf) {
-    const own = await repo.listJobsForCompany(session.companyId);
-    if (!own.some((j) => j.ref === amendmentOf)) {
-      return NextResponse.json({ error: "We can't find that job on your account — check the reference, or message us and we'll track it down." }, { status: 404 });
-    }
+  // An amendment must point at a job this company actually has — in the portal
+  // or on the board. See amendableRef.
+  if (amendmentOf && !(await amendableRef(session.companyId, amendmentOf)).ok) {
+    return NextResponse.json(NOT_YOURS, { status: 404 });
   }
 
   const uploads = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
@@ -268,11 +303,8 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     return NextResponse.json({ error: "We just need a site address, class and a short description to lodge this." }, { status: 400 });
   }
 
-  if (amendmentOf) {
-    const own = await repo.listJobsForCompany(session.companyId);
-    if (!own.some((j) => j.ref === amendmentOf)) {
-      return NextResponse.json({ error: "We can't find that job on your account — check the reference, or message us and we'll track it down." }, { status: 404 });
-    }
+  if (amendmentOf && !(await amendableRef(session.companyId, amendmentOf)).ok) {
+    return NextResponse.json(NOT_YOURS, { status: 404 });
   }
 
   const claimed: { name: string; category?: string }[] = Array.isArray(body.files)

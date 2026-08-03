@@ -109,10 +109,20 @@ export async function lodgeAmendment(id: string): Promise<LodgeResult> {
       getAmendmentConfig(),
     ]);
 
+    // The card, which is NOT the same as the portal job. A job invoiced before
+    // the portal existed was never synced, so there's no job row to read the
+    // item id from — and that's the ordinary case for an amendment, not the
+    // exception. Fall back to finding it on the board by reference, or routing
+    // and the card note would both silently do nothing.
+    let itemId = parent?.mondayItemId || null;
+    let cardAddress = parent?.address || "";
+    if (!itemId) {
+      const [card] = await monday.findByRef(sub.amendmentOf).catch(() => []);
+      if (card) { itemId = card.itemId; cardAddress = cardAddress || card.address; }
+    }
+
     // Straight off the board, so it's who signed it as at today.
-    const certified = parent?.mondayItemId
-      ? await monday.certifiedBy(parent.mondayItemId)
-      : "";
+    const certified = itemId ? await monday.certifiedBy(itemId) : "";
     const route = routeAmendment(certified, cfg.routes, cfg.fallbackName);
     const why = routeExplanation(route, certified);
 
@@ -121,10 +131,10 @@ export async function lodgeAmendment(id: string): Promise<LodgeResult> {
     // there for days. But the original's history should still say this
     // happened, or a differently dated certificate is unexplainable later.
     let noted = false;
-    if (parent?.mondayItemId) {
+    if (itemId) {
       try {
         await monday.postUpdate(
-          parent.mondayItemId,
+          itemId,
           `AMENDMENT lodged via the client portal — handled by email, not on the board.\n\n` +
           `Client: ${company?.name || sub.companyId}\n` +
           `Reason: ${sub.description || "(none given)"}\n` +
@@ -146,7 +156,7 @@ export async function lodgeAmendment(id: string): Promise<LodgeResult> {
         const mail = amendmentEmail({
           companyName: company?.name || sub.companyId,
           parentRef: sub.amendmentOf,
-          address: parent?.address || sub.address,
+          address: cardAddress || sub.address,
           reason: sub.description,
           notes: sub.notes,
           fileNames: sub.files.map((f) => f.name),

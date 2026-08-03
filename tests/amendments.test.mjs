@@ -94,3 +94,59 @@ test("an amendment's states are its own, never the review queue's", () => {
     assert.ok(!["pending", "accepted", "rejected"].includes(s), `${s} collides with a queue state`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Finding a historical job
+//
+// The sync only pulls issued and non-closed cards, so a job invoiced before
+// the portal existed isn't in the portal at all — on a board of 3,827 items
+// that's most of them. An amendment months after issue is the ordinary case,
+// so the reference has to be findable on the board itself.
+// ---------------------------------------------------------------------------
+import { refSearchTerms, sameRef } from "../lib/core.mjs";
+
+test("a reference is searched precisely first, then widened", () => {
+  // Real shapes off the live board: 51205, BA2025094, B2025-125, BP24-27.
+  assert.deepEqual(refSearchTerms("51205"), ["51205", "1205"]);
+  assert.deepEqual(refSearchTerms("B2025-125"), ["B2025-125", "b2025125", "5125"]);
+  assert.deepEqual(refSearchTerms("26-1042"), ["26-1042", "261042", "1042"]);
+  // The literal comes first so a precise hit is taken before anything widens —
+  // widening past a good match is how you pick up the neighbouring job.
+  assert.equal(refSearchTerms("51205")[0], "51205");
+});
+
+test("a client typing their reference differently still finds the job", () => {
+  // contains_text is literal, so "261042" would never match a stored "26-1042"
+  // without this. Every way a person writes it has to reach a usable term.
+  for (const typed of ["26-1042", "26 1042", "261042", "26/1042", "26.1042", "#26-1042"]) {
+    const terms = refSearchTerms(typed);
+    assert.ok(
+      terms.some((t) => "26-1042".includes(t)),
+      `no term of ${JSON.stringify(typed)} is a substring of the stored "26-1042"`
+    );
+  }
+});
+
+test("short and empty references don't produce a term that matches everything", () => {
+  // A blank or one-character search would return the whole board, and the
+  // exact-match filter is the only thing standing between that and a client
+  // being offered somebody else's job.
+  assert.deepEqual(refSearchTerms(""), []);
+  assert.deepEqual(refSearchTerms("   "), []);
+  for (const short of ["7", "42"]) {
+    assert.ok(refSearchTerms(short).every((t) => t.length >= 1));
+  }
+});
+
+test("only an exact reference counts as the same job", () => {
+  assert.ok(sameRef("26-1042", "261042"));
+  assert.ok(sameRef(" 26 1042 ", "26-1042"));
+  assert.ok(sameRef("BA2025094", "ba2025094"));
+  // The widened search WILL return these; the exact filter is what stops them.
+  assert.ok(!sameRef("26-1042", "26-10420"));
+  assert.ok(!sameRef("26-1042", "126-1042"));
+  assert.ok(!sameRef("51205", "512050"));
+  assert.ok(!sameRef("", "26-1042"));
+  assert.ok(!sameRef("26-1042", ""));
+  assert.ok(!sameRef(null, null));
+});
