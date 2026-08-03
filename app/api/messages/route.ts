@@ -3,20 +3,54 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
 import { pageDisabled } from "@/lib/pages";
-import { sendMail, officeReplyEmail, officeEnquiryEmail } from "@/lib/mail";
+import {
+  sendMail, officeReplyEmail, officeEnquiryEmail, fitAttachments,
+  type MailAttachment,
+} from "@/lib/mail";
 import { env } from "@/lib/env";
 import { isGeneralRef, GENERAL_REF } from "@/lib/core.mjs";
+
+/**
+ * Read what the client just sent back out of storage so it can ride along on
+ * the office email — a notification that says "Attachments: engineering.pdf"
+ * and carries nothing is a notification that costs somebody a click and a
+ * login to act on.
+ *
+ * Best effort by design. A file that won't read back is left out of the email;
+ * it is still in the portal and on the Monday card, and the notification is
+ * far too important to lose over an attachment.
+ */
+async function loadAttachments(stored: repo.MessageFile[]): Promise<MailAttachment[]> {
+  const out: MailAttachment[] = [];
+  for (const f of stored) {
+    try {
+      const bytes = await repo.readFile(f.storagePath);
+      if (bytes.length) {
+        out.push({ name: f.name, contentType: f.contentType || "application/pdf", bytes });
+      }
+    } catch (e) {
+      console.warn(`messages: couldn't attach ${f.name} to the office email:`, (e as Error).message);
+    }
+  }
+  return out;
+}
 
 /** Email the office when a client replies. Monday doesn't notify the token
  *  owner of updates posted with its own token, so without this a client's FIR
  *  reply — the event that unblocks a job — can sit on the board unseen. */
 async function notifyOffice(
-  companyName: string, ref: string, address: string, body: string, fileNames: string[]
+  companyName: string, ref: string, address: string, body: string,
+  stored: repo.MessageFile[]
 ) {
   if (!env.officeEmail) return;
+  const fileNames = stored.map((f) => f.name);
   try {
-    const mail = officeReplyEmail({ companyName, ref, address, body, fileNames });
-    await sendMail([env.officeEmail], mail.subject, mail.html);
+    const { attach } = fitAttachments(await loadAttachments(stored));
+    const mail = officeReplyEmail({
+      companyName, ref, address, body, fileNames,
+      attachedNames: attach.map((a) => a.name),
+    });
+    await sendMail([env.officeEmail], mail.subject, mail.html, attach);
   } catch (e) {
     console.warn(`messages: office notify failed for ${ref}:`, (e as Error).message);
   }
@@ -27,11 +61,16 @@ async function notifyOffice(
  *  delay. An enquiry has no card, so a failed email is a lost enquiry — the
  *  client is told, rather than left thinking somebody has it. */
 async function notifyOfficeEnquiry(
-  companyName: string, subject: string, body: string, fileNames: string[]
+  companyName: string, subject: string, body: string, stored: repo.MessageFile[]
 ): Promise<boolean> {
   if (!env.officeEmail) return false;
-  const mail = officeEnquiryEmail({ companyName, subject, body, fileNames });
-  return sendMail([env.officeEmail], mail.subject, mail.html);
+  const { attach } = fitAttachments(await loadAttachments(stored));
+  const mail = officeEnquiryEmail({
+    companyName, subject, body,
+    fileNames: stored.map((f) => f.name),
+    attachedNames: attach.map((a) => a.name),
+  });
+  return sendMail([env.officeEmail], mail.subject, mail.html, attach);
 }
 
 /** A client reply on a job that was waiting on them moves the card off FIR.
@@ -216,12 +255,12 @@ async function handle(req: Request) {
   }, msgId);
 
   if (general) {
-    await notifyEnquiry(who, subject, text, stored.map((f) => f.name));
+    await notifyEnquiry(who, subject, text, stored);
   } else {
     // The client has answered. Move the card before telling the office, so the
     // board is already right by the time somebody opens the email.
     await moveOffFir(job);
-    await notifyOffice(who, jobRef, job?.address || "", text, stored.map((f) => f.name));
+    await notifyOffice(who, jobRef, job?.address || "", text, stored);
   }
   await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
   return NextResponse.json({ ok: true });
@@ -231,10 +270,10 @@ async function handle(req: Request) {
  *  the email goes or not — so a mail outage delays the office seeing it, it
  *  doesn't lose it. Logged loudly all the same. */
 async function notifyEnquiry(
-  who: string, subject: string, text: string, fileNames: string[]
+  who: string, subject: string, text: string, stored: repo.MessageFile[]
 ) {
   try {
-    const sent = await notifyOfficeEnquiry(who, subject, text, fileNames);
+    const sent = await notifyOfficeEnquiry(who, subject, text, stored);
     if (!sent) {
       console.warn(
         `enquiry from ${who} saved but not emailed — OFFICE_EMAIL or the Graph ` +
@@ -354,12 +393,12 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   }, msgId);
 
   if (general) {
-    await notifyEnquiry(who, subject, text, stored.map((f) => f.name));
+    await notifyEnquiry(who, subject, text, stored);
   } else {
     // The client has answered. Move the card before telling the office, so the
     // board is already right by the time somebody opens the email.
     await moveOffFir(job);
-    await notifyOffice(who, jobRef, job?.address || "", text, stored.map((f) => f.name));
+    await notifyOffice(who, jobRef, job?.address || "", text, stored);
   }
   await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
   return NextResponse.json({ ok: true });

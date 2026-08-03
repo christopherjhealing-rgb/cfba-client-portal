@@ -64,6 +64,11 @@ export const env = {
   // Where client-reply notifications land. Set to a watched inbox
   // (e.g. admin@cfba.com.au); falls back to the sending mailbox.
   officeEmail: process.env.OFFICE_EMAIL || process.env.MAIL_FROM || "",
+  // Raw MB of client attachments one office email may carry. Graph's sendMail
+  // caps the whole request at 4 MB and base64 costs a third on top, so this
+  // has to stay well under that. Bigger files are named in the email and
+  // fetched from the portal instead.
+  mailAttachMaxMb: Number(process.env.MAIL_ATTACH_MAX_MB || "2.5"),
   turnaroundDays: process.env.TURNAROUND_DAYS || "3-4",
   retentionMonths: Number(process.env.RETENTION_MONTHS || "3"),
   // Minutes a card must sit at Issued before the portal pulls files and

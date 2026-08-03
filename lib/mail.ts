@@ -5,14 +5,64 @@ const MAIL_READY = Boolean(
   env.graphTenantId && env.graphClientId && env.graphClientSecret && env.mailFrom
 );
 
+export interface MailAttachment {
+  name: string;
+  contentType: string;
+  bytes: Buffer;
+}
+
+/**
+ * How much raw attachment one email may carry.
+ *
+ * Graph's `sendMail` action caps the WHOLE request at 4 MB, and base64 inflates
+ * bytes by a third — so 3 MB of PDF is already 4 MB on the wire before the body
+ * and envelope. Anything bigger needs a draft plus an upload session, which is
+ * a lot of moving parts for a notification that already links to the file.
+ * Over the budget we send the names instead; nothing is ever dropped silently.
+ */
+const ATTACH_BUDGET = Math.round(Number(env.mailAttachMaxMb || 2.5) * 1024 * 1024);
+
+/** Which of these fit in one email. Returns what to attach and what didn't fit,
+ *  so the body can say so rather than quietly listing files that aren't there. */
+export function fitAttachments(files: MailAttachment[]): {
+  attach: MailAttachment[]; tooBig: string[];
+} {
+  const attach: MailAttachment[] = [];
+  const tooBig: string[] = [];
+  let used = 0;
+  for (const f of files) {
+    if (used + f.bytes.length <= ATTACH_BUDGET) {
+      attach.push(f);
+      used += f.bytes.length;
+    } else {
+      tooBig.push(f.name);
+    }
+  }
+  return { attach, tooBig };
+}
+
 /** Send as the CFBA mailbox via Microsoft Graph. Requires the app registration
  *  to hold the Mail.Send application permission and MAIL_FROM to be a real
  *  mailbox in the tenant (admin@cfba.com.au). */
 export async function sendMail(
-  to: string[], subject: string, html: string
+  to: string[], subject: string, html: string, attachments: MailAttachment[] = []
 ): Promise<boolean> {
   const recipients = to.filter(Boolean);
   if (!MAIL_READY || recipients.length === 0) return false;
+
+  const message: Record<string, unknown> = {
+    subject,
+    body: { contentType: "HTML", content: html },
+    toRecipients: recipients.map((address) => ({ emailAddress: { address } })),
+  };
+  if (attachments.length) {
+    message.attachments = attachments.map((a) => ({
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: a.name,
+      contentType: a.contentType || "application/octet-stream",
+      contentBytes: a.bytes.toString("base64"),
+    }));
+  }
 
   const token = await graphToken();
   const r = await fetch(
@@ -20,14 +70,7 @@ export async function sendMail(
     {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: {
-          subject,
-          body: { contentType: "HTML", content: html },
-          toRecipients: recipients.map((address) => ({ emailAddress: { address } })),
-        },
-        saveToSentItems: true,
-      }),
+      body: JSON.stringify({ message, saveToSentItems: true }),
     }
   );
   if (!r.ok) throw new Error(`Graph sendMail ${r.status}: ${await r.text()}`);
@@ -153,12 +196,25 @@ export function digestEmail(opts: {
  *  without this a client's FIR reply — the event that unblocks a job — can
  *  sit on the board unseen. */
 export function officeReplyEmail(opts: {
-  companyName: string; ref: string; address: string; body: string; fileNames: string[];
+  companyName: string; ref: string; address: string; body: string;
+  fileNames: string[];
+  /** Names that came through ON this email. The rest are named but not
+   *  attached — too big for Graph's 4 MB message cap — and the body says so,
+   *  because "Attachments: x.pdf" on an email with no attachment is worse than
+   *  saying nothing. */
+  attachedNames?: string[];
 }): { subject: string; html: string } {
   const { companyName, ref, address, body, fileNames } = opts;
+  const attached = new Set(opts.attachedNames || []);
+  const notAttached = fileNames.filter((n) => !attached.has(n));
   const subject = `Portal Reply — ${companyName}, Job ${ref}`;
   const files = fileNames.length
-    ? `<p style="margin:0 0 12px;font-size:14px"><strong>Attachments:</strong> ${fileNames.map(esc).join(", ")}</p>`
+    ? (attached.size
+        ? `<p style="margin:0 0 6px;font-size:14px"><strong>Attached to this email:</strong> ${[...attached].map(esc).join(", ")}</p>`
+        : "") +
+      (notAttached.length
+        ? `<p style="margin:0 0 12px;font-size:14px"><strong>Too large to attach:</strong> ${notAttached.map(esc).join(", ")} — open the thread below, or find it on the Monday card.</p>`
+        : "")
     : "";
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
@@ -284,11 +340,19 @@ interface ReportRow {
  *  send, nobody knows the enquiry exists. */
 export function officeEnquiryEmail(opts: {
   companyName: string; subject: string; body: string; fileNames: string[];
+  attachedNames?: string[];
 }): { subject: string; html: string } {
   const { companyName, subject: topic, body, fileNames } = opts;
+  const attached = new Set(opts.attachedNames || []);
+  const notAttached = fileNames.filter((n) => !attached.has(n));
   const subject = `Portal Enquiry — ${companyName}: ${topic}`;
   const files = fileNames.length
-    ? `<p style="margin:0 0 12px;font-size:14px"><strong>Attachments:</strong> ${fileNames.map(esc).join(", ")}</p>`
+    ? (attached.size
+        ? `<p style="margin:0 0 6px;font-size:14px"><strong>Attached to this email:</strong> ${[...attached].map(esc).join(", ")}</p>`
+        : "") +
+      (notAttached.length
+        ? `<p style="margin:0 0 12px;font-size:14px"><strong>Too large to attach:</strong> ${notAttached.map(esc).join(", ")} — open it in the portal.</p>`
+        : "")
     : "";
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
