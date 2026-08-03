@@ -4,6 +4,7 @@ import {
   windClass, topographicClass, rowCells, gustSpeed, GUST,
   REGION_KEYS, TERRAIN_KEYS, TOPO_KEYS, SHIELDING_KEYS,
   REGIONS, TERRAIN, SHIELDING, TOPOGRAPHY, SLOPE_BANDS, LANDFORMS, POSITIONS,
+  REGION_MAP_LINKS,
 } from "../lib/wind.mjs";
 
 // ---------------------------------------------------------------------------
@@ -235,4 +236,19 @@ test("every option offered on screen is one the tables actually accept", () => {
   }
   // Only the escarpment has a behind-the-crest position.
   assert.deepEqual(POSITIONS.filter((p) => p.escarpmentOnly).map((p) => p.key), ["plateau"]);
+});
+
+test("the region is the one input with an official source beside it", () => {
+  // Nobody can work out their wind region by looking around them, so the
+  // authoritative answer has to be one click away — same reasoning as the
+  // bushfire check pointing at the DFES map rather than keeping a copy.
+  assert.ok(REGION_MAP_LINKS.length > 0, "no official source offered");
+  for (const l of REGION_MAP_LINKS) {
+    assert.ok(l.label?.trim(), "a link with no label");
+    assert.match(l.url, /^https:\/\//, `${l.label} must be https`);
+    assert.doesNotMatch(l.url, /\s/, `${l.label} has whitespace in the URL`);
+  }
+  // Every region says something about where it is — an unexplained "Region B"
+  // is the same as no answer for anyone who doesn't already know.
+  for (const r of REGIONS) assert.ok(r.note?.trim(), `${r.label} has no description`);
 });

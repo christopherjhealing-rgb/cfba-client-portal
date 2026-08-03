@@ -5,7 +5,7 @@ import {
   REGIONS, TERRAIN, SHIELDING, TOPOGRAPHY,
   SLOPE_BANDS, LANDFORMS, POSITIONS,
   VEGETATION_NOT_SHIELDING, MAX_LANDFORM_HEIGHT_M,
-  WIND_SOURCE, WIND_CAVEAT,
+  WIND_SOURCE, WIND_CAVEAT, WIND_REGULATOR_NOTE, REGION_MAP_LINKS,
   windClass, topographicClass,
 } from "@/lib/wind.mjs";
 
@@ -68,6 +68,19 @@ export function WindClassCheck() {
 
       <Choice label="Wind region" hint="Region A covers Perth and most of the south."
         options={REGIONS} value={region} onChange={setRegion} />
+
+      {/* The region is the one input nobody can work out by looking around
+          them, so the official source sits right beside it. */}
+      <p className="-mt-3 mb-4 text-[12.5px] text-ink/50">
+        Not sure which region?{" "}
+        {REGION_MAP_LINKS.map((l, i) => (
+          <span key={l.url}>
+            {i > 0 && " · "}
+            <a href={l.url} target="_blank" rel="noopener noreferrer"
+              className="text-seal underline">{l.label}</a>
+          </span>
+        ))}
+      </p>
 
       <Choice label="Terrain category" hint="What the wind flows over on its way to the site."
         options={TERRAIN} value={terrain} onChange={setTerrain} details />
@@ -197,7 +210,7 @@ export function WindClassCheck() {
       </div>
 
       <p className="mt-4 border-t border-rule pt-3 text-[12px] leading-relaxed text-ink/45">
-        {WIND_SOURCE} {WIND_CAVEAT}
+        {WIND_SOURCE} {WIND_CAVEAT} {WIND_REGULATOR_NOTE}
       </p>
     </div>
   );

@@ -44,5 +44,7 @@ export function topographicClass(input?: {
   landform?: string; slope?: string; position?: string;
 }): TopoResult;
 
+export const REGION_MAP_LINKS: readonly { label: string; url: string }[];
+export const WIND_REGULATOR_NOTE: string;
 export const WIND_SOURCE: string;
 export const WIND_CAVEAT: string;
