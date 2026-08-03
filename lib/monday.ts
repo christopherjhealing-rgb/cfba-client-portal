@@ -1,7 +1,9 @@
 // Monday client. Reads the board for status and writes a new card when a
 // portal submission is accepted. Column ids match the live CFBA / EWA board.
 import { env, MONDAY_READY, DEMO_MODE } from "./env";
-import { portalColumnWrite, portalLadder } from "./core.mjs";
+import {
+  portalColumnWrite, portalLadder, INFO_RECEIVED_STATUS, AWAITING_REPLY_STATUSES,
+} from "./core.mjs";
 
 const API = "https://api.monday.com/v2";
 
@@ -212,11 +214,16 @@ export async function setStatus(
   if (!CAN_WRITE) return { ok: false, reason: "off" };
 
   const { labels, status } = await statusContext(itemId);
-  if (!labels.includes(label)) return { ok: false, reason: "no-such-label", labels };
-  if (onlyWhenAt && !onlyWhenAt.includes(status)) {
+  // Compared loosely on purpose: the board's labels are typed by people and
+  // don't stay in one case — QUERY is in capitals, KACIE DOCS too. An exact
+  // match here would silently refuse to write.
+  const key = (x: string) => x.trim().toLowerCase().replace(/\s+/g, " ");
+  const onBoard = labels.find((l) => key(l) === key(label));
+  if (!onBoard) return { ok: false, reason: "no-such-label", labels };
+  if (onlyWhenAt && !onlyWhenAt.some((s) => key(s) === key(status))) {
     return { ok: false, reason: "moved-on", status };
   }
-  if (status === label) return { ok: true }; // already there — no need to write
+  if (key(status) === key(label)) return { ok: true }; // already there
 
   const q = `
     mutation ($board: ID!, $item: ID!, $col: String!, $val: JSON!) {
@@ -227,9 +234,20 @@ export async function setStatus(
     board: env.mondayBoardId,
     item: itemId,
     col: COL.status,
-    val: JSON.stringify({ label }),
+    val: JSON.stringify({ label: onBoard }),
   });
   return { ok: true };
+}
+
+/**
+ * A client has answered a request for information: move the card off the
+ * waiting status so it lands back in the assessment queue.
+ *
+ * Guarded by AWAITING_REPLY_STATUSES, so a reply on a job nobody was waiting
+ * on leaves the card exactly where the office put it.
+ */
+export async function markInfoReceived(itemId: string): Promise<StatusWrite> {
+  return setStatus(itemId, INFO_RECEIVED_STATUS, [...AWAITING_REPLY_STATUSES.values()]);
 }
 
 /** Post a note into the card's Updates (conversation) section — not a column.

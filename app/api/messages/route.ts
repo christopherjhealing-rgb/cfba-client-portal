@@ -34,6 +34,33 @@ async function notifyOfficeEnquiry(
   return sendMail([env.officeEmail], mail.subject, mail.html);
 }
 
+/** A client reply on a job that was waiting on them moves the card off FIR.
+ *  The update alone isn't enough: a card left at FIR stays in the board's
+ *  Further Information Request group, so a job somebody has already answered
+ *  still looks like it's waiting on them. That is how a job goes quiet.
+ *
+ *  Never throws, and never blocks the reply — the message is saved and posted
+ *  before this runs. A card the office has already moved on is left alone. */
+async function moveOffFir(job: { ref: string; mondayItemId: string | null } | undefined) {
+  if (!job?.mondayItemId) return;
+  try {
+    const r = await monday.markInfoReceived(job.mondayItemId);
+    if (!r.ok && r.reason === "no-such-label") {
+      console.warn(
+        `messages ${job.ref}: the board has no "New Info Received" label, so the ` +
+        `card is still at FIR. Labels on the column: ${r.labels.join(", ")}.`
+      );
+      await repo.noteBoardWriteFail(job.ref, 'no "New Info Received" label on the board')
+        .catch(() => {});
+    } else if (!r.ok && r.reason === "moved-on") {
+      console.info(`messages ${job.ref}: card is at "${r.status}", not waiting on the client — left alone.`);
+    }
+  } catch (e) {
+    console.warn(`messages ${job.ref}: could not move the card off FIR:`, (e as Error).message);
+    await repo.noteBoardWriteFail(job.ref, (e as Error).message).catch(() => {});
+  }
+}
+
 /** The enquiry's "what's it about?" becomes the first line of the message, so
  *  the thread list and the office email both have something to show without a
  *  column being added to store it separately. */
@@ -191,6 +218,9 @@ async function handle(req: Request) {
   if (general) {
     await notifyEnquiry(who, subject, text, stored.map((f) => f.name));
   } else {
+    // The client has answered. Move the card before telling the office, so the
+    // board is already right by the time somebody opens the email.
+    await moveOffFir(job);
     await notifyOffice(who, jobRef, job?.address || "", text, stored.map((f) => f.name));
   }
   await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
@@ -326,6 +356,9 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   if (general) {
     await notifyEnquiry(who, subject, text, stored.map((f) => f.name));
   } else {
+    // The client has answered. Move the card before telling the office, so the
+    // board is already right by the time somebody opens the email.
+    await moveOffFir(job);
     await notifyOffice(who, jobRef, job?.address || "", text, stored.map((f) => f.name));
   }
   await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);

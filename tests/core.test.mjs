@@ -8,6 +8,7 @@ import {
   canCancel, portalColumnWrite, portalLadder, portalRank,
   PORTAL_ISSUED, PORTAL_READY, PORTAL_DOWNLOADED, PORTAL_STUCK,
   isGeneralRef, GENERAL_REF, HIDDEN_STATUSES,
+  INFO_RECEIVED_STATUS, AWAITING_REPLY_STATUSES,
 } from "../lib/core.mjs";
 
 // The labels the live board's Status column actually carries, read from board
@@ -191,6 +192,30 @@ test("portalRank places every rung and nothing else", () => {
   assert.equal(portalRank(""), -1);
   assert.equal(portalRank("STUCK"), -1);   // deliberately not a rung
   assert.equal(portalRank("ON HOLD"), -1);
+});
+
+test("a client reply moves a card only off a status that was waiting on them", () => {
+  // The whole point: a card left at FIR stays in the board's Further
+  // Information Request group, so a job the client has already answered still
+  // looks like it's waiting on them.
+  assert.equal(AWAITING_REPLY_STATUSES.has("FIR"), true);
+  assert.equal(AWAITING_REPLY_STATUSES.has("FIR - ENG"), true);
+  assert.equal(AWAITING_REPLY_STATUSES.has("fir"), true);   // board casing drifts
+
+  // NOT these. A reply on a job nobody was waiting on must never drag it
+  // backwards into the assessment queue.
+  for (const s of ["To FIR", "To Assess", "To Check", "To CDC", "To Issue",
+                   "Issued", "To Invoice", "Invoiced / Completed", "Cancelled",
+                   "On Hold", "Amendment", "New Info Received"]) {
+    assert.equal(AWAITING_REPLY_STATUSES.has(s), false, s);
+  }
+});
+
+test("the status a reply moves a card to is one the live board carries", () => {
+  // setStatus refuses a label the board doesn't have, so a typo here would
+  // mean the card silently never moves.
+  assert.ok(BOARD_LABELS.includes(INFO_RECEIVED_STATUS), INFO_RECEIVED_STATUS);
+  for (const s of ["FIR", "FIR - ENG"]) assert.ok(BOARD_LABELS.includes(s), s);
 });
 
 // --- the general enquiry channel -------------------------------------------

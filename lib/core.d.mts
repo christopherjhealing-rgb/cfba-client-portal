@@ -66,6 +66,8 @@ export function groupJobs<T extends PortalJob>(jobs: T[], now?: Date | string, m
 export function tidyAddress(s: string | null | undefined): string;
 export const CLIENT_ACTION_STATUSES: StatusSet;
 export const IN_HOUSE_WAIT_STATUSES: StatusSet;
+export const INFO_RECEIVED_STATUS: string;
+export const AWAITING_REPLY_STATUSES: StatusSet;
 export function needsClientInfo(job: PortalJob): boolean;
 export function splitInProgress<T extends PortalJob>(jobs: T[]): { awaiting: T[]; running: T[] };
 export const STAGES: { key: string; label: string }[];
