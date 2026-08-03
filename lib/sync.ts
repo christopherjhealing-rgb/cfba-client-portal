@@ -18,6 +18,8 @@ import { sendMail, updateEmail, issuedEmail } from "./mail";
 import * as graph from "./graph";
 import * as repo from "./repo";
 import { notifyTeams } from "./teams";
+import { getFirLibrary, getRetiredFir } from "./fir-library";
+import { parseFir, composeFir, firCardNote, firHeldNote } from "./fir.mjs";
 
 export interface SyncResult {
   ok: boolean;
@@ -61,6 +63,17 @@ export interface SyncResult {
 // NOTE: this means an internal note that happens to open with "FIR:" WILL be
 // delivered and emailed to the client — the prefix is the whole switch.
 export const CLIENT_PREFIXES = ["FIR:", "CLIENT:"];
+
+// Only "FIR:" expands shortcuts. "CLIENT:" is for saying something in your own
+// words and stays literal, so nobody has to worry that a sentence starting with
+// a library word turns into a form letter.
+export const FIR_PREFIX = "FIR:";
+
+// Updates we deliberately didn't send, because what followed FIR: looked like a
+// mistyped shortcut. Remembered so the next sync doesn't post the same "did you
+// mean" note again every five minutes. Capped — this is a nudge, not a ledger.
+const HELD_KEY = "fir_held";
+const HELD_MAX = 300;
 
 // Every active card's conversation is scanned, so a prefixed update reaches
 // the client whatever the card's status. listUpdates batches 25 cards per
@@ -541,6 +554,17 @@ async function pullMessages(
   // Asked about exactly these updates, not "everything we've ever mirrored" —
   // see repo.knownMondayUpdateIds for why that distinction matters.
   const seen = await repo.knownMondayUpdateIds(updates.map((u) => u.id));
+
+  // The shortcut library, and the updates we've already declined to send.
+  // Both read once for the whole batch rather than per update.
+  const [library, retired, heldBefore] = await Promise.all([
+    getFirLibrary().catch(() => []),
+    getRetiredFir().catch(() => []),
+    repo.getSetting<string[]>(HELD_KEY).catch(() => []),
+  ]);
+  const held = new Set(Array.isArray(heldBefore) ? heldBefore : []);
+  let heldChanged = false;
+
   let n = 0;
   for (const u of updates) {
     if (seen.has(u.id)) continue;
@@ -549,7 +573,36 @@ async function pullMessages(
     if (!prefix) continue;
     const target = byItem.get(u.itemId);
     if (!target) continue;
-    const body = text.slice(prefix.length).trim();
+    let body = text.slice(prefix.length).trim();
+
+    // --- shortcut expansion ------------------------------------------------
+    // Only on FIR:, and only when the whole of what follows is shortcuts. See
+    // lib/fir.mjs for why it is all-or-nothing.
+    if (prefix === FIR_PREFIX && library.length) {
+      const parsed = parseFir(body, library, retired);
+
+      if (parsed.kind === "held") {
+        // Almost certainly a typed shortcut with a letter wrong. Sending it
+        // would put "Sol Class" in front of a client over our name, so the
+        // card gets told and the client gets nothing.
+        if (!held.has(u.id)) {
+          await monday.postUpdate(u.itemId, firHeldNote(parsed.held, library))
+            .catch(() => {});
+          held.add(u.id);
+          heldChanged = true;
+        }
+        continue;
+      }
+
+      if (parsed.kind === "expand") {
+        const job = await repo.getJob(target.ref).catch(() => null);
+        body = composeFir(parsed.items, { address: job?.address || "" });
+        // What the client was actually asked for, on the card, in words —
+        // otherwise the board's only record is the shorthand.
+        await monday.postUpdate(u.itemId, firCardNote(parsed.items)).catch(() => {});
+      }
+    }
+
     try {
       await repo.addMessage({
         ref: target.ref, companyId: target.companyId, from: "cfba",
@@ -584,6 +637,10 @@ async function pullMessages(
     } catch (e) {
       console.warn(`sync: could not email ${target.ref}:`, (e as Error).message);
     }
+  }
+
+  if (heldChanged) {
+    await repo.setSetting(HELD_KEY, [...held].slice(-HELD_MAX)).catch(() => {});
   }
   return n;
 }
