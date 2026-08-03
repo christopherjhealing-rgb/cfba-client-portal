@@ -91,7 +91,32 @@ export async function POST(req: Request) {
     if (!login) return NextResponse.json({ error: "Unknown username." }, { status: 404 });
     await repo.issueSetupCode(u, setupCodeHash, setupExpiresAt);
     await repo.logAudit("login.reset", u);
-    return NextResponse.json({ ok: true, username: u, setupCode });
+
+    // A reset is useless until the client has the new code, so send it the
+    // same way a new login goes out. The username never changes.
+    const company = await repo.companyById(login.companyId);
+    let emailed = false;
+    let emailError: string | undefined;
+    const to = String(email || "").trim() || company?.emails?.[0] || "";
+    if (to && company) {
+      try {
+        const guide = await guideAttachment();
+        const { attach } = fitAttachments(guide ? [guide] : []);
+        const mail = loginEmail({
+          companyName: company.name, username: u, setupCode,
+          displayName: login.displayName || undefined,
+          guideAttached: attach.length > 0,
+        });
+        emailed = await sendMail([to], mail.subject, mail.html, attach);
+        if (!emailed) emailError = "mail isn't configured (MAIL_FROM / Graph Mail.Send)";
+      } catch (e) {
+        emailError = (e as Error).message;
+        console.warn(`logins: couldn't email the reset for ${u}:`, emailError);
+      }
+    } else {
+      emailError = "no email address on this client — read the code out instead";
+    }
+    return NextResponse.json({ ok: true, username: u, setupCode, emailed, emailError });
   }
 
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });

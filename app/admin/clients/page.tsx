@@ -4,6 +4,7 @@ import { isStaff } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import { StaffShell } from "@/components/StaffShell";
 import { LoginManager } from "@/components/LoginManager";
+import { DeleteClient } from "@/components/DeleteClient";
 import { AddClient } from "@/components/AddClient";
 
 export const dynamic = "force-dynamic";
@@ -88,6 +89,7 @@ export default async function ClientsPage() {
                   </div>
                 </div>
                 <LoginManager companyId={c.id} companyName={c.name} existing={ls.map((l) => l.username)} />
+                <DeleteClient companyId={c.id} companyName={c.name} />
               </div>
             );
           })}

@@ -164,6 +164,65 @@ export async function createCompany(input: {
   return { id, name: input.name, emails, isTest: !!input.isTest };
 }
 
+/** Everything a client owns, for the confirm dialog. Counting BEFORE deleting
+ *  is the whole point — "delete this client" means nothing until you can see
+ *  it means three jobs and eleven files. */
+export async function companyFootprint(id: string): Promise<{
+  jobs: number; files: number; messages: number; logins: number; refs: string[];
+}> {
+  const jobs = (await listJobsForCompany(id)).map((j) => j.ref);
+  const messages = (await listMessagesForCompany(id)).length;
+  const logins = (await listLogins()).filter((l) => l.companyId === id).length;
+  let files = 0;
+  for (const ref of jobs) files += (await jobFiles(ref)).length;
+  return { jobs: jobs.length, files, messages, logins, refs: jobs.slice(0, 12) };
+}
+
+/**
+ * Remove a client and everything hanging off it: logins, emails, aliases,
+ * their jobs and the stored files, their messages and read marks.
+ *
+ * Their Monday cards are NOT touched — this portal is not the system of
+ * record and has no business deleting the firm's board. Which means any card
+ * still on the board reappears on the next sync as an unmatched client, and
+ * the caller is told so rather than finding out later.
+ */
+export async function deleteCompany(id: string): Promise<{ jobs: number; files: number }> {
+  const before = await companyFootprint(id);
+
+  for (const ref of (await listJobsForCompany(id)).map((j) => j.ref)) {
+    const job = await getJob(ref);
+    try {
+      await purgeJobFiles(ref, job?.storagePrefix || `issued/${ref}`);
+    } catch (e) {
+      console.warn(`deleteCompany: couldn't purge files for ${ref}:`, (e as Error).message);
+    }
+  }
+
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    for (const [ref, j] of Object.entries(db.jobs)) if (j.companyId === id) delete db.jobs[ref];
+    for (const u of Object.keys(db.logins)) if (db.logins[u].companyId === id) delete db.logins[u];
+    db.messages = (db.messages || []).filter((m) => m.companyId !== id);
+    if (db.reads) delete db.reads[id];
+    db.companies = db.companies.filter((c) => c.id !== id);
+    await demo.save(db);
+    return { jobs: before.jobs, files: before.files };
+  }
+
+  const refs = (await listJobsForCompany(id)).map((j) => j.ref);
+  if (refs.length) must(await sb().from("job_files").delete().in("ref", refs));
+  must(await sb().from("jobs").delete().eq("company_id", id));
+  must(await sb().from("messages").delete().eq("company_id", id));
+  await sb().from("message_reads").delete().eq("company_id", id);
+  await sb().from("submissions").delete().eq("company_id", id);
+  must(await sb().from("client_logins").delete().eq("company_id", id));
+  await sb().from("company_emails").delete().eq("company_id", id);
+  await sb().from("company_aliases").delete().eq("company_id", id);
+  must(await sb().from("companies").delete().eq("id", id));
+  return { jobs: before.jobs, files: before.files };
+}
+
 export async function companiesForMatch(): Promise<CompanyMatch[]> {
   if (DEMO_MODE) {
     const db = await demo.load();

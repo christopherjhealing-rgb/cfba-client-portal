@@ -33,7 +33,7 @@ export function LoginManager({
     return (
       <div className="mt-3 border-t border-rule pt-3">
         <button className="text-[13px] text-seal underline" onClick={() => setOpen(true)}>
-          {existing.length ? "Issue another login / reset a password" : "Issue a login"}
+          {existing.length ? "Reset a password / issue another login" : "Issue a login"}
         </button>
       </div>
     );
@@ -43,7 +43,9 @@ export function LoginManager({
     <div className="mt-3 border-t border-rule pt-3">
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-[160px] flex-1">
-          <label className="label">New Username for {companyName}</label>
+          <label className="label">
+            {existing.length ? "Username for an Additional Login" : `New Username for ${companyName}`}
+          </label>
           <input className="field" value={username} autoCapitalize="none"
             onChange={(e) => setUsername(e.target.value)} placeholder="yourcompany" />
         </div>
@@ -66,13 +68,22 @@ export function LoginManager({
       </div>
 
       {existing.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
-          <span className="text-ink/55">Reset a password:</span>
+        <div className="mt-3 border-t border-rule pt-3">
+          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/55">
+            Existing Logins
+          </p>
+          {/* Resetting keeps the username — it's the same person, they've just
+              forgotten their password. Nothing above is involved. */}
           {existing.map((u) => (
-            <button key={u} className="chip normal-case tracking-normal underline"
-              disabled={busy} onClick={() => call("reset", u)}>
-              {u}
-            </button>
+            <div key={u} className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[13px]">{u}</span>
+              <button className="btn-ghost" disabled={busy} onClick={() => call("reset", u)}>
+                {busy ? "…" : "Reset Password"}
+              </button>
+              <span className="text-[12px] text-ink/50">
+                keeps this username · issues a new one-time code
+              </span>
+            </div>
           ))}
         </div>
       )}
@@ -80,7 +91,7 @@ export function LoginManager({
       {issued && (
         <div className="mt-3 rounded-sm border-l-[3px] border-seal bg-[#EDF3EE] px-3 py-2.5 text-[13px]">
           <div className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/55">
-            Give these to the client — the code works once
+            {issued.emailed ? "Sent to the client — the code works once" : "Give these to the client — the code works once"}
           </div>
           <div className="mt-1.5">
             Username: <span className="font-mono font-semibold">{issued.username}</span>
