@@ -24,3 +24,15 @@ export const isPublishedSheet = (f: string): boolean =>
   PUBLISHED_SHEETS.some((s) => s.file === f);
 
 export const sheetStoragePath = (f: string) => `info-sheets/${f}`;
+
+
+/**
+ * The getting-started guide attached to a new client's login email.
+ *
+ * Storage first, the copy in public/ as the fallback — the same override shape
+ * as an info sheet, so it can be replaced from /admin when the portal changes
+ * without waiting for a deploy. The login route said as much long before
+ * anything let you actually do it.
+ */
+export const GUIDE_PATH = "collateral/welcome-guide.pdf";
+export const GUIDE_SHIPPED = "/guides/getting-started.pdf";

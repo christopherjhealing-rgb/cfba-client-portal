@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isStaff } from "@/lib/session";
 import * as repo from "@/lib/repo";
-import { isPublishedSheet, sheetStoragePath } from "@/lib/info-sheets";
+import { isPublishedSheet, sheetStoragePath, GUIDE_PATH } from "@/lib/info-sheets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,12 +14,17 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     const key = String(body.key || "");
-    if (!isPublishedSheet(key)) {
+    // The welcome guide rides the same route: identical shape — one PDF, an
+    // override slot, revert to the shipped copy — and a second endpoint doing
+    // the same thing is a second endpoint to keep in step.
+    const guide = key === "__guide";
+    if (!guide && !isPublishedSheet(key)) {
       return NextResponse.json({ error: "Unknown info sheet." }, { status: 400 });
     }
+    const dest = guide ? GUIDE_PATH : sheetStoragePath(key);
 
     if (body.revert === true) {
-      await repo.deleteFile(sheetStoragePath(key));
+      await repo.deleteFile(dest);
       return NextResponse.json({ ok: true, reverted: true });
     }
 
@@ -41,7 +46,7 @@ export async function POST(req: Request) {
 
     // Overwrite the override slot, then clear the draft.
     const bytes = await repo.readFile(draftPath);
-    await repo.writeFile(sheetStoragePath(key), bytes, "application/pdf");
+    await repo.writeFile(dest, bytes, "application/pdf");
     await repo.deleteFile(draftPath);
 
     return NextResponse.json({ ok: true });
