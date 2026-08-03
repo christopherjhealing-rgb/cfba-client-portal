@@ -332,3 +332,14 @@ test("the rate used is reported back, so a screen can't show one and apply anoth
   assert.equal(sizeNew({ roofM2: 100 }).rate, RATE_M3_PER_M2);
   assert.equal(sizeNew({ roofM2: 100, rate: ratePerM2(50) }).rate, 0.02);
 });
+
+test("shipped behaviour: every call with no rate is 0.0125, both calculators", () => {
+  // The screen has no rate control — Chris's call, 3 Aug 2026 — so the default
+  // is what every client actually gets. This is the test that would fail if
+  // somebody changed the constant without meaning to.
+  assert.equal(RATE_M3_PER_M2, 0.0125);
+  assert.equal(sizeNew({ roofM2: 200 }).required, 2.5);
+  assert.equal(sizeExisting({ existingRoofM2: 160, proposedRoofM2: 40 }).required, 2.5);
+  assert.equal(sizeNew({ roofM2: 200 }).rate, 0.0125);
+  assert.equal(sizeExisting({ existingRoofM2: 160, proposedRoofM2: 40 }).rate, 0.0125);
+});
