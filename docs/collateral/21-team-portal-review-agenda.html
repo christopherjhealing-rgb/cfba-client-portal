@@ -269,6 +269,9 @@
 
   /* Feature tables get their icon in a narrow first column. */
   table.stack td.ic { width: 8mm; color: var(--green); font-size: 11pt; padding-right: 0; }
+  /* Longer labels on the tools and safety pages — wrapping "Address, typed
+     once" onto two lines makes a list of nine read as a list of eighteen. */
+  table.stack.wide td:nth-child(2) { width: 38mm; }
 
   /* Empty boxes, not ticks — a list worked through during the week, and a
      pre-ticked one reads as already done. Drawn so it doesn't depend on the
@@ -346,7 +349,7 @@
         <div class="cover-meta">
           <span><svg class="i"><use href="#ic-cal"/></svg> Tuesday 4 August 2026</span>
           <span><svg class="i"><use href="#ic-people"/></svg> Kacie · Chris · Rebecca · Fiona</span>
-          <span><svg class="i"><use href="#ic-clock"/></svg> Allow 85 minutes</span>
+          <span><svg class="i"><use href="#ic-clock"/></svg> Allow 90 minutes</span>
         </div>
       </div>
 
@@ -387,7 +390,7 @@
       </div>
       <div class="stop">
         <span class="node"><svg class="i"><use href="#ic-screen"/></svg></span>
-        <b>Admin<br>dashboard</b><span class="mins">10 min</span>
+        <b>Our side +<br>security</b><span class="mins">15 min</span>
       </div>
       <div class="stop">
         <span class="node"><svg class="i"><use href="#ic-board"/></svg></span>
@@ -409,7 +412,7 @@
       <tr>
         <td>15 min</td><td><svg class="i"><use href="#ic-user"/></svg></td>
         <td><strong>The client&apos;s side</strong>
-          <div class="what">Signing in, lodging, messages, downloads, resources — and what they can&apos;t see. <span class="muted">Page 5</span></div></td>
+          <div class="what">Signing in, lodging, messages, downloads, resources, and the tools we&apos;ve given them. <span class="muted">Pages 5–6</span></div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
@@ -421,7 +424,7 @@
       <tr>
         <td>10 min</td><td><svg class="i"><use href="#ic-chat"/></svg></td>
         <td><strong>An FIR, worked through</strong>
-          <div class="what">Saves us the most time, and most likely to catch us out. <span class="muted">Page 3</span></div></td>
+          <div class="what">Saves us the most time, and most likely to catch us out. <span class="muted">Page 2</span></div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
@@ -431,9 +434,9 @@
         <td class="muted small">All</td>
       </tr>
       <tr>
-        <td>10 min</td><td><svg class="i"><use href="#ic-screen"/></svg></td>
-        <td><strong>The admin dashboard</strong>
-          <div class="what">Queue, Clients, Enquiries, Amendments, Content, Settings. <span class="muted">Page 6</span></div></td>
+        <td>15 min</td><td><svg class="i"><use href="#ic-screen"/></svg></td>
+        <td><strong>Our side, and keeping it safe</strong>
+          <div class="what">The eight admin pages, and what protects a client&apos;s files. <span class="muted">Pages 7–8</span></div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
@@ -453,7 +456,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 1 of 6 — running order</span><span>CF Building Approvals</span>
+    <span>Page 1 of 8 — running order</span><span>CF Building Approvals</span>
   </div>
 </div>
 
@@ -586,7 +589,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 2 of 6 — the job, and the FIR</span><span>CF Building Approvals</span>
+    <span>Page 2 of 8 — the job, and the FIR</span><span>CF Building Approvals</span>
   </div>
 </div>
 
@@ -659,7 +662,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 3 of 6 — what&apos;s automatic, and the 5pm report</span><span>CF Building Approvals</span>
+    <span>Page 3 of 8 — what&apos;s automatic, and the 5pm report</span><span>CF Building Approvals</span>
   </div>
 </div>
 
@@ -673,7 +676,7 @@
       <div class="n">03</div>
       <div>
         <h2>Amendments — what&apos;s changed</h2>
-        <p>The only process on these six pages that works differently from last week.</p>
+        <p>The only process in this pack that works differently from last week.</p>
       </div>
     </div>
 
@@ -775,7 +778,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 4 of 6 — amendments</span><span>CF Building Approvals</span>
+    <span>Page 4 of 8 — amendments</span><span>CF Building Approvals</span>
   </div>
 </div>
 
@@ -853,18 +856,215 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 5 of 6 — the client&apos;s side, and your trial</span><span>CF Building Approvals</span>
+    <span>Page 5 of 8 — the client&apos;s side, and your trial</span><span>CF Building Approvals</span>
   </div>
 </div>
 
 <!-- ===================================================================
-     PAGE 6 — our side, and what's left
+     PAGE 6 — the tools, which are the part nobody has seen yet
      =================================================================== -->
 <div class="page">
   <div class="content">
 
     <div class="chapter">
       <div class="n">05</div>
+      <div>
+        <h2>The tools we&apos;ve given them</h2>
+        <p>Each one exists because of a question we answer over and over, or a job we send back.</p>
+      </div>
+    </div>
+
+    <table class="stack wide">
+      <tr><td class="ic"><svg class="i"><use href="#ic-search"/></svg></td>
+        <td><strong>Address, typed once</strong></td>
+        <td>The address completes itself as they type — Australian addresses only, weighted to the
+          slab of WA we certify in. The spelling and the suburb come from Google rather than from a
+          builder on a phone, so <em>&ldquo;lot 42 smith st&rdquo;</em> stops arriving without a suburb.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-map"/></svg></td>
+        <td><strong>Site Plan Tool</strong></td>
+        <td>Draws a compliant A4 site plan at a real scale, starting from the actual lot boundary out
+          of the State&apos;s cadastre. North arrow, scale bar, dimensions to every boundary, title
+          block. For the simple jobs we&apos;d otherwise send back for a plan.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-zap"/></svg></td>
+        <td><strong>Wind classification checker</strong></td>
+        <td>Region, terrain, shielding and topography in — the AS&nbsp;4055 wind class out, straight
+          off the Stratco design guide tables. It shows its working, and says so plainly when the
+          combination isn&apos;t one the tables cover.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-warn"/></svg></td>
+        <td><strong>Bushfire map check</strong></td>
+        <td>Puts their address straight into Landgate&apos;s bushfire-prone map. Answers
+          &ldquo;do I need a BAL assessment?&rdquo; before they lodge instead of after.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clip"/></svg></td>
+        <td><strong>Council forms</strong></td>
+        <td>BA1, BA2, BA5, BA7, BA9, BA13, BA19 and BA22 — Word or PDF, ours to keep current, with a
+          link to the official source beside each so nobody works from a stale copy.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-folder"/></svg></td>
+        <td><strong>All thirty councils</strong></td>
+        <td>Every local government we deal with, each with a direct link to its building application
+          page — not its home page.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clip"/></svg></td>
+        <td><strong>The fourteen info sheets</strong></td>
+        <td>Site plans, engineering, BAL, retaining, elevations, amendments, the lodging checklist,
+          boundaries, pool barriers, wind and site class, stormwater, easements, after the permit,
+          and planning approval for Class 10.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-gear"/></svg></td>
+        <td><strong>Engineering checker</strong></td>
+        <td>Built and hidden. Switches on from Settings the day we decide it&apos;s ready — for
+          clients, or just for us.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-user"/></svg></td>
+        <td><strong>Their document library</strong></td>
+        <td>The documents they reuse job to job, kept in My Details and attachable to a lodgement
+          without going and finding the file again.</td></tr>
+    </table>
+
+    <div class="callout" style="margin-top:3mm">
+      <div class="note">
+        <svg class="i"><use href="#ic-target"/></svg>
+        <div>None of these decide anything either. They put the right answer in front of a client at
+        the moment they&apos;d otherwise guess — which is the moment a job starts going wrong.
+        <strong>Every one of them is worth five minutes on Tuesday</strong>, because a tool nobody
+        knows about is a tool we still answer the phone for.</div>
+      </div>
+    </div>
+
+    <div class="sec">What to say when they ring</div>
+    <div class="run">
+      <div class="beat">
+        <div class="hd"><svg class="i"><use href="#ic-zap"/></svg><h4>&ldquo;What wind class am I?&rdquo;</h4></div>
+        <p>Resources → Wind Classification. Twenty seconds, and they get the answer with the reasoning
+          under it rather than a number they have to trust.</p>
+      </div>
+      <div class="arr">·</div>
+      <div class="beat">
+        <div class="hd"><svg class="i"><use href="#ic-warn"/></svg><h4>&ldquo;Do I need a BAL?&rdquo;</h4></div>
+        <p>Resources → Bushfire Map Check. Their address goes straight into Landgate&apos;s map, so
+          it&apos;s the State&apos;s answer and not ours.</p>
+      </div>
+      <div class="arr">·</div>
+      <div class="beat">
+        <div class="hd"><svg class="i"><use href="#ic-map"/></svg><h4>&ldquo;My site plan came back&rdquo;</h4></div>
+        <p>Site Plan Tool. For a simple job it draws one properly — faster than explaining what was
+          wrong with the last one.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot-light">
+    <span>Page 6 of 8 — the tools</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- ===================================================================
+     PAGE 7 — safety and security, in language we can repeat to a client
+     =================================================================== -->
+<div class="page">
+  <div class="content">
+
+    <div class="chapter">
+      <div class="n">06</div>
+      <div>
+        <h2>Keeping it safe</h2>
+        <p>Clients will ask. This is the answer, in words we can say back to them.</p>
+      </div>
+    </div>
+
+    <div class="sec">Getting in</div>
+    <table class="stack wide">
+      <tr><td class="ic"><svg class="i"><use href="#ic-mail"/></svg></td>
+        <td><strong>A one-time code</strong></td>
+        <td>Emailed with their username, and good for one use. They set their own password; we never
+          choose one for them and never see it.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-stamp"/></svg></td>
+        <td><strong>Passwords we can&apos;t read</strong></td>
+        <td>Stored scrambled, one-way, with a different scramble for each password. Nobody who took
+          the whole database could turn them back into passwords — including us.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-ban"/></svg></td>
+        <td><strong>Guessing gets slower</strong></td>
+        <td>Three wrong tries, then the wait grows: five minutes, half an hour, two hours. Counted
+          against the username on our server, so moving to another computer doesn&apos;t reset it.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clock"/></svg></td>
+        <td><strong>How long they stay in</strong></td>
+        <td>Thirty days on a device they ask to be remembered on; twelve hours for our staff.</td></tr>
+    </table>
+
+    <div class="sec">Their files</div>
+    <table class="stack wide">
+      <tr><td class="ic"><svg class="i"><use href="#ic-folder"/></svg></td>
+        <td><strong>Nothing has a public link</strong></td>
+        <td>Every file lives in private storage. There is no address you could paste to somebody that
+          would hand them a certificate — each download is checked against who&apos;s asking.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-eye"/></svg></td>
+        <td><strong>A wrong guess tells you nothing</strong></td>
+        <td>Somebody else&apos;s reference and a reference that doesn&apos;t exist give exactly the
+          same &ldquo;not found&rdquo;, so the portal can&apos;t be used to work out what we hold.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clip"/></svg></td>
+        <td><strong>What can be uploaded</strong></td>
+        <td>PDFs only. Up to 40&nbsp;MB across 30 files on a lodgement, 25&nbsp;MB on a message —
+          checked on our side, not just in the browser.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-loop"/></svg></td>
+        <td><strong>Issued packages don&apos;t sit forever</strong></td>
+        <td>Their copy is cleared after three months. Ours doesn&apos;t move — the certificate stays
+          with us and on SharePoint exactly as it always has.</td></tr>
+    </table>
+
+    <div class="sec">On our side</div>
+    <div class="cols">
+      <div>
+        <ul class="check dots">
+          <li>Staff sign in separately — a client session can&apos;t reach an admin page</li>
+          <li><strong>View as Client</strong> shows us what they see, without their password</li>
+        </ul>
+      </div>
+      <div>
+        <ul class="check dots">
+          <li>The activity log records who did what, and when</li>
+          <li>The key that reaches storage never leaves our server</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout warn" style="margin-top:3mm">
+      <div class="note">
+        <svg class="i"><use href="#ic-ban"/></svg>
+        <div><strong>And what it deliberately doesn&apos;t do.</strong> No card details and no
+        payments, anywhere. No client can see another client&apos;s jobs, files or messages — that
+        check runs on every request, not just on what the menu offers. And nothing about a job&apos;s
+        outcome is ever written by the portal: it delivers what we wrote, and tells people it&apos;s
+        there.</div>
+      </div>
+    </div>
+
+    <div class="sec">If a client asks — and they will</div>
+    <table class="stack narrow">
+      <tr><td class="ic"><svg class="i"><use href="#ic-chat"/></svg></td>
+        <td>&ldquo;Who else can see my plans?&rdquo;</td>
+        <td>Nobody. Only your login reaches your jobs, and we check that on every file.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-chat"/></svg></td>
+        <td>&ldquo;What if I lose my password?&rdquo;</td>
+        <td>Ring us and we&apos;ll send a fresh code. We can&apos;t tell you the old one — we
+          can&apos;t see it either.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-chat"/></svg></td>
+        <td>&ldquo;How long do you keep it?&rdquo;</td>
+        <td>Your download stays for three months. Our copy of the certificate we keep as we always
+          have — ask any time and we&apos;ll re-issue it.</td></tr>
+    </table>
+
+  </div>
+
+  <div class="foot-light">
+    <span>Page 7 of 8 — keeping it safe</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- ===================================================================
+     PAGE 8 — our side, and what's left
+     =================================================================== -->
+<div class="page">
+  <div class="content">
+
+    <div class="chapter">
+      <div class="n">07</div>
       <div>
         <h2>What we can do</h2>
         <p>The admin dashboard — eight places, and what each of them is for.</p>
@@ -923,7 +1123,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 6 of 6 — our side, and what&apos;s left</span><span>CF Building Approvals</span>
+    <span>Page 8 of 8 — our side, and what&apos;s left</span><span>CF Building Approvals</span>
   </div>
 </div>
 
