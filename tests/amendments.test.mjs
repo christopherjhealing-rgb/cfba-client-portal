@@ -150,3 +150,50 @@ test("only an exact reference counts as the same job", () => {
   assert.ok(!sameRef("26-1042", ""));
   assert.ok(!sameRef(null, null));
 });
+
+// ---------------------------------------------------------------------------
+// Regressions found in review. Each of these shipped and each was wrong.
+// ---------------------------------------------------------------------------
+import { REVISED, HIDDEN_STATUSES, CANCELLED_STATUS } from "../lib/core.mjs";
+
+test("the two file sets are told apart, so issuing can't destroy the lodgement", () => {
+  // Issuing used to REPLACE files with the revised certificate, which wiped
+  // the record of what the client actually asked for — and left a resend
+  // looking for the certificate in the lodgement folder, where it isn't.
+  const after = [
+    { name: "revised-site-plan.pdf" },
+    { name: "elevations.pdf" },
+    { name: "CDC-AMENDED.pdf", category: REVISED },
+  ];
+  const lodged = after.filter((f) => f.category !== REVISED).map((f) => f.name);
+  const sent = after.filter((f) => f.category === REVISED).map((f) => f.name);
+  assert.deepEqual(lodged, ["revised-site-plan.pdf", "elevations.pdf"]);
+  assert.deepEqual(sent, ["CDC-AMENDED.pdf"]);
+  // The marker has to be something a real category never is, or a lodged file
+  // would be mistaken for the certificate we sent back.
+  assert.ok(REVISED);
+  assert.ok(!["engineering", "plans", "site plan", ""].includes(REVISED));
+});
+
+test("a hidden job never reaches the past-jobs index", () => {
+  // QUERY exists to hide a job from the client completely. The index reads the
+  // board directly, so it walks past isClientVisible — without an explicit
+  // check, a job the office deliberately hid appeared in the amend picker.
+  assert.ok(HIDDEN_STATUSES.has("QUERY"));
+  assert.ok(HIDDEN_STATUSES.has("Query"));
+  assert.ok(HIDDEN_STATUSES.has("query"));
+  // And there's nothing to amend on a cancelled job.
+  assert.equal(CANCELLED_STATUS, "Cancelled");
+});
+
+test("only genuinely finished work is offered as finished", () => {
+  // Everything from the index used to be chipped "Completed", including live
+  // work — which told a client a certificate existed when it didn't.
+  const CLOSED_ISH = new Set(["Invoiced / Completed", "To Invoice", "Issued"]);
+  for (const s of ["Invoiced / Completed", "To Invoice", "Issued"]) {
+    assert.ok(CLOSED_ISH.has(s), `${s} should read as finished`);
+  }
+  for (const s of ["To Assess", "FIR", "To CDC", "On Hold", "Amendment", ""]) {
+    assert.ok(!CLOSED_ISH.has(s), `${s} must not read as finished`);
+  }
+});

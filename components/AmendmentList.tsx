@@ -139,9 +139,11 @@ export function AmendmentList({ rows }: { rows: AmendmentRow[] }) {
                     {busy === a.id ? "…" : "Send Revised CDC"}
                   </button>
                 )}
-                <button className="btn-ghost" disabled={busy === a.id} onClick={() => resend(a.id)}>
-                  Email It Again
-                </button>
+                {!sent && (
+                  <button className="btn-ghost" disabled={busy === a.id} onClick={() => resend(a.id)}>
+                    Email It Again
+                  </button>
+                )}
               </div>
             </div>
 

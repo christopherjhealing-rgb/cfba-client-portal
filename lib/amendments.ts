@@ -27,9 +27,11 @@ import {
   sendMail, amendmentEmail, amendmentReadyEmail, fitAttachments,
   type MailAttachment,
 } from "./mail";
-import { routeAmendment, routeExplanation, AMENDMENT_OPEN, AMENDMENT_DONE } from "./core.mjs";
+import {
+  routeAmendment, routeExplanation, AMENDMENT_OPEN, AMENDMENT_DONE, REVISED,
+} from "./core.mjs";
 
-export { AMENDMENT_OPEN, AMENDMENT_DONE };
+export { AMENDMENT_OPEN, AMENDMENT_DONE, REVISED };
 
 const SETTING = "amendments";
 
@@ -138,7 +140,8 @@ export async function lodgeAmendment(id: string): Promise<LodgeResult> {
           `AMENDMENT lodged via the client portal — handled by email, not on the board.\n\n` +
           `Client: ${company?.name || sub.companyId}\n` +
           `Reason: ${sub.description || "(none given)"}\n` +
-          (sub.files.length ? `New documents: ${sub.files.map((f) => f.name).join(", ")}\n` : "") +
+          (sub.files.filter((f) => f.category !== REVISED).length
+            ? `New documents: ${sub.files.filter((f) => f.category !== REVISED).map((f) => f.name).join(", ")}\n` : "") +
           `Sent to: ${route.email || "nobody — see the portal"}\n` +
           `This certificate is unchanged until a revised one is issued.`
         );
@@ -152,14 +155,15 @@ export async function lodgeAmendment(id: string): Promise<LodgeResult> {
     let emailed = false;
     if (route.email) {
       try {
-        const { attach, tooBig } = fitAttachments(await loadFiles(id, sub.files));
+        const lodged = sub.files.filter((f) => f.category !== REVISED);
+        const { attach, tooBig } = fitAttachments(await loadFiles(id, lodged));
         const mail = amendmentEmail({
           companyName: company?.name || sub.companyId,
           parentRef: sub.amendmentOf,
           address: cardAddress || sub.address,
           reason: sub.description,
           notes: sub.notes,
-          fileNames: sub.files.map((f) => f.name),
+          fileNames: lodged.map((f) => f.name),
           attachedNames: attach.map((a) => a.name),
           tooBigNames: tooBig,
           routedWhy: why,
@@ -204,7 +208,14 @@ export async function issueAmendment(
     repo.getJob(sub.amendmentOf).catch(() => null),
   ]);
 
-  await repo.setSubmission(id, { status: AMENDMENT_DONE as never, files });
+  // Keep what the client sent. Replacing files wholesale destroyed the record
+  // of what was actually asked for — and left the resend reading the revised
+  // certificate out of the lodgement folder, where it isn't.
+  const kept = sub.files.filter((f) => f.category !== REVISED);
+  await repo.setSubmission(id, {
+    status: AMENDMENT_DONE,
+    files: [...kept, ...files.map((f) => ({ name: f.name, category: REVISED }))],
+  });
 
   let emailed = false;
   const to = (company?.emails || []).filter(Boolean);
@@ -215,7 +226,9 @@ export async function issueAmendment(
         parentRef: sub.amendmentOf,
         address: parent?.address || sub.address,
         fileNames: files.map((f) => f.name),
-        url: `${env.appUrl}/jobs/${encodeURIComponent(sub.amendmentOf)}`,
+        url: parent
+          ? `${env.appUrl}/jobs/${encodeURIComponent(sub.amendmentOf)}`
+          : `${env.appUrl}/amend`,
       });
       emailed = await sendMail(to, mail.subject, mail.html);
     } catch (e) {
@@ -224,11 +237,17 @@ export async function issueAmendment(
   }
 
   // And the original card learns that a revised certificate exists — the same
-  // reason the lodgement note is there.
-  if (parent?.mondayItemId) {
+  // reason the lodgement note is there. Resolved by reference when the job
+  // predates the portal, which is most of them.
+  let itemId = parent?.mondayItemId || null;
+  if (!itemId) {
+    const [card] = await monday.findByRef(sub.amendmentOf).catch(() => []);
+    itemId = card?.itemId || null;
+  }
+  if (itemId) {
     try {
       await monday.postUpdate(
-        parent.mondayItemId,
+        itemId,
         `A revised certificate has been issued for the amendment and sent to the ` +
         `client through the portal: ${files.map((f) => f.name).join(", ")}.`
       );

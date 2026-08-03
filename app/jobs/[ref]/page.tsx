@@ -5,7 +5,7 @@ import * as repo from "@/lib/repo";
 import {
   isClientVisible, needsClientInfo, clientStatusLabel, jobBucket,
   elapsedBusinessDays, PAUSED_STATUSES, canCancel, CANCELLED_STATUS,
-  AMENDMENT_OPEN, AMENDMENT_DONE,
+  AMENDMENT_OPEN, AMENDMENT_DONE, REVISED,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -207,7 +207,7 @@ export default async function JobDetail({
                     {s.files.map((f, i) => (
                       <li key={i} className="flex items-center gap-2 py-0.5">
                         <span className="text-seal"><Icon name="folder" size={13} /></span>
-                        {s.amendmentOf && s.status === AMENDMENT_DONE ? (
+                        {s.amendmentOf && s.status === AMENDMENT_DONE && f.category === REVISED ? (
                           <a href={`/api/amendments/${s.id}/${encodeURIComponent(f.name)}`}
                             target="_blank" rel="noopener noreferrer"
                             className="truncate text-seal underline">{f.name}</a>

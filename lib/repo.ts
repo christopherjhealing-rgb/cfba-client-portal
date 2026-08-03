@@ -42,7 +42,9 @@ export interface Submission {
   notes: string;
   files: { name: string; category?: string }[];
   clientRef?: string | null;
-  status: "pending" | "accepted" | "rejected";
+  /** "pending" | "accepted" | "rejected" are the review queue. Amendments
+   *  carry their own two and never join it — see lib/amendments. */
+  status: "pending" | "accepted" | "rejected" | "amendment" | "amendment_done";
   mondayItemId: string | null;
   reviewNote: string | null;
   createdAt: string;
@@ -456,13 +458,13 @@ export async function upsertJob(job: Job, files: JobFile[]) {
 export async function addSubmission(
   s: Omit<Submission, "id" | "status" | "mondayItemId" | "reviewNote" | "reviewedAt">,
   preId?: string,
-  status = "pending"
+  status: Submission["status"] = "pending"
 ): Promise<string> {
   const id = preId || "sub_" + Math.random().toString(36).slice(2, 10);
   if (DEMO_MODE) {
     const db = await demo.load();
     db.submissions.unshift({
-      ...s, id, status: status as Submission["status"],
+      ...s, id, status,
       mondayItemId: null, reviewNote: null, reviewedAt: null,
     });
     await demo.save(db);

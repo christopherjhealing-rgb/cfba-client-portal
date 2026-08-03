@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import {
-  isClientVisible, READY_STATUS, AMENDMENT_OPEN, AMENDMENT_DONE,
+  isClientVisible, READY_STATUS, AMENDMENT_OPEN, AMENDMENT_DONE, REVISED,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { getPastJobs } from "@/lib/history";
@@ -49,6 +49,9 @@ export default async function Amend({
   // Jobs we've finished, from the past-jobs index rather than the jobs table —
   // see lib/history. Anything already in the portal wins, so a job that's both
   // current and in the index isn't offered twice.
+  // What the board calls finished. Anything else from the index is live work,
+  // and says so rather than claiming to be complete.
+  const CLOSED_ISH = new Set(["Invoiced / Completed", "To Invoice", "Issued"]);
   const live = new Set(jobs.map((j) => j.ref));
   const older: AmendableJob[] = past
     .filter((p) => p.ref && !live.has(p.ref))
@@ -57,7 +60,10 @@ export default async function Amend({
       address: p.address,
       description: "",
       status: p.status,
-      issued: true,
+      // Only genuinely finished work gets the tick. An in-progress job can
+      // reach this list too — one the sync couldn't match to a client — and
+      // labelling that "Issued" would tell them a certificate exists.
+      issued: CLOSED_ISH.has(p.status),
       past: true,
     }));
 
@@ -129,9 +135,9 @@ export default async function Amend({
                     : <span className="chip chip-brass">With your surveyor</span>}
                 </div>
                 <div className="mt-0.5 text-[12.5px] text-ink/55">{a.description}</div>
-                {a.status === AMENDMENT_DONE && a.files.length > 0 && (
+                {a.status === AMENDMENT_DONE && a.files.some((f) => f.category === REVISED) && (
                   <ul className="mt-1.5 flex flex-wrap gap-3">
-                    {a.files.map((f) => (
+                    {a.files.filter((f) => f.category === REVISED).map((f) => (
                       <li key={f.name}>
                         <a href={`/api/amendments/${a.id}/${encodeURIComponent(f.name)}`}
                           target="_blank" rel="noopener noreferrer"

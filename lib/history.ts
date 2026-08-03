@@ -16,7 +16,7 @@
 
 import * as repo from "./repo";
 import * as monday from "./monday";
-import { matchCompany } from "./core.mjs";
+import { matchCompany, HIDDEN_STATUSES, CANCELLED_STATUS } from "./core.mjs";
 
 export interface PastJob {
   ref: string;
@@ -73,6 +73,13 @@ export async function refreshPastJobs(): Promise<RefreshResult> {
 
   const byCompany = new Map<string, PastJob[]>();
   for (const c of cards) {
+    // QUERY exists to hide a job from the client completely. This index reads
+    // the board directly and so walks straight past isClientVisible — without
+    // this, a job the office deliberately hid would appear in the amendment
+    // picker. Cancelled jobs are dropped too: there's nothing to amend.
+    if (HIDDEN_STATUSES.has(c.status)) continue;
+    if (c.status === CANCELLED_STATUS) continue;
+
     const companyId = matchCompany({ clientName: c.clientName, email: c.email }, companies);
     if (!companyId) { res.unmatched++; continue; }
     res.matched++;

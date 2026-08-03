@@ -48,6 +48,15 @@ export async function POST(req: Request) {
     // For the day the email didn't go, or went to the wrong person because
     // Certified By was blank at the time and has since been filled in.
     if (body.resend === true) {
+      // Not once it's been sent back. lodgeAmendment re-posts "AMENDMENT
+      // lodged" to the card and re-emails the surveyor, so resending a
+      // finished one asks somebody to approve work that's already gone out.
+      if (sub.status !== AMENDMENT_OPEN) {
+        return NextResponse.json(
+          { error: "That amendment is already finished — nothing left to send." },
+          { status: 409 }
+        );
+      }
       const r = await lodgeAmendment(id);
       return r.emailed
         ? NextResponse.json({ ok: true, sent: true, to: r.to, why: r.why })

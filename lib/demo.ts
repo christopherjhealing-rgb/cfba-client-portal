@@ -56,7 +56,10 @@ export interface DemoSubmission {
   description: string;
   notes: string;
   files: { name: string; category?: string }[];
-  status: "pending" | "accepted" | "rejected";
+  /** Kept in step with Submission in lib/repo — the two describe the same row,
+   *  and this one silently lagging is how the amendment states typechecked
+   *  against Supabase and not against demo mode. */
+  status: "pending" | "accepted" | "rejected" | "amendment" | "amendment_done";
   mondayItemId: string | null;
   reviewNote: string | null;
   createdAt: string;

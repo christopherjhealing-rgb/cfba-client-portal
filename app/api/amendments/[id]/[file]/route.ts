@@ -1,6 +1,6 @@
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
-import { AMENDMENT_DONE } from "@/lib/core.mjs";
+import { AMENDMENT_DONE, REVISED } from "@/lib/core.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,9 +29,12 @@ export async function GET(
   if (!sub || sub.companyId !== session.companyId) {
     return new Response("Not found", { status: 404 });
   }
-  // Only once it's actually been sent back, and only a name the submission
-  // itself lists — so the path can never be steered anywhere else.
-  if (sub.status !== AMENDMENT_DONE || !sub.files.some((f) => f.name === file)) {
+  // Only once it's been sent back, and only a file marked as the revised
+  // certificate. The lodgement's own documents are listed on the same record
+  // but live in a different folder — matching on name alone would offer a
+  // client links that 404.
+  const revised = sub.files.some((f) => f.name === file && f.category === REVISED);
+  if (sub.status !== AMENDMENT_DONE || !revised) {
     return new Response("Not found", { status: 404 });
   }
 

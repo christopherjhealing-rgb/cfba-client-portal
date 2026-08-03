@@ -144,8 +144,10 @@ export function routeExplanation(
   certifiedByText: string | null | undefined
 ): string;
 
-export const AMENDMENT_OPEN: string;
-export const AMENDMENT_DONE: string;
+export const AMENDMENT_OPEN: "amendment";
+export const AMENDMENT_DONE: "amendment_done";
 
 export function refSearchTerms(ref: string | null | undefined): string[];
 export function sameRef(a: string | null | undefined, b: string | null | undefined): boolean;
+
+export const REVISED: string;

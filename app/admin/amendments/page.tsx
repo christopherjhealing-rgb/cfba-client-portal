@@ -6,7 +6,7 @@ import { StaffShell } from "@/components/StaffShell";
 import { AmendmentList, type AmendmentRow } from "@/components/AmendmentList";
 import { PastJobsCard } from "@/components/PastJobsCard";
 import {
-  getAmendmentConfig, AMENDMENT_OPEN, AMENDMENT_DONE,
+  getAmendmentConfig, AMENDMENT_OPEN, AMENDMENT_DONE, REVISED,
 } from "@/lib/amendments";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +34,10 @@ export default async function AmendmentsPage() {
     address: s.address,
     reason: s.description,
     notes: s.notes,
-    files: done ? [] : s.files.map((f) => f.name),
-    issuedFiles: done ? s.files.map((f) => f.name) : [],
+    // Both, now that issuing no longer overwrites what the client lodged —
+    // "what they asked for" and "what we sent back" are different questions.
+    files: s.files.filter((f) => f.category !== REVISED).map((f) => f.name),
+    issuedFiles: s.files.filter((f) => f.category === REVISED).map((f) => f.name),
     routedTo: s.reviewNote || "",
     createdAt: s.createdAt,
     days: Math.max(0, Math.floor((now - new Date(s.createdAt).getTime()) / DAY)),
