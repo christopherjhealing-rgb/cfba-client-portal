@@ -7,6 +7,7 @@ import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
 import { BushfireCheck } from "@/components/BushfireCheck";
 import { WindClassCheck } from "@/components/WindClassCheck";
+import { SoakwellCheck } from "@/components/SoakwellCheck";
 import { Icon } from "@/components/Icon";
 import {
   PORTAL_FORMS, FORMS_OFFICIAL_SOURCE, LINK_GROUPS, COUNCILS,
@@ -38,10 +39,12 @@ export default async function Resources() {
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead hero="/heroes/retaining.jpg" title="Resources" sub="Forms, maps and the links you need to lodge with your local government." />
 
-      {/* The two questions every client asks about a site before anything
-          else: is it bushfire prone, and what wind class is it. */}
+      {/* The questions every client asks about a site before anything else:
+          is it bushfire prone, what wind class is it, and how much soakwell
+          does the new roof need. */}
       <div className="mb-6"><BushfireCheck /></div>
       <div className="mb-6"><WindClassCheck /></div>
+      <div className="mb-6"><SoakwellCheck /></div>
 
       {/* Council forms */}
       <section className="mb-8">
