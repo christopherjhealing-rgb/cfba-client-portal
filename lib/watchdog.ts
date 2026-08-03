@@ -43,6 +43,8 @@ export interface DailyReport {
   unopenedOlder: number;
   /** A PORTAL write the board wouldn't take. */
   boardFails: ReportLine[];
+  /** Issued packages holding everything except the certificate itself. */
+  noCertificate: ReportLine[];
   /** Enquiries waiting on an answer. */
   enquiriesWaiting: number;
   /** Lodgements sitting in the review queue. Normally none: a job goes
@@ -87,7 +89,8 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
     repo.listAllJobs().catch(() => []),
     repo.listCompanies().catch(() => []),
     repo.getWatch().catch(() => repo.EMPTY_WATCH),
-    repo.getSetting<{ at?: string; ok?: boolean; error?: string }>("last_sync").catch(() => null),
+    repo.getSetting<{ at?: string; ok?: boolean; error?: string; noCertificate?: string[] }>(
+      "last_sync").catch(() => null),
     repo.listMessagesByRef(GENERAL_REF).catch(() => []),
     repo.listSubmissions("pending").catch(() => []),
   ]);
@@ -168,6 +171,13 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
     (j) => j.firstDownloadedAt && perthDate(new Date(j.firstDownloadedAt)) === today
   ).length;
 
+  // --- the package with no certificate in it -------------------------------
+  // The autogen leaves the CDC as a Word file and nothing converts it, so the
+  // PDF exists only because somebody exported it. Re-checked on every sync, so
+  // the last run's list is current.
+  const noCertificate: ReportLine[] = (lastSync?.noCertificate || []).map((ref) =>
+    line(ref, "files are there, but no CDC…pdf among them", daysSince(byRef.get(ref)?.issuedAt, now)));
+
   // --- lodgements that never reached the board -----------------------------
   // Auto-accept puts a job on Monday the moment it's lodged. When it can't —
   // Monday down, a token expired — the lodgement drops into the review queue
@@ -195,10 +205,11 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
   return {
     date: today,
     allClear: !syncProblem && !stuck.length && !untold.length && !unopened.length
-      && !boardFails.length && !queued.length && enquiriesWaiting === 0
+      && !boardFails.length && !queued.length && !noCertificate.length
+      && enquiriesWaiting === 0
       && stuckOlder === 0 && unopenedOlder === 0,
     issuedToday, readyToday, downloadedToday,
     stuck, untold, unopened, boardFails, stuckOlder, unopenedOlder,
-    queued, enquiriesWaiting, syncProblem,
+    queued, noCertificate, enquiriesWaiting, syncProblem,
   };
 }
