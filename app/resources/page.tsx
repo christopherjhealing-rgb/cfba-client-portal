@@ -9,6 +9,7 @@ import { BushfireCheck } from "@/components/BushfireCheck";
 import { Icon } from "@/components/Icon";
 import {
   PORTAL_FORMS, FORMS_OFFICIAL_SOURCE, LINK_GROUPS, COUNCILS,
+  FORM_LABEL, hostedFormFile,
 } from "@/lib/resources";
 
 export const dynamic = "force-dynamic";
@@ -53,8 +54,7 @@ export default async function Resources() {
         </p>
         <div className="card divide-y divide-rule">
           {PORTAL_FORMS.map((f) => {
-            const file = `${f.key}.pdf`;
-            const hosted = uploaded.has(file);
+            const hosted = hostedFormFile(f.key, uploaded);
             return (
               <div key={f.key} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
@@ -64,9 +64,11 @@ export default async function Resources() {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   {hosted && (
-                    <a href={`/api/forms/${file}`} target="_blank" rel="noopener noreferrer"
+                    <a href={`/api/forms/${hosted.file}`} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-[13px] font-medium text-seal hover:underline">
-                      <Icon name="download" size={13} /> Download
+                      {/* Which format, so nobody clicks expecting a PDF and
+                          gets a download they can't open on their phone. */}
+                      <Icon name="download" size={13} /> Download {FORM_LABEL[hosted.ext]}
                     </a>
                   )}
                   <a href={FORMS_OFFICIAL_SOURCE} target="_blank" rel="noopener noreferrer"

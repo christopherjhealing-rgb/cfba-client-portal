@@ -70,10 +70,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `That's more than ${limits.maxFiles} files — send them in batches of ${limits.maxFiles} or fewer.` }, { status: 400 });
     }
 
-    const notPdf = wanted.filter((f) => !/\.pdf$/i.test(f.name)).map((f) => f.name);
-    if (notPdf.length) {
+    // PDFs everywhere except council forms. Councils publish those as Word as
+    // often as PDF, and the Word original is the more useful one — a client can
+    // fill it in rather than print, write and scan. Everything else stays
+    // PDF-only on purpose: lodged drawings get opened by staff and shipped to
+    // the board, and that whole path assumes a PDF.
+    const allowed = purpose === "form" ? /\.(pdf|docx?)$/i : /\.pdf$/i;
+    const wrongType = wanted.filter((f) => !allowed.test(f.name)).map((f) => f.name);
+    if (wrongType.length) {
       return NextResponse.json(
-        { error: `We can only accept PDFs — please convert or remove: ${notPdf.slice(0, 4).join(", ")}` },
+        {
+          error: purpose === "form"
+            ? `Council forms can be PDF or Word — please convert or remove: ${wrongType.slice(0, 4).join(", ")}`
+            : `We can only accept PDFs — please convert or remove: ${wrongType.slice(0, 4).join(", ")}`,
+        },
         { status: 415 }
       );
     }
@@ -104,7 +114,7 @@ export async function POST(req: Request) {
     for (const f of wanted) {
       let name = sanitize(f.name);
       let n = 2;
-      while (used.has(name)) name = name.replace(/(\.pdf)$/i, `-${n++}$1`);
+      while (used.has(name)) name = name.replace(/(\.[a-z0-9]+)$/i, `-${n++}$1`);
       used.add(name);
       files.push({ name, url: await repo.signUploadUrl(`${prefix}/${name}`) });
     }

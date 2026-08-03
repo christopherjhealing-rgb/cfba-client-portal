@@ -15,7 +15,11 @@ export interface LinkGroup { group: string; items: LinkItem[] }
 
 // Council forms clients lodge WITH THE LOCAL GOVERNMENT alongside CFBA's
 // certificate. CFBA issues the CDC (BA3) — never these. Staff upload the
-// current PDF from /admin; until then the official source link is shown.
+// current file from /admin; until then the official source link is shown.
+//
+// Titles below are the official ones from the wa.gov.au publication pages
+// (checked 3 Aug 2026). Worth keeping exact: a client searching a council site
+// for the name we printed needs to find the same form.
 export interface PortalForm { key: string; code: string; title: string; note: string }
 
 export const PORTAL_FORMS: PortalForm[] = [
@@ -25,13 +29,69 @@ export const PORTAL_FORMS: PortalForm[] = [
     note: "For certain Class 1a/10 work where the local government does the assessment." },
   { key: "ba5", code: "BA5", title: "Application for Demolition Permit",
     note: "To demolish a building or structure." },
-  { key: "ba13", code: "BA13", title: "Notice of Completion",
-    note: "Given to the permit authority when building work is complete." },
-  { key: "ba19", code: "BA19", title: "Application to Amend a Building Permit",
-    note: "When an already-approved job changes. Lodge an amendment with us too." },
-  { key: "ba22", code: "BA22", title: "Application for Occupancy Permit",
-    note: "For a new commercial building or a change of use." },
+  { key: "ba7", code: "BA7", title: "Notice of Completion",
+    note: "Given to the permit authority within 7 days of the work being finished. The builder's job, not ours." },
+  { key: "ba13", code: "BA13", title: "Application for Building Approval Certificate",
+    note: "For work already built, or an existing building that needs certifying after the fact." },
+  { key: "ba19", code: "BA19", title: "Request to Amend Building Permit or Builder's Details",
+    note: "When an already-approved job changes, or the builder does. Lodge an amendment with us too." },
+  { key: "ba22", code: "BA22", title: "Application to Extend Time — Building or Demolition Permit",
+    note: "When a permit will run out before the work is finished. Apply before it expires." },
 ];
+
+// ---------------------------------------------------------------------------
+// Hosting a form
+//
+// Councils publish these as Word about as often as PDF, and a Word original is
+// the more useful one — the client can fill it in rather than print, write and
+// scan. So a form is stored under whatever format was uploaded, and everything
+// that links to one asks which format that was rather than assuming.
+// ---------------------------------------------------------------------------
+
+/** In preference order: if a form somehow exists in two formats, PDF is the
+ *  one every client can open. */
+export const FORM_EXTS = ["pdf", "docx", "doc"] as const;
+export type FormExt = (typeof FORM_EXTS)[number];
+
+export const FORM_MIME: Record<FormExt, string> = {
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  doc: "application/msword",
+};
+
+export const FORM_LABEL: Record<FormExt, string> = {
+  pdf: "PDF", docx: "Word", doc: "Word",
+};
+
+/** The extension of an uploaded file, if it's one we host. */
+export function formExtOf(name: string): FormExt | null {
+  const m = /\.([a-z0-9]+)$/i.exec(String(name || ""));
+  const ext = m?.[1]?.toLowerCase() as FormExt | undefined;
+  return ext && (FORM_EXTS as readonly string[]).includes(ext) ? ext : null;
+}
+
+/** Every name a given form could legitimately be stored under. */
+export function formFileNames(key: string): string[] {
+  return FORM_EXTS.map((e) => `${key}.${e}`);
+}
+
+/** Is this a filename the forms route may serve? Checked against the registry
+ *  rather than parsed, so the route can't be talked into reading elsewhere. */
+export function isFormFile(file: string): boolean {
+  return PORTAL_FORMS.some((f) => formFileNames(f.key).includes(file));
+}
+
+/** Which file is actually hosted for a form, given what's in storage. */
+export function hostedFormFile(
+  key: string, uploaded: Iterable<string>
+): { file: string; ext: FormExt } | null {
+  const have = new Set(uploaded);
+  for (const ext of FORM_EXTS) {
+    const file = `${key}.${ext}`;
+    if (have.has(file)) return { file, ext };
+  }
+  return null;
+}
 
 // The one link to keep current for all forms. Paste the exact WA Building and
 // Energy "building forms" page URL here after checking it.
