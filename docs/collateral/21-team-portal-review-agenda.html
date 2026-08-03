@@ -11,48 +11,192 @@
      page you're holding. Measured: 1119px at 96dpi. The rhythm is tightened
      here rather than the copy being cut.
      --------------------------------------------------------------------- */
-  .page > .content { padding-top: 9mm; }
+  .page > .content { padding-top: 8mm; }
   .sec { margin: 5mm 0 2.5mm; }
   td { padding: 1.8mm 3mm; }
   .check li { padding-top: 1.2mm; padding-bottom: 1.2mm; }
 
+  /* ---------------------------------------------------------------------
+     ICONS. One inline sprite at the top of the document, used by reference
+     everywhere after it. Drawn as strokes so they take the colour of
+     whatever they sit in, and so they stay sharp at any size in print.
+     --------------------------------------------------------------------- */
+  .i { width: 1em; height: 1em; stroke: currentColor; fill: none;
+       stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+       vertical-align: -.13em; }
+
+  /* ---------------------------------------------------------------------
+     COVER. A diagonal field of green with the title on it, the real portal
+     beside it, and what the week is for underneath. The clip-path makes the
+     split; the screenshot sits in the space it leaves.
+     --------------------------------------------------------------------- */
+  .cover { position: relative; background: var(--white); padding: 0 0 0 0;
+           min-height: 128mm; overflow: hidden; }
+  .cover .field {
+    position: absolute; inset: 0; background: var(--green-deep);
+    clip-path: polygon(0 0, 64% 0, 48% 100%, 0 100%);
+  }
+  .cover .field::after {           /* a brass edge along the diagonal */
+    content: ""; position: absolute; inset: 0; background: var(--brass);
+    clip-path: polygon(63.4% 0, 64% 0, 48% 100%, 47.4% 100%);
+  }
+  .cover-in { position: relative; padding: 10mm 14mm 7mm; display: flex; gap: 7mm; }
+  .cover-txt { width: 99mm; flex: 0 0 auto; color: var(--white); }
+  /* Mark and eyebrow on one line — stacked, the logo alone costs 25mm of a
+     page that has none to give. */
+  .cover-head { display: flex; align-items: center; gap: 4mm; margin-bottom: 5mm; }
+  .cover-head img { width: 14mm; flex: 0 0 auto; }
+  .cover .eyebrow {
+    font-size: 8pt; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--brass); font-weight: 700;
+  }
+  .cover h1 {
+    font-family: Georgia, "Times New Roman", serif; font-size: 27pt;
+    line-height: 1.1; margin-top: 3mm; font-weight: 700;
+  }
+  .cover h1 em { font-style: normal; color: var(--brass); }
+  .cover .goldrule { width: 16mm; height: 1.2mm; background: var(--brass); margin: 3.4mm 0; }
+  .cover .sub { font-size: 10pt; color: rgba(255,255,255,.82); max-width: 80mm; }
+
+  .goal {
+    margin-top: 4.5mm; background: rgba(255,255,255,.07);
+    border: .35mm solid rgba(201,162,39,.5); border-radius: 2.5mm;
+    padding: 3.4mm 4.2mm; display: flex; gap: 3.6mm; max-width: 83mm;
+  }
+  .goal .ic { flex: 0 0 auto; color: var(--brass); font-size: 15pt; padding-top: .4mm; }
+  .goal b {
+    display: block; font-size: 8pt; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--brass); margin-bottom: 1.4mm;
+  }
+  .goal p { font-size: 9pt; line-height: 1.45; color: rgba(255,255,255,.9); }
+
+  .cover-meta { margin-top: 4.5mm; display: flex; flex-wrap: wrap; gap: 2mm 6mm; max-width: 80mm; }
+  .cover-meta span {
+    font-size: 8.5pt; color: rgba(255,255,255,.72); display: inline-flex;
+    align-items: center; gap: 1.8mm;
+  }
+  .cover-meta .i { color: var(--brass); font-size: 10pt; }
+
+  /* The screenshot, in a device frame so it reads as a screen not a picture. */
+  .shot { flex: 1; min-width: 0; align-self: center; margin-top: 4mm; }
+  .shot .screen {
+    border: .8mm solid #0E241C; border-radius: 2mm; overflow: hidden;
+    background: #0E241C; box-shadow: 0 3mm 9mm rgba(0,0,0,.22);
+  }
+  .shot .bar { height: 3.4mm; background: #0E241C; display: flex; align-items: center;
+               gap: 1mm; padding-left: 2mm; }
+  .shot .bar i { width: 1.1mm; height: 1.1mm; border-radius: 50%; background: rgba(255,255,255,.35); }
+  .shot img { display: block; width: 100%; }
+  .shot figcaption {
+    font-size: 7.5pt; color: var(--soft); text-align: center; margin-top: 2mm;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+
+  /* ---------------------------------------------------------------------
+     THE AGENDA AS A TRACK. Eight stops along one line, each with its icon
+     and how long it takes, so the shape of the session is visible before a
+     word of it is read.
+     --------------------------------------------------------------------- */
+  .track { display: grid; grid-template-columns: repeat(8, 1fr); margin: 2.5mm 0 0; }
+  .stop { position: relative; text-align: center; padding-top: 10mm; }
+  .stop::before {                       /* the line they hang from */
+    content: ""; position: absolute; top: 4.8mm; left: 0; right: 0;
+    border-top: .5mm solid var(--rule);
+  }
+  .stop:first-child::before { left: 50%; }
+  .stop:last-child::before  { right: 50%; }
+  .node {
+    position: absolute; top: 0; left: 50%; margin-left: -4.8mm;
+    width: 9.6mm; height: 9.6mm; border-radius: 50%;
+    background: var(--white); border: .5mm solid var(--green-deep); color: var(--green-deep);
+    display: flex; align-items: center; justify-content: center; font-size: 11.5pt;
+  }
+  .node.fill { background: var(--green-deep); color: var(--white); }
+  .node.gold { background: var(--brass); border-color: var(--brass); color: #fff; }
+  .stop b { display: block; font-size: 8pt; line-height: 1.25; padding: 0 1mm; }
+  .stop .mins {
+    display: inline-block; margin-top: 1.4mm; font-size: 7pt; font-weight: 700;
+    letter-spacing: .06em; color: var(--soft);
+    background: var(--wash); border-radius: 99px; padding: .5mm 2mm;
+  }
+
   /* Durations rather than clock times, so a late start doesn't invalidate it. */
-  table.agenda td:first-child { width: 18mm; font-weight: 700; color: var(--green); }
-  table.agenda td:last-child  { width: 26mm; }
-  table.agenda td { padding: 1.5mm 3mm; }
-  table.agenda .what { font-size: 8.5pt; color: var(--soft); margin-top: .6mm; }
+  table.agenda td:first-child { width: 17mm; font-weight: 700; color: var(--green); }
+  table.agenda td:nth-child(2) { width: 7mm; color: var(--green-deep); font-size: 11pt; }
+  table.agenda td:last-child  { width: 24mm; }
+  table.agenda td { padding: 1mm 3mm; }
+  table.agenda .what { font-size: 8.5pt; color: var(--soft); margin-top: .5mm; }
   .blank.short { min-width: 26mm; }
 
   /* ---------------------------------------------------------------------
-     FLOW CHART — a spine down the middle, who does it on the left, what
-     happens on the right. Three grid columns rather than absolute
-     positioning, so a long step can't push the dot off its line.
+     CHAPTER HEADS. A number in brass, so somebody flicking through the
+     printout knows which part they're in.
      --------------------------------------------------------------------- */
-  .flow { display: grid; grid-template-columns: 20mm 6mm 1fr; margin: 2mm 0; }
-  .flow > .who { text-align: right; padding: 2mm 0 0; }
+  .chapter { display: flex; align-items: center; gap: 4mm; margin-bottom: 4mm; }
+  .chapter .n {
+    font-family: Georgia, serif; font-size: 20pt; font-weight: 700;
+    color: var(--brass); line-height: 1;
+  }
+  .chapter h2 { font-family: Georgia, serif; font-size: 15pt; line-height: 1.1; }
+  .chapter p { font-size: 9pt; color: var(--soft); margin-top: .6mm; }
+
+  /* ---------------------------------------------------------------------
+     FLOW CHART — a spine down the middle, who does it on the left, an icon
+     tile and the step on the right. Four grid columns rather than absolute
+     positioning, so a long step can't push the node off its line.
+     --------------------------------------------------------------------- */
+  .flow { display: grid; grid-template-columns: 19mm 6mm 9mm 1fr; margin: 2mm 0; }
+  .flow > .who { text-align: right; padding: 2.4mm 0 0; }
   .flow > .rail { position: relative; }
   .flow > .rail::before {           /* the spine */
     content: ""; position: absolute; left: 2.7mm; top: 0; bottom: 0;
     width: .6mm; background: var(--rule);
   }
   .flow > .rail::after {            /* the node */
-    content: ""; position: absolute; left: 1.2mm; top: 2.6mm;
+    content: ""; position: absolute; left: 1.2mm; top: 3.4mm;
     width: 3.6mm; height: 3.6mm; border-radius: 50%;
     background: var(--green-deep); box-shadow: 0 0 0 1mm var(--white);
   }
   .flow > .rail.gold::after { background: var(--brass); }
-  .flow > .rail.first::before { top: 3mm; }
-  .flow > .rail.last::before  { bottom: calc(100% - 4mm); }
-  .flow > .step { padding: 1.6mm 0 3.4mm 3mm; }
+  .flow > .rail.first::before { top: 3.8mm; }
+  .flow > .rail.last::before  { bottom: calc(100% - 5mm); }
+  .flow > .tile { padding: 1.4mm 0 0 1.5mm; }
+  .flow > .tile span {
+    width: 7mm; height: 7mm; border-radius: 1.8mm; display: flex;
+    align-items: center; justify-content: center; font-size: 10.5pt;
+    background: var(--wash); color: var(--green); border: .3mm solid var(--rule);
+  }
+  .flow > .tile.gold span { background: var(--wash-warm); color: var(--brass-deep); border-color: #E4C766; }
+  .flow > .step { padding: 1.6mm 0 3.2mm 2.5mm; }
   .flow > .step h4 { font-size: 10.5pt; }
   .flow > .step p  { font-size: 9pt; color: var(--soft); margin-top: .6mm; }
   .flow > .step:last-child { padding-bottom: 0; }
 
   /* The loop back — an FIR returns the job to assessment rather than ending. */
   .loop {
-    margin: 1mm 0 0 26mm; padding: 2.4mm 4mm;
+    margin: 1mm 0 0 25mm; padding: 2.6mm 4mm;
     border-left: .6mm dashed var(--brass); border-radius: 0 2mm 2mm 0;
     background: var(--wash-warm); font-size: 9pt; color: #6B5518;
+    display: flex; gap: 3mm;
+  }
+  .loop .i { font-size: 12pt; flex: 0 0 auto; color: var(--brass-deep); margin-top: .4mm; }
+
+  /* ---------------------------------------------------------------------
+     RUN — three or four beats read left to right, with arrows between.
+     For a sequence short enough that a vertical spine would waste the page.
+     --------------------------------------------------------------------- */
+  .run { display: flex; align-items: stretch; gap: 0; margin: 2mm 0 0; }
+  .run .beat {
+    flex: 1; border: .35mm solid var(--rule); border-radius: 2.5mm;
+    padding: 3.4mm 3.6mm; background: var(--white);
+  }
+  .run .beat .hd { display: flex; align-items: center; gap: 2.2mm; }
+  .run .beat .hd .i { font-size: 12pt; color: var(--brass-deep); }
+  .run .beat h4 { font-size: 9.5pt; }
+  .run .beat p { font-size: 8.5pt; color: var(--soft); margin-top: 1.4mm; line-height: 1.4; }
+  .run .arr {
+    flex: 0 0 7mm; display: flex; align-items: center; justify-content: center;
+    color: #B9C4BC; font-size: 13pt;
   }
 
   /* ---------------------------------------------------------------------
@@ -60,17 +204,18 @@
      coloured so the difference reads before the words do.
      --------------------------------------------------------------------- */
   .fork { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin: 2mm 0 0; }
-  .fork > div { border-radius: 2.5mm; padding: 4mm 4.5mm; }
+  .fork > div { border-radius: 2.5mm; padding: 3.6mm 4.5mm; }
   .fork .hd {
     font-size: 8pt; letter-spacing: .16em; text-transform: uppercase;
-    font-weight: 700; margin-bottom: 2mm;
+    font-weight: 700; margin-bottom: 1.8mm; display: flex; align-items: center; gap: 2mm;
   }
+  .fork .hd .i { font-size: 11pt; }
   .fork .was { background: #FBECEC; border-left: 1.2mm solid #B3372F; }
   .fork .was .hd { color: #8E2B24; }
   .fork .now { background: #EDF3EE; border-left: 1.2mm solid var(--green); }
   .fork .now .hd { color: var(--green); }
   .fork ul { list-style: none; font-size: 9pt; line-height: 1.45; }
-  .fork li { padding: .9mm 0 .9mm 4.5mm; position: relative; }
+  .fork li { padding: .8mm 0 .8mm 4.5mm; position: relative; }
   .fork li::before { content: "•"; position: absolute; left: 0; opacity: .55; }
 
   /* ---------------------------------------------------------------------
@@ -78,11 +223,12 @@
      --------------------------------------------------------------------- */
   .ladder { display: flex; align-items: stretch; gap: 0; margin: 2mm 0 0; }
   .ladder .rung {
-    flex: 1; text-align: center; padding: 3mm 1.5mm;
+    flex: 1; text-align: center; padding: 2.8mm 1.5mm;
     border: .35mm solid var(--rule); border-radius: 2mm; background: var(--white);
   }
-  .ladder .rung b { display: block; font-size: 9.5pt; letter-spacing: .06em; }
-  .ladder .rung span { display: block; font-size: 8pt; color: var(--soft); margin-top: .8mm; }
+  .ladder .rung .i { font-size: 12pt; color: var(--green); }
+  .ladder .rung b { display: block; font-size: 9.5pt; letter-spacing: .06em; margin-top: .8mm; }
+  .ladder .rung span { display: block; font-size: 8pt; color: var(--soft); margin-top: .6mm; }
   .ladder .rung.on { background: var(--wash); border-color: #BFD3C4; }
   .ladder .arr {
     flex: 0 0 7mm; display: flex; align-items: center; justify-content: center;
@@ -91,27 +237,38 @@
   .stuck {
     margin-top: 2mm; padding: 2.4mm 4mm; border-radius: 2mm;
     background: #FBECEC; border-left: 1.2mm solid #B3372F;
-    font-size: 9pt; color: #7A2620;
+    font-size: 9pt; color: #7A2620; display: flex; gap: 3mm; align-items: baseline;
   }
+  .stuck .i { color: #B3372F; font-size: 11pt; flex: 0 0 auto; }
 
   /* ---------------------------------------------------------------------
      WHEN — the unattended work on a scale, so "every 5 minutes" and
      "Monday morning" don't read as the same kind of thing.
      --------------------------------------------------------------------- */
   .when { display: grid; grid-template-columns: repeat(5, 1fr); margin: 3mm 0 0; }
-  .when .tick { text-align: center; position: relative; padding-top: 8mm; }
+  .when .tick { text-align: center; position: relative; padding-top: 11mm; }
   .when .tick::before {                     /* the rule they all sit on */
-    content: ""; position: absolute; top: 3.4mm; left: 0; right: 0;
+    content: ""; position: absolute; top: 4.2mm; left: 0; right: 0;
     border-top: .5mm dotted #B9C4BC;
   }
   .when .tick:first-child::before { left: 50%; }
   .when .tick:last-child::before  { right: 50%; }
-  .when .tick i {
-    position: absolute; top: 2mm; left: 50%; margin-left: -1.4mm;
-    width: 2.8mm; height: 2.8mm; border-radius: 50%; background: var(--green-deep);
+  .when .tick .dot {
+    position: absolute; top: 0; left: 50%; margin-left: -4.2mm;
+    width: 8.4mm; height: 8.4mm; border-radius: 50%; background: var(--green-deep);
+    color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10pt;
   }
   .when .tick b { display: block; font-size: 9pt; color: var(--green); }
   .when .tick span { display: block; font-size: 8pt; color: var(--soft); margin-top: .8mm; padding: 0 1.5mm; }
+
+  /* Icon panels — a callout that says what kind of thing it is. */
+  .note { display: flex; gap: 3.5mm; align-items: flex-start; }
+  .note .i { font-size: 13pt; flex: 0 0 auto; margin-top: .6mm; }
+  .callout .note .i { color: var(--green); }
+  .callout.warn .note .i { color: var(--brass-deep); }
+
+  /* Feature tables get their icon in a narrow first column. */
+  table.stack td.ic { width: 8mm; color: var(--green); font-size: 11pt; padding-right: 0; }
 
   /* Empty boxes, not ticks — a list worked through during the week, and a
      pre-ticked one reads as already done. Drawn so it doesn't depend on the
@@ -125,106 +282,174 @@
 </head>
 <body>
 
+<!-- The icon set. Declared once, referenced by <use> from here down. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-flag" viewBox="0 0 24 24"><path d="M5 21V4m0 0h11l-2 3.5L16 11H5"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></symbol>
+  <symbol id="ic-screen" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M9 21h6M12 17v4"/></symbol>
+  <symbol id="ic-chat" viewBox="0 0 24 24"><path d="M20.5 12.5a7.5 7.5 0 0 1-10.9 6.7L4 20.5l1.4-5.4A7.5 7.5 0 1 1 20.5 12.5z"/></symbol>
+  <symbol id="ic-pen" viewBox="0 0 24 24"><path d="M15.5 4.5l4 4L8 20H4v-4z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></symbol>
+  <symbol id="ic-clip" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h4"/></symbol>
+  <symbol id="ic-cloud" viewBox="0 0 24 24"><path d="M7 18h10.5a3.5 3.5 0 0 0 .3-7 5.5 5.5 0 0 0-10.6-1A4 4 0 0 0 7 18z"/></symbol>
+  <symbol id="ic-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4L11 8h8.5A1.5 1.5 0 0 1 21 9.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z"/></symbol>
+  <symbol id="ic-zap" viewBox="0 0 24 24"><path d="M13 2.5L4.5 13.5H11l-.5 8L19.5 10H13z"/></symbol>
+  <symbol id="ic-stamp" viewBox="0 0 24 24"><path d="M8 10.5a4 4 0 1 1 8 0c0 2-1.2 2.5-1.2 4.5h-5.6C9.2 13 8 12.5 8 10.5z"/><rect x="4.5" y="16.5" width="15" height="4" rx="1.2"/></symbol>
+  <symbol id="ic-mail" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="ic-down" viewBox="0 0 24 24"><path d="M12 3.5v12M7 11l5 4.5 5-4.5M4 20h16"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24"><path d="M21 3.5L10.5 14M21 3.5l-7 17-3.5-7-7-3.5z"/></symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="ic-people" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6M17.2 14.4a6.2 6.2 0 0 1 4 5.1"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.3l3.3 2"/></symbol>
+  <symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M12 3.5l9 16H3z"/><path d="M12 9.5v5M12 17.2v.2"/></symbol>
+  <symbol id="ic-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.6"/><path d="M20 4.5v4.2h-4.2"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.4"/><path d="M4 19.5v-4.2h4.2"/></symbol>
+  <symbol id="ic-board" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M8.5 9h9M8.5 12.5h9M8.5 16h5M6 9v.2M6 12.5v.2M6 16v.2"/></symbol>
+  <symbol id="ic-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6.2 6.2l11.6 11.6"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5S6.5 14 6.5 10z"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0"/></symbol>
+  <symbol id="ic-map" viewBox="0 0 24 24"><path d="M9 4.5L3.5 6.8v13L9 17.2l6 2.3 5.5-2.3v-13L15 7z"/><path d="M9 4.5v12.7M15 7v12.5"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="M15.4 15.4L20.5 20.5"/></symbol>
+</defs></svg>
+
 <!-- ===================================================================
-     PAGE 1 — the running order: the sheet you hold in the room
+     PAGE 1 — the cover: what this is, and the shape of the session
      =================================================================== -->
 <div class="page">
-  <div class="band">
-    <img class="band-logo" src="../../public/logo-white.png" alt="">
-    <div class="eyebrow">Team Session</div>
-    <h1>Client Portal — review &amp; trial week</h1>
-    <div class="goldrule"></div>
-    <div class="sub">CF Building Approvals — internal</div>
-    <div class="meta">Tuesday 4 August 2026 · <span class="blank short">&nbsp;</span> · Kacie, Chris, Rebecca, Fiona · Allow 85 minutes</div>
+
+  <div class="cover">
+    <div class="field"></div>
+    <div class="cover-in">
+      <div class="cover-txt">
+        <div class="cover-head">
+          <img src="../../public/logo-white.png" alt="CF Building Approvals">
+          <div class="eyebrow">CF Building Approvals<br>internal</div>
+        </div>
+        <h1>Client Portal<br><em>Launch</em> Workshop</h1>
+        <div class="goldrule"></div>
+        <div class="sub">
+          The portal is live and doing real work. We walk it through together —
+          then it&apos;s yours for the week.
+        </div>
+
+        <div class="goal">
+          <span class="ic"><svg class="i"><use href="#ic-target"/></svg></span>
+          <div>
+            <b>Our goal this week</b>
+            <p>Everyone uses the portal as a client and as staff at least once,
+              and anything that felt wrong gets written down. Ten small problems
+              found now beats a tidy meeting.</p>
+          </div>
+        </div>
+
+        <div class="cover-meta">
+          <span><svg class="i"><use href="#ic-cal"/></svg> Tuesday 4 August 2026</span>
+          <span><svg class="i"><use href="#ic-people"/></svg> Kacie · Chris · Rebecca · Fiona</span>
+          <span><svg class="i"><use href="#ic-clock"/></svg> Allow 85 minutes</span>
+        </div>
+      </div>
+
+      <figure class="shot">
+        <div class="screen">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <img src="img/dashboard.png" alt="The client dashboard">
+        </div>
+        <figcaption>What a client sees when they sign in</figcaption>
+      </figure>
+    </div>
   </div>
 
-  <div class="content">
-    <p class="lede">
-      The portal is live and doing real work. We walk it through together, then it&apos;s
-      yours for the week — so we find the rough edges before our clients do.
-    </p>
+  <div class="content" style="padding-top:4mm">
 
-    <div class="sec">Running order</div>
-    <table class="agenda">
+    <div class="sec">Today&apos;s agenda</div>
+
+    <div class="track">
+      <div class="stop">
+        <span class="node fill"><svg class="i"><use href="#ic-flag"/></svg></span>
+        <b>Where<br>we&apos;re up to</b><span class="mins">5 min</span>
+      </div>
+      <div class="stop">
+        <span class="node"><svg class="i"><use href="#ic-user"/></svg></span>
+        <b>The client&apos;s<br>side</b><span class="mins">15 min</span>
+      </div>
+      <div class="stop">
+        <span class="node fill"><svg class="i"><use href="#ic-loop"/></svg></span>
+        <b>One job,<br>end to end</b><span class="mins">20 min</span>
+      </div>
+      <div class="stop">
+        <span class="node gold"><svg class="i"><use href="#ic-chat"/></svg></span>
+        <b>An FIR,<br>worked</b><span class="mins">10 min</span>
+      </div>
+      <div class="stop">
+        <span class="node gold"><svg class="i"><use href="#ic-pen"/></svg></span>
+        <b>Amend&shy;ments<br><em style="font-style:normal;color:var(--brass-deep)">changed</em></b><span class="mins">10 min</span>
+      </div>
+      <div class="stop">
+        <span class="node"><svg class="i"><use href="#ic-screen"/></svg></span>
+        <b>Admin<br>dashboard</b><span class="mins">10 min</span>
+      </div>
+      <div class="stop">
+        <span class="node"><svg class="i"><use href="#ic-board"/></svg></span>
+        <b>Monday +<br>autogen</b><span class="mins">10 min</span>
+      </div>
+      <div class="stop">
+        <span class="node fill"><svg class="i"><use href="#ic-check"/></svg></span>
+        <b>Your trial<br>this week</b><span class="mins">5 min</span>
+      </div>
+    </div>
+
+    <table class="agenda" style="margin-top:4mm">
       <tr>
-        <td>5 min</td>
-        <td><strong>Where we're up to</strong>
-          <div class="what">What's live, what's still coming, what we're deciding this week.</div></td>
+        <td>5 min</td><td><svg class="i"><use href="#ic-flag"/></svg></td>
+        <td><strong>Where we&apos;re up to</strong>
+          <div class="what">What&apos;s live, what&apos;s still coming, what we&apos;re deciding this week.</div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
-        <td>15 min</td>
-        <td><strong>The client's side</strong>
-          <div class="what">Signing in, lodging, messages, downloads, resources. What they see —
-          and what they can't. <span class="muted">Page 5</span></div></td>
+        <td>15 min</td><td><svg class="i"><use href="#ic-user"/></svg></td>
+        <td><strong>The client&apos;s side</strong>
+          <div class="what">Signing in, lodging, messages, downloads, resources — and what they can&apos;t see. <span class="muted">Page 5</span></div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
-        <td>20 min</td>
+        <td>20 min</td><td><svg class="i"><use href="#ic-loop"/></svg></td>
         <td><strong>One job, start to finish</strong>
-          <div class="what">A single job walked the whole way through on screen. Stop me
-          anywhere. <span class="muted">Page 2</span></div></td>
+          <div class="what">A single job walked the whole way through on screen. Stop me anywhere. <span class="muted">Page 2</span></div></td>
         <td class="muted small">All</td>
       </tr>
       <tr>
-        <td>10 min</td>
+        <td>10 min</td><td><svg class="i"><use href="#ic-chat"/></svg></td>
         <td><strong>An FIR, worked through</strong>
-          <div class="what">Saves us the most time, and most likely to catch us out.
-          <span class="muted">Page 2</span></div></td>
+          <div class="what">Saves us the most time, and most likely to catch us out. <span class="muted">Page 3</span></div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
-        <td>10 min</td>
+        <td>10 min</td><td><svg class="i"><use href="#ic-pen"/></svg></td>
         <td><strong>Amendments — this one has changed</strong>
-          <div class="what">They no longer touch the board. Affects Kacie, Chris and Rebecca
-          directly. <span class="muted">Page 3</span></div></td>
+          <div class="what">They no longer touch the board. Affects Kacie, Chris and Rebecca directly. <span class="muted">Page 4</span></div></td>
         <td class="muted small">All</td>
       </tr>
       <tr>
-        <td>10 min</td>
+        <td>10 min</td><td><svg class="i"><use href="#ic-screen"/></svg></td>
         <td><strong>The admin dashboard</strong>
-          <div class="what">Queue, Clients, Enquiries, Amendments, Content, Settings.
-          <span class="muted">Page 6</span></div></td>
+          <div class="what">Queue, Clients, Enquiries, Amendments, Content, Settings. <span class="muted">Page 6</span></div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
-        <td>10 min</td>
+        <td>10 min</td><td><svg class="i"><use href="#ic-board"/></svg></td>
         <td><strong>Monday and the CDC autogen</strong>
-          <div class="what">What's automatic, what PORTAL is telling you, what still needs a
-          person. <span class="muted">Page 4</span></div></td>
+          <div class="what">What&apos;s automatic, what PORTAL is telling you, what still needs a person. <span class="muted">Page 3</span></div></td>
         <td class="muted small">Chris</td>
       </tr>
       <tr>
-        <td>5 min</td>
+        <td>5 min</td><td><svg class="i"><use href="#ic-check"/></svg></td>
         <td><strong>Your trial this week</strong>
-          <div class="what">Who does what, and how to tell me what you find.
-          <span class="muted">Page 4</span></div></td>
+          <div class="what">Who does what, and how to tell me what you find. <span class="muted">Page 5</span></div></td>
         <td class="muted small">All</td>
       </tr>
     </table>
 
-    <div class="sec">What the board now tells you</div>
-    <p class="small muted" style="margin-bottom:1mm">
-      The PORTAL column answers one question no one could answer before: where is
-      this certificate, actually?
-    </p>
-    <div class="ladder">
-      <div class="rung on"><b>ISSUED</b><span>Signed off. We have it; the client doesn&apos;t.</span></div>
-      <div class="arr">›</div>
-      <div class="rung on"><b>READY</b><span>In the portal. Client emailed.</span></div>
-      <div class="arr">›</div>
-      <div class="rung on"><b>DOWNLOADED</b><span>They&apos;ve taken it. Nothing to chase.</span></div>
-    </div>
-    <div class="stuck">
-      <strong>STUCK</strong> — it hasn&apos;t got there and somebody needs to look. Also on
-      the 5pm report.
-    </div>
-
-    <div class="callout" style="margin-top:4mm">
-      <strong>What we want out of this week:</strong> everyone has used the portal as a
-      client and as staff at least once, and anything that felt wrong or confusing is
-      written down. Ten small problems found now beats a tidy meeting.
-    </div>
   </div>
 
   <div class="foot-light">
@@ -233,16 +458,23 @@
 </div>
 
 <!-- ===================================================================
-     PAGE 2 — the job, as a flow chart
+     PAGE 2 — the job and the FIR, as flow charts
      =================================================================== -->
 <div class="page">
   <div class="content">
 
-    <div class="sec">One job, start to finish</div>
+    <div class="chapter">
+      <div class="n">01</div>
+      <div>
+        <h2>One job, start to finish</h2>
+        <p>The same eight steps every job takes. Three are ours; the rest happen without anyone.</p>
+      </div>
+    </div>
 
     <div class="flow">
       <div class="who"><span class="pill-role r-client">Client</span></div>
       <div class="rail first"></div>
+      <div class="tile"><span><svg class="i"><use href="#ic-send"/></svg></span></div>
       <div class="step">
         <h4>Lodges through the portal</h4>
         <p>Address, class, description and plans.</p>
@@ -250,18 +482,18 @@
 
       <div class="who"><span class="pill-role r-auto">Automatic</span></div>
       <div class="rail"></div>
+      <div class="tile"><span><svg class="i"><use href="#ic-board"/></svg></span></div>
       <div class="step">
         <h4>Monday card created — straight away</h4>
-        <p>Client, email, class and description filled in, their PDFs in the Files column.
-        No re-typing.</p>
+        <p>Client, email, class and description filled in, their PDFs in the Files column. No re-typing.</p>
       </div>
 
       <div class="who"><span class="pill-role r-kacie">Kacie</span></div>
       <div class="rail"></div>
+      <div class="tile"><span><svg class="i"><use href="#ic-folder"/></svg></span></div>
       <div class="step">
         <h4>Reference, folders, assign</h4>
-        <p>As always — but the card arrives populated, so it&apos;s checking rather than
-        creating.</p>
+        <p>As always — but the card arrives populated, so it&apos;s checking rather than creating.</p>
       </div>
 
       <div class="who">
@@ -269,6 +501,7 @@
         <span class="pill-role r-rebecca">Rebecca</span>
       </div>
       <div class="rail"></div>
+      <div class="tile"><span><svg class="i"><use href="#ic-eye"/></svg></span></div>
       <div class="step">
         <h4>Assessment</h4>
         <p>Unchanged. Missing information means an FIR — below.</p>
@@ -276,14 +509,16 @@
 
       <div class="who"><span class="pill-role r-auto">Automatic</span></div>
       <div class="rail"></div>
+      <div class="tile"><span><svg class="i"><use href="#ic-zap"/></svg></span></div>
       <div class="step">
         <h4>To CDC — the autogen writes the certificate</h4>
-        <p>A Word document. <strong>We still check it and PDF it ourselves</strong> — nothing
-        goes out that a person hasn&apos;t read.</p>
+        <p>A Word document. <strong>We still check it and PDF it ourselves</strong> — nothing goes out
+        that a person hasn&apos;t read.</p>
       </div>
 
       <div class="who"><span class="pill-role r-kacie">Kacie</span></div>
       <div class="rail gold"></div>
+      <div class="tile gold"><span><svg class="i"><use href="#ic-stamp"/></svg></span></div>
       <div class="step">
         <h4>Status → Issued <span class="chip line-g" style="float:right">PORTAL: ISSUED</span></h4>
         <p>The one action that starts delivery.</p>
@@ -291,6 +526,7 @@
 
       <div class="who"><span class="pill-role r-auto">Automatic</span></div>
       <div class="rail"></div>
+      <div class="tile"><span><svg class="i"><use href="#ic-cloud"/></svg></span></div>
       <div class="step">
         <h4>Files collected, client emailed <span class="chip line-g" style="float:right">PORTAL: READY</span></h4>
         <p>SharePoint checked <strong>every five minutes</strong>.</p>
@@ -298,63 +534,152 @@
 
       <div class="who"><span class="pill-role r-client">Client</span></div>
       <div class="rail last"></div>
+      <div class="tile"><span><svg class="i"><use href="#ic-down"/></svg></span></div>
       <div class="step">
         <h4>Downloads it <span class="chip line-g" style="float:right">PORTAL: DOWNLOADED</span></h4>
         <p>Receipt posted on the card. The end of &ldquo;did you get it?&rdquo; calls.</p>
       </div>
     </div>
 
+    <div class="sec">What the board now tells you</div>
+    <div class="ladder">
+      <div class="rung on"><svg class="i"><use href="#ic-stamp"/></svg><b>ISSUED</b><span>Signed off. We have it; the client doesn&apos;t.</span></div>
+      <div class="arr">›</div>
+      <div class="rung on"><svg class="i"><use href="#ic-mail"/></svg><b>READY</b><span>In the portal. Client emailed.</span></div>
+      <div class="arr">›</div>
+      <div class="rung on"><svg class="i"><use href="#ic-down"/></svg><b>DOWNLOADED</b><span>They&apos;ve taken it. Nothing to chase.</span></div>
+    </div>
+    <div class="stuck">
+      <svg class="i"><use href="#ic-warn"/></svg>
+      <div><strong>STUCK</strong> — it hasn&apos;t got there and somebody needs to look. Also on the 5pm report.</div>
+    </div>
+
     <div class="sec">An FIR, worked through</div>
 
-    <div class="flow">
-      <div class="who"><span class="pill-role r-chris">Us</span></div>
-      <div class="rail first gold"></div>
-      <div class="step">
-        <h4>Status → FIR, and send the message from the portal</h4>
-        <p>They get an email and see the request against that job — not buried in a thread.</p>
+    <div class="run">
+      <div class="beat">
+        <div class="hd"><svg class="i"><use href="#ic-chat"/></svg><h4>We ask</h4></div>
+        <p>Status → FIR, and the message goes from the portal. They get an email <em>and</em> see the
+          request against that job — not buried in a thread.</p>
       </div>
-
-      <div class="who"><span class="pill-role r-client">Client</span></div>
-      <div class="rail gold"></div>
-      <div class="step">
-        <h4>Replies with the missing document</h4>
-        <p>It lands on the card as an update, and the status moves <strong>itself</strong> to
-        New Info Received.</p>
+      <div class="arr">›</div>
+      <div class="beat">
+        <div class="hd"><svg class="i"><use href="#ic-clip"/></svg><h4>They reply</h4></div>
+        <p>With the missing document. It lands on the card as an update, and the status moves
+          <strong>itself</strong> to New Info Received.</p>
       </div>
-
-      <div class="who"><span class="pill-role r-auto">Automatic</span></div>
-      <div class="rail last gold"></div>
-      <div class="step">
-        <h4>You&apos;re emailed, with the attachment on it</h4>
-        <p>See what came back without opening anything.</p>
+      <div class="arr">›</div>
+      <div class="beat">
+        <div class="hd"><svg class="i"><use href="#ic-mail"/></svg><h4>You&apos;re told</h4></div>
+        <p>Emailed, with the attachment on it. See what came back without opening anything.</p>
       </div>
     </div>
 
-    <div class="loop">
-      ↺ &nbsp;<strong>Back to assessment.</strong> That automatic status move is the point —
-      an answered job stops sitting in the FIR group looking like it&apos;s still waiting on
-      them. <strong>Watch this one on Tuesday:</strong> if a status doesn&apos;t move itself,
-      say so straight away. A job that goes quiet here costs a client a week.
+    <div class="loop" style="margin-left:0">
+      <svg class="i"><use href="#ic-loop"/></svg>
+      <div><strong>Back to assessment.</strong> That automatic status move is the point — an answered
+      job stops sitting in the FIR group looking like it&apos;s still waiting on them.
+      <strong>Watch this one on Tuesday:</strong> if a status doesn&apos;t move itself, say so straight
+      away. A job that goes quiet here costs a client a week.</div>
     </div>
 
   </div>
 
   <div class="foot-light">
-    <span>Page 2 of 6 — the job and the FIR</span><span>CF Building Approvals</span>
+    <span>Page 2 of 6 — the job, and the FIR</span><span>CF Building Approvals</span>
   </div>
 </div>
 
 <!-- ===================================================================
-     PAGE 3 — amendments: the one process that actually changes
+     PAGE 3 — what happens without anyone, and the report that checks
      =================================================================== -->
 <div class="page">
   <div class="content">
 
-    <div class="sec">Amendments — what's changed</div>
+    <div class="chapter">
+      <div class="n">02</div>
+      <div>
+        <h2>What runs without anyone</h2>
+        <p>Nobody presses these. They matter most on the days we&apos;re too busy to notice.</p>
+      </div>
+    </div>
+
+    <div class="when">
+      <div class="tick"><span class="dot"><svg class="i"><use href="#ic-loop"/></svg></span><b>Every 5 min</b>
+        <span>Collects issued packages, emails clients, moves PORTAL, delivers messages</span></div>
+      <div class="tick"><span class="dot"><svg class="i"><use href="#ic-warn"/></svg></span><b>45 minutes</b>
+        <span>An issued job with no files is flagged STUCK</span></div>
+      <div class="tick"><span class="dot"><svg class="i"><use href="#ic-bell"/></svg></span><b>3 days</b>
+        <span>A ready package still unopened is chased</span></div>
+      <div class="tick"><span class="dot"><svg class="i"><use href="#ic-clock"/></svg></span><b>5pm weekdays</b>
+        <span>The report, and the past-jobs lists rebuild</span></div>
+      <div class="tick"><span class="dot"><svg class="i"><use href="#ic-mail"/></svg></span><b>Monday 7am</b>
+        <span>A digest to each client with anything outstanding</span></div>
+    </div>
+
+    <div class="sec">And the moment it happens</div>
+    <table class="stack">
+      <tr><td class="ic"><svg class="i"><use href="#ic-send"/></svg></td>
+        <td>A job is lodged</td><td>Card created, files attached, client acknowledged.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-chat"/></svg></td>
+        <td>A client replies</td><td>Onto the card, status off FIR, office emailed.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-pen"/></svg></td>
+        <td>An amendment</td><td>Emailed to the certifier. Never on the board — over the page.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-down"/></svg></td>
+        <td>A download</td><td>Receipt on the card, PORTAL to DOWNLOADED, retention clock starts.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-user"/></svg></td>
+        <td><strong>Still a person</strong></td><td>Checking the autogen&apos;s Word document, PDF-ing it,
+        and setting the status to Issued.</td></tr>
+    </table>
+
+    <div class="sec">The 5pm report — what it&apos;s for</div>
+    <p class="small">
+      Everything else in the portal reacts to something happening. This is the one thing that looks for
+      something that <em>should</em> have happened and didn&apos;t — the job that never reaches the
+      client, which is the only failure here that costs somebody a week and never announces itself.
+    </p>
+    <table class="stack narrow" style="margin-top:1mm">
+      <tr><td class="ic"><svg class="i"><use href="#ic-warn"/></svg></td><td>Issued, not delivered</td><td>On the board at Issued, nothing in the portal.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-mail"/></svg></td><td>Delivered, not told</td><td>The portal has it; the email didn&apos;t send.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clock"/></svg></td><td>Ready, not opened</td><td>Three days and they still haven&apos;t looked.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-pen"/></svg></td><td>Amendments waiting</td><td>Lodged, nothing sent back — the board can&apos;t see these.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-stamp"/></svg></td><td>No certificate</td><td>A package with everything except the CDC itself.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-board"/></svg></td><td>Lodged, not on the board</td><td>The client believes it&apos;s with us.</td></tr>
+    </table>
+
+    <div class="callout" style="margin-top:3mm">
+      <div class="note">
+        <svg class="i"><use href="#ic-bell"/></svg>
+        <div>It goes out at 5pm on weekdays whether there&apos;s anything in it or not, and the same
+        items appear in Teams as they happen. <strong>A quiet report is the good outcome</strong> —
+        but an empty inbox at 5pm means the report itself didn&apos;t run, so say something.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot-light">
+    <span>Page 3 of 6 — what&apos;s automatic, and the 5pm report</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- ===================================================================
+     PAGE 4 — amendments: the one process that actually changes
+     =================================================================== -->
+<div class="page">
+  <div class="content">
+
+    <div class="chapter">
+      <div class="n">03</div>
+      <div>
+        <h2>Amendments — what&apos;s changed</h2>
+        <p>The only process on these six pages that works differently from last week.</p>
+      </div>
+    </div>
 
     <div class="fork">
       <div class="was">
-        <div class="hd">Until now</div>
+        <div class="hd"><svg class="i"><use href="#ic-ban"/></svg> Until now</div>
         <ul>
           <li>Opened a <strong>new job on the board</strong></li>
           <li>Sat there looking like an assessment</li>
@@ -363,7 +688,7 @@
         </ul>
       </div>
       <div class="now">
-        <div class="hd">From now</div>
+        <div class="hd"><svg class="i"><use href="#ic-check"/></svg> From now</div>
         <ul>
           <li><strong>Never touches the board</strong></li>
           <li>Emailed to whoever certified it</li>
@@ -378,18 +703,20 @@
     <div class="flow">
       <div class="who"><span class="pill-role r-client">Client</span></div>
       <div class="rail first gold"></div>
+      <div class="tile gold"><span><svg class="i"><use href="#ic-search"/></svg></span></div>
       <div class="step">
         <h4>Lodges it in the portal</h4>
-        <p>Picks the job — including ones we finished years ago — says what&apos;s changed,
-        attaches the new drawings.</p>
+        <p>Picks the job — including ones we finished years ago — says what&apos;s changed, attaches
+        the new drawings.</p>
       </div>
 
       <div class="who"><span class="pill-role r-auto">Automatic</span></div>
       <div class="rail gold"></div>
+      <div class="tile gold"><span><svg class="i"><use href="#ic-mail"/></svg></span></div>
       <div class="step">
         <h4>Emailed to whoever certified it</h4>
-        <p>Off the board&apos;s <strong>Certified By</strong> column, office copied, with the
-        reason and the documents. Nobody in that column means Rebecca.</p>
+        <p>Off the board&apos;s <strong>Certified By</strong> column, office copied, with the reason and
+        the documents. Nobody in that column means Rebecca.</p>
       </div>
 
       <div class="who">
@@ -397,6 +724,7 @@
         <span class="pill-role r-rebecca">Rebecca</span>
       </div>
       <div class="rail gold"></div>
+      <div class="tile gold"><span><svg class="i"><use href="#ic-check"/></svg></span></div>
       <div class="step">
         <h4>Reply &ldquo;yes&rdquo; by email</h4>
         <p><strong>Exactly as you do today.</strong> No system, no button, nothing to learn.</p>
@@ -404,70 +732,93 @@
 
       <div class="who"><span class="pill-role r-kacie">Kacie</span></div>
       <div class="rail gold"></div>
+      <div class="tile gold"><span><svg class="i"><use href="#ic-stamp"/></svg></span></div>
       <div class="step">
         <h4>Watermark, re-issue, upload it back</h4>
-        <p>The only new step for anyone — <strong>Admin → Amendments</strong>. With no card
-        there&apos;s no SharePoint sync to collect it.</p>
+        <p>The only new step for anyone — <strong>Admin → Amendments</strong>. With no card there&apos;s
+        no SharePoint sync to collect it.</p>
       </div>
 
       <div class="who"><span class="pill-role r-auto">Automatic</span></div>
       <div class="rail last gold"></div>
+      <div class="tile gold"><span><svg class="i"><use href="#ic-down"/></svg></span></div>
       <div class="step">
         <h4>Client emailed, and downloads it</h4>
         <p>Their original certificate stays valid until then; both sit side by side.</p>
       </div>
     </div>
 
-    <div class="callout warn" style="margin-top:3mm">
-      <strong>The catch.</strong> Because they&apos;re off the board, the board can&apos;t
-      notice one going quiet — the 5pm report does instead. If you get an amendment email
-      and it isn&apos;t yours, say so rather than leaving it.
+    <div class="sec">What it means for each of you</div>
+    <table class="stack">
+      <tr><td class="ic"><svg class="i"><use href="#ic-mail"/></svg></td>
+        <td><span class="pill-role r-kacie">Kacie</span></td>
+        <td>You stop forwarding them — the email arrives at the right person already. You still
+          watermark and re-issue exactly as now, then upload it on the Amendments page.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-check"/></svg></td>
+        <td><span class="pill-role r-chris">Chris</span> <span class="pill-role r-rebecca">Rebecca</span></td>
+        <td>Nothing changes. The request reaches you directly with the reason and the drawings
+          attached; you reply &ldquo;yes&rdquo; by email as you do today.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-board"/></svg></td>
+        <td><span class="pill-role r-auto">The board</span></td>
+        <td>Gets one note on the original card and nothing else. No new item, no status, no invoice.</td></tr>
+    </table>
+
+    <div class="callout warn" style="margin-top:2.5mm">
+      <div class="note">
+        <svg class="i"><use href="#ic-warn"/></svg>
+        <div><strong>The catch.</strong> Because they&apos;re off the board, the board can&apos;t notice
+        one going quiet — the 5pm report does instead. If you get an amendment email and it isn&apos;t
+        yours, say so rather than leaving it.</div>
+      </div>
     </div>
 
   </div>
 
   <div class="foot-light">
-    <span>Page 3 of 6 — amendments</span><span>CF Building Approvals</span>
+    <span>Page 4 of 6 — amendments</span><span>CF Building Approvals</span>
   </div>
 </div>
 
 <!-- ===================================================================
-     PAGE 4 — what happens without anyone, and the trial
+     PAGE 5 — the client's side, and the trial
      =================================================================== -->
 <div class="page">
   <div class="content">
 
-    <div class="sec">What runs without anyone</div>
-
-    <div class="when">
-      <div class="tick"><i></i><b>Every 5 min</b>
-        <span>Collects issued packages, emails clients, moves PORTAL, delivers messages</span></div>
-      <div class="tick"><i></i><b>45 minutes</b>
-        <span>An issued job with no files is flagged STUCK</span></div>
-      <div class="tick"><i></i><b>3 days</b>
-        <span>A ready package still unopened is chased</span></div>
-      <div class="tick"><i></i><b>5pm weekdays</b>
-        <span>The report, and the past-jobs lists rebuild</span></div>
-      <div class="tick"><i></i><b>Monday 7am</b>
-        <span>A digest to each client with anything outstanding</span></div>
+    <div class="chapter">
+      <div class="n">04</div>
+      <div>
+        <h2>What a client can do</h2>
+        <p>Their sidebar, top to bottom. Any of it switches off from Settings while we update it,
+          without taking the portal down.</p>
+      </div>
     </div>
 
-    <div class="sec">And the moment it happens</div>
     <table class="stack">
-      <tr><td>A job is lodged</td><td>Card created, files attached, client acknowledged.</td></tr>
-      <tr><td>A client replies</td><td>Onto the card, status off FIR, office emailed.</td></tr>
-      <tr><td>An amendment</td><td>Emailed to the certifier. Never on the board — page 3.</td></tr>
-      <tr><td>A download</td><td>Receipt on the card, PORTAL to DOWNLOADED, retention clock starts.</td></tr>
-      <tr><td><strong>Still a person</strong></td><td>Checking the autogen&apos;s Word document,
-        PDF-ing it, and setting the status to Issued.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-screen"/></svg></td><td><strong>Dashboard</strong></td><td>Every job and what stage it&apos;s at, on one screen.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clip"/></svg></td><td><strong>My Jobs</strong></td><td>One job in detail — stage timeline, who&apos;s assessing, how long it&apos;s been with us.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-chat"/></svg></td><td><strong>My Messages</strong></td><td>A thread per job, newest first. Attachments both ways. Where an FIR is answered.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-send"/></svg></td><td><strong>Lodge a Job</strong></td><td>Address, class, description, PDFs — plus anything saved in My Details. Straight onto the board.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-pen"/></svg></td><td><strong>Amend a Job</strong></td><td>A change to any job we&apos;ve done — current or long finished. By email, never onto the board.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-down"/></svg></td><td><strong>Downloads</strong></td><td>Every package we&apos;ve issued them, as often as they like.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-folder"/></svg></td><td><strong>Info Sheets</strong></td><td>The fourteen guidance notes.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-map"/></svg></td><td><strong>Resources</strong></td><td>Council forms, wind classification checker, bushfire map check, maps, and all thirty councils.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-board"/></svg></td><td><strong>Site Plan Tool</strong></td><td>Draws a compliant site plan for a simple job, rather than us sending it back for one.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-gear"/></svg></td><td><strong>My Details</strong></td><td>Contact details, and a library of documents they reuse job to job.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-people"/></svg></td><td><strong>Help &amp; Support</strong></td><td>How it works, and a general enquiry that reaches us even when it isn&apos;t about a job.</td></tr>
     </table>
+    <p class="small muted" style="margin-top:1.5mm">
+      Plus: first sign-in with a one-time code · password reset · unread counts · cancel a lodged job ·
+      export their job list · works on a phone, which is where most of them lodge from. The engineering
+      checker is built and hidden until we switch it on.
+    </p>
 
     <div class="sec">Your trial this week</div>
     <p class="small">
-      You each get a client login too. Please get through this by <strong>Friday</strong>, on
-      a test job rather than a live one.
+      You each get a client login too. Please get through this by <strong>Friday</strong>, on a test job
+      rather than a live one.
     </p>
-    <div class="cols" style="margin-top:2mm">
+    <div class="cols" style="margin-top:1.5mm">
       <div>
         <ul class="check box">
           <li>Sign in with the code you&apos;re emailed</li>
@@ -490,125 +841,89 @@
       </div>
     </div>
 
-    <div class="callout" style="margin-top:3mm">
-      <strong>Tell me the same day</strong> if something&apos;s broken — don&apos;t wait for
-      Friday. Write the clumsy things down as you go; you won&apos;t remember them later. What
-      you did, what you expected, what happened. <strong>Friday:</strong> fifteen minutes on
-      what everyone found.
+    <div class="callout" style="margin-top:2.5mm">
+      <div class="note">
+        <svg class="i"><use href="#ic-bell"/></svg>
+        <div><strong>Tell me the same day</strong> if something&apos;s broken — don&apos;t wait for Friday.
+        Write the clumsy things down as you go; you won&apos;t remember them later. What you did, what you
+        expected, what happened. <strong>Friday:</strong> fifteen minutes on what everyone found.</div>
+      </div>
     </div>
 
   </div>
 
   <div class="foot-light">
-    <span>Page 4 of 6 — what's automatic, and your trial</span><span>CF Building Approvals</span>
+    <span>Page 5 of 6 — the client&apos;s side, and your trial</span><span>CF Building Approvals</span>
   </div>
 </div>
 
 <!-- ===================================================================
-     PAGE 5 — the client's side
+     PAGE 6 — our side, and what's left
      =================================================================== -->
 <div class="page">
   <div class="content">
 
-    <div class="sec">What a client can do</div>
-    <p class="small muted" style="margin-bottom:2mm">
-      Their sidebar, top to bottom. Any of it can be switched off from Settings while we
-      update it, without taking the portal down.
-    </p>
+    <div class="chapter">
+      <div class="n">05</div>
+      <div>
+        <h2>What we can do</h2>
+        <p>The admin dashboard — eight places, and what each of them is for.</p>
+      </div>
+    </div>
+
     <table class="stack">
-      <tr><td><strong>Dashboard</strong></td><td>Every job and what stage it&apos;s at, on one screen.</td></tr>
-      <tr><td><strong>My Jobs</strong></td><td>One job in detail — stage timeline, who&apos;s assessing, how long it&apos;s been with us.</td></tr>
-      <tr><td><strong>My Messages</strong></td><td>A thread per job, newest first. Attachments both ways. Where an FIR is answered.</td></tr>
-      <tr><td><strong>Lodge a Job</strong></td><td>Address, class, description, PDFs — plus anything saved in My Details. Straight onto the board.</td></tr>
-      <tr><td><strong>Amend a Job</strong></td><td>A change to any job we&apos;ve done — current or long finished. By email, never onto the board.</td></tr>
-      <tr><td><strong>Downloads</strong></td><td>Every package we&apos;ve issued them, as often as they like.</td></tr>
-      <tr><td><strong>Info Sheets</strong></td><td>The fourteen guidance notes.</td></tr>
-      <tr><td><strong>Resources</strong></td><td>Council forms, wind classification checker, bushfire map check, maps, and all thirty councils.</td></tr>
-      <tr><td><strong>Site Plan Tool</strong></td><td>Draws a compliant site plan for a simple job, rather than us sending it back for one.</td></tr>
-      <tr><td><strong>Engineering</strong></td><td>The engineering checker. Hidden until we switch it on.</td></tr>
-      <tr><td><strong>My Details</strong></td><td>Contact details, and a library of documents they reuse job to job.</td></tr>
-      <tr><td><strong>Help &amp; Support</strong></td><td>How it works, and a general enquiry that reaches us even when it isn&apos;t about a job.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clip"/></svg></td><td><strong>Queue</strong></td><td>Lodgements waiting to be accepted. Normally empty — a job goes straight onto the board. Anything here means Monday was down when they pressed Lodge.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-people"/></svg></td><td><strong>Clients</strong></td><td>The registry. Issue a login, email the details and one-time code, reset a password, check their SharePoint folder resolves, view the portal as them, remove a client.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-chat"/></svg></td><td><strong>Enquiries</strong></td><td>Questions with no job behind them; the reply goes back through the portal.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-pen"/></svg></td><td><strong>Amendments</strong></td><td>Every one lodged, who it went to and why, and where the revised certificate goes back out from.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-folder"/></svg></td><td><strong>Content</strong></td><td>The welcome guide, info sheets, council forms and engineering sets — new versions any time, no redeploy.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-gear"/></svg></td><td><strong>Settings</strong></td><td>What&apos;s connected, the evening report, Teams notifications, amendment routing, switching client pages on and off.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-clock"/></svg></td><td><strong>Turnaround Reports</strong></td><td>How long jobs are taking, by class, with the days spent waiting on the client taken out.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-eye"/></svg></td><td><strong>Activity Log</strong></td><td>Who did what, and when. <strong>Sync Now</strong> sits beside it, for when five minutes is too long to wait.</td></tr>
     </table>
 
-    <div class="sec">And around the edges</div>
+    <div class="sec">Before the first real client</div>
     <div class="cols">
       <div>
-        <ul class="check dots">
-          <li>First sign-in with a one-time code</li>
-          <li>Password reset, same username</li>
-          <li>Unread counts on jobs and messages</li>
+        <ul class="check box">
+          <li><span class="pill-role r-chris">Chris</span> Amendment routing in Settings, then
+            <strong>Rebuild Now</strong> — until both are done, Amend a Job stays off</li>
+          <li><span class="pill-role r-kacie">Kacie</span> Upload the council forms — BA1, BA2, BA5,
+            BA7, BA9, BA13, BA19, BA22</li>
+          <li><span class="pill-role r-auto">All</span> Read the fourteen info sheets with a red pen.
+            They go out under our name</li>
         </ul>
       </div>
       <div>
-        <ul class="check dots">
-          <li>Cancel a job they&apos;ve lodged</li>
-          <li>Export their job list</li>
-          <li>Works on a phone — most lodge from site</li>
+        <ul class="check box">
+          <li>The portal on our own domain rather than the build address</li>
+          <li>Privacy wording signed off before anyone real signs in</li>
+          <li>One live job carried the whole way through, watched</li>
+          <li>Teams notifications unmuted</li>
         </ul>
+      </div>
+    </div>
+
+    <div class="sec">Decisions we need today</div>
+    <table class="stack narrow">
+      <tr><td class="ic"><svg class="i"><use href="#ic-target"/></svg></td><td>Who goes first</td><td>Which client, and what week. One we can ring if something looks odd.</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-eye"/></svg></td><td>How far back they see</td><td>Every job we&apos;ve ever done for them, or only the current ones?</td></tr>
+      <tr><td class="ic"><svg class="i"><use href="#ic-zap"/></svg></td><td>The engineering checker</td><td>On for clients, or ours only to begin with?</td></tr>
+    </table>
+
+    <div class="callout" style="margin-top:2.5mm">
+      <div class="note">
+        <svg class="i"><use href="#ic-target"/></svg>
+        <div><strong>The one thing to remember:</strong> the portal never decides anything. It moves
+        files, tells people, and keeps the board honest about where a certificate actually is. Every
+        judgement is still ours.</div>
       </div>
     </div>
 
   </div>
 
   <div class="foot-light">
-    <span>Page 5 of 6 — the client's side</span><span>CF Building Approvals</span>
-  </div>
-</div>
-
-<!-- ===================================================================
-     PAGE 6 — our side
-     =================================================================== -->
-<div class="page">
-  <div class="content">
-
-    <div class="sec">What we can do</div>
-    <table class="stack">
-      <tr><td><strong>Queue</strong></td><td>Lodgements waiting to be accepted. Normally empty —
-        a job goes straight onto the board. Anything here means Monday was down when they
-        pressed Lodge.</td></tr>
-      <tr><td><strong>Clients</strong></td><td>The registry. Issue a login, email the details and
-        one-time code, reset a password, check their SharePoint folder resolves, view the portal
-        as them, remove a client.</td></tr>
-      <tr><td><strong>Enquiries</strong></td><td>Questions with no job behind them; the reply goes
-        back through the portal.</td></tr>
-      <tr><td><strong>Amendments</strong></td><td>Every one lodged, who it went to and why, and
-        where the revised certificate goes back out from.</td></tr>
-      <tr><td><strong>Content</strong></td><td>The welcome guide, info sheets, council forms and
-        engineering sets — new versions any time, no redeploy.</td></tr>
-      <tr><td><strong>Settings</strong></td><td>What&apos;s connected, the evening report, Teams
-        notifications, amendment routing, switching client pages on and off.</td></tr>
-      <tr><td><strong>Turnaround Reports</strong></td><td>How long jobs are taking, by class, with
-        the days spent waiting on the client taken out.</td></tr>
-      <tr><td><strong>Activity Log</strong></td><td>Who did what, and when.</td></tr>
-      <tr><td><strong>Sync Now</strong></td><td>Don&apos;t wait five minutes.</td></tr>
-    </table>
-
-    <div class="sec">The 5pm report — what it's for</div>
-    <p>
-      Everything else in the portal reacts to something happening. This is the one thing that
-      looks for something that <em>should</em> have happened and didn&apos;t — the job that
-      never reaches the client, which is the only failure here that costs somebody a week and
-      never announces itself.
-    </p>
-    <table class="stack narrow" style="margin-top:1mm">
-      <tr><td>Issued, not delivered</td><td>On the board at Issued, nothing in the portal.</td></tr>
-      <tr><td>Delivered, not told</td><td>The portal has it; the email didn&apos;t send.</td></tr>
-      <tr><td>Ready, not opened</td><td>Three days and they still haven&apos;t looked.</td></tr>
-      <tr><td>Amendments waiting</td><td>Lodged, nothing sent back — the board can&apos;t see these.</td></tr>
-      <tr><td>No certificate</td><td>A package with everything except the CDC itself.</td></tr>
-      <tr><td>Lodged, not on the board</td><td>The client believes it&apos;s with us.</td></tr>
-    </table>
-
-    <div class="callout" style="margin-top:3mm">
-      <strong>The one thing to remember:</strong> the portal never decides anything. It moves
-      files, tells people, and keeps the board honest about where a certificate actually is.
-      Every judgement is still ours.
-    </div>
-
-  </div>
-
-  <div class="foot-light">
-    <span>Page 6 of 6 — our side</span><span>CF Building Approvals</span>
+    <span>Page 6 of 6 — our side, and what&apos;s left</span><span>CF Building Approvals</span>
   </div>
 </div>
 
