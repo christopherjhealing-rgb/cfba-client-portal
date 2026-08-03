@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Client Portal — team review and trial week</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Durations rather than clock times: the running order survives a late
+     start, and nobody has to re-time the sheet on the morning. */
+  table.agenda td:first-child { width: 20mm; font-weight: 700; color: var(--green); }
+  table.agenda td:last-child  { width: 30mm; }
+  table.agenda .what { font-size: 9pt; color: var(--soft); margin-top: .8mm; }
+  .blank.short { min-width: 26mm; }
+
+  /* Three pages, and each one has to BE a page — a sheet that overflows by a
+     few millimetres prints as two, and then the footers are lying about which
+     page you're holding. The rhythm is tightened here rather than the copy
+     being cut, because every line on these pages is doing a job. Measured:
+     an A4 page is 1119px at 96dpi, and all three come in under it. */
+  .page > .content { padding-top: 9mm; }
+  .sec { margin: 5.5mm 0 3mm; }
+  .steps li { padding: 2.7mm 0; }
+  td { padding: 2mm 3mm; }
+  .check li { padding-top: 1.3mm; padding-bottom: 1.3mm; }
+
+  /* Empty boxes, not ticks — this is a list people work through during the
+     week, and a pre-ticked list reads as already done. Drawn rather than
+     typed so the box doesn't depend on the font having ☐. Same treatment as
+     the lodging checklist note; that lives in notes.css, which the guidance
+     notes link and this document doesn't. */
+  .check.box li { padding-left: 6.5mm; }
+  .check.box li::before {
+    content: ""; width: 3.1mm; height: 3.1mm; top: 1.9mm;
+    border: .4mm solid #9AA6A0; border-radius: .6mm; background: var(--white);
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 — the agenda proper: the sheet you hold in the room -->
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">Team Session</div>
+    <h1>Client Portal — review &amp; trial week</h1>
+    <div class="goldrule"></div>
+    <div class="sub">CF Building Approvals — internal</div>
+    <div class="meta">Tuesday 4 August 2026 · <span class="blank short">&nbsp;</span> · Kacie, Chris, Rebecca, Fiona · Allow 75 minutes</div>
+  </div>
+
+  <div class="content">
+    <p class="lede">
+      The portal is live and doing real work. This session walks the whole thing
+      through together — what the client sees, what it changes on the board, and
+      where the autogen fits — and then puts it in your hands for the week, so we
+      find the rough edges before our clients do.
+    </p>
+
+    <div class="callout" style="margin-top:5mm">
+      <strong>What we want out of this week:</strong> everyone has used the portal
+      as a client and as staff at least once, and anything that felt wrong, slow or
+      confusing is written down. Finding ten small problems now is worth far more
+      than a tidy meeting.
+    </div>
+
+    <div class="sec">Running order</div>
+    <table class="agenda">
+      <tr>
+        <td>5 min</td>
+        <td><strong>Where we're up to</strong>
+          <div class="what">What's live, what's still coming, what we're deciding this week.</div></td>
+        <td class="muted small">Chris</td>
+      </tr>
+      <tr>
+        <td>15 min</td>
+        <td><strong>The client's side</strong>
+          <div class="what">Signing in, the dashboard, lodging a job, messages, downloads,
+          resources. What they can see and — just as important — what they can't.</div></td>
+        <td class="muted small">Chris</td>
+      </tr>
+      <tr>
+        <td>20 min</td>
+        <td><strong>One job, start to finish</strong>
+          <div class="what">A single job walked the whole way through on screen: lodged, onto
+          the board, assessed, issued, downloaded. Stop me anywhere. <span class="muted">Page 2</span></div></td>
+        <td class="muted small">All</td>
+      </tr>
+      <tr>
+        <td>10 min</td>
+        <td><strong>An FIR, worked through</strong>
+          <div class="what">The part that saves us the most time, and the part most likely to
+          catch us out. <span class="muted">Page 2</span></div></td>
+        <td class="muted small">Chris</td>
+      </tr>
+      <tr>
+        <td>10 min</td>
+        <td><strong>The admin dashboard</strong>
+          <div class="what">Queue, Clients, Enquiries, Content, Settings. Issuing a login. The
+          5pm report and what it's actually for.</div></td>
+        <td class="muted small">Chris</td>
+      </tr>
+      <tr>
+        <td>10 min</td>
+        <td><strong>Monday and the CDC autogen</strong>
+          <div class="what">What's automatic now, what the PORTAL column is telling you, and
+          what still needs a person. <span class="muted">Page 3</span></div></td>
+        <td class="muted small">Chris</td>
+      </tr>
+      <tr>
+        <td>5 min</td>
+        <td><strong>Your trial this week</strong>
+          <div class="what">Who's doing what, and how to tell me what you find.
+          <span class="muted">Page 3</span></div></td>
+        <td class="muted small">All</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="foot-light">
+    <span>Page 1 of 3 — running order</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- PAGE 2 — the two walk-throughs -->
+<div class="page">
+  <div class="content">
+
+    <div class="sec">One job, start to finish</div>
+    <ol class="steps">
+      <li><span class="step-n">1</span><div style="flex:1">
+        <h3>Client lodges through the portal
+          <span class="pill-role r-client" style="float:right">Client</span></h3>
+        <p>Address, class, description and plans. The Monday card is created
+        <strong>straight away</strong> — client, email, class and description filled in, and their
+        PDFs in the Files column. No re-typing.</p>
+      </div></li>
+      <li><span class="step-n">2</span><div style="flex:1">
+        <h3>Reference, folders, assign
+          <span class="pill-role r-kacie" style="float:right">Kacie</span></h3>
+        <p>As always — but the card arrives populated, so it's checking rather than creating.</p>
+      </div></li>
+      <li><span class="step-n">3</span><div style="flex:1">
+        <h3>Assessment
+          <span class="pill-role r-rebecca" style="float:right">Rebecca</span>
+          <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
+        <p>Unchanged. Where information is missing, that's an FIR — below.</p>
+      </div></li>
+      <li><span class="step-n">4</span><div style="flex:1">
+        <h3>To CDC — the autogen produces the certificate
+          <span class="pill-role r-auto" style="float:right">Automatic</span></h3>
+        <p>It writes the Word document. <strong>We still check it and PDF it ourselves</strong> —
+        nothing goes out that a person hasn't read.</p>
+      </div></li>
+      <li><span class="step-n">5</span><div style="flex:1">
+        <h3>Status → Issued
+          <span class="pill-role r-kacie" style="float:right">Kacie</span></h3>
+        <p>The one action that starts delivery. PORTAL moves to
+        <span class="chip line-g">ISSUED</span> — we have it in hand, the client has nothing yet.</p>
+      </div></li>
+      <li><span class="step-n">6</span><div style="flex:1">
+        <h3>The portal collects the files and emails the client
+          <span class="pill-role r-auto" style="float:right">Automatic</span></h3>
+        <p>SharePoint is checked <strong>every five minutes</strong>. When the package is there the
+        client is emailed and PORTAL moves to <span class="chip line-g">READY</span>.</p>
+      </div></li>
+      <li><span class="step-n">7</span><div style="flex:1">
+        <h3>Client downloads
+          <span class="pill-role r-client" style="float:right">Client</span></h3>
+        <p>PORTAL moves to <span class="chip line-g">DOWNLOADED</span> and a receipt is posted on
+        the card. The end of &ldquo;did you get it?&rdquo; phone calls.</p>
+      </div></li>
+    </ol>
+
+    <div class="sec">An FIR, worked through</div>
+    <ol class="steps">
+      <li><span class="step-n gold">1</span><div style="flex:1">
+        <h3>Set the status to FIR and send the message from the portal</h3>
+        <p>The client gets an email and sees the request against that job — not buried in a thread
+        with the rest of their work.</p>
+      </div></li>
+      <li><span class="step-n gold">2</span><div style="flex:1">
+        <h3>The client replies with the missing document</h3>
+        <p>Their reply and their file land on the card as an update, and the status moves itself to
+        <strong>New Info Received</strong>. That automatic move is the point: an answered job stops
+        sitting in the FIR group looking like it's still waiting on them.</p>
+      </div></li>
+      <li><span class="step-n gold">3</span><div style="flex:1">
+        <h3>You get told</h3>
+        <p>An email to the office with the reply and the attachment on it, so you can see what came
+        back without opening anything.</p>
+      </div></li>
+    </ol>
+
+    <div class="callout warn" style="margin-top:4mm">
+      <strong>Watch this one on Tuesday.</strong> If a status doesn't move itself, or a reply
+      doesn't reach the board, say so straight away — a job that goes quiet here is the failure
+      that costs a client a week.
+    </div>
+
+  </div>
+
+  <div class="foot-light">
+    <span>Page 2 of 3 — the job flow and the FIR</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- PAGE 3 — what's automatic, and the trial brief to keep -->
+<div class="page">
+  <div class="content">
+
+    <div class="sec">What's automatic now</div>
+    <table class="stack">
+      <tr><td>Card creation</td><td>The moment a client lodges. Nothing to re-type.</td></tr>
+      <tr><td>Files onto the card</td><td>Their plans go straight into the Files column.</td></tr>
+      <tr><td>Status on a reply</td><td>FIR → New Info Received when the client answers.</td></tr>
+      <tr><td>Delivery</td><td>Checked every 5 minutes; client emailed when the package lands.</td></tr>
+      <tr><td>PORTAL column</td><td>ISSUED → READY → DOWNLOADED, so the board shows where a
+        certificate actually is. <span class="chip gold">STUCK</span> means it hasn't got there and
+        somebody needs to look.</td></tr>
+      <tr><td>Download receipt</td><td>Posted on the card the first time they open it.</td></tr>
+      <tr><td>5pm report</td><td>Weekdays. Anything that should have reached a client and didn't.</td></tr>
+      <tr><td>Still a person</td><td>Checking the autogen's Word document, PDF-ing it, and setting
+        the status to Issued.</td></tr>
+    </table>
+
+    <div class="sec">Your trial this week</div>
+    <p>
+      You each get a client login as well as your staff access. Please get through this by
+      <strong>Friday</strong>, on a test job rather than a live one.
+    </p>
+    <div class="cols" style="margin-top:3mm">
+      <div>
+        <ul class="check box">
+          <li>Sign in for the first time with the code you're emailed</li>
+          <li>Set your own password, then sign out and back in</li>
+          <li>Lodge a job with plans attached</li>
+          <li>Check it appeared on the board correctly</li>
+          <li>Send a message about a job</li>
+          <li>Answer an FIR and attach a document</li>
+        </ul>
+      </div>
+      <div>
+        <ul class="check box">
+          <li>Download a package and open the zip</li>
+          <li>Send a general enquiry — not about a job</li>
+          <li>Try it on your phone, not just the desktop</li>
+          <li>Look at Resources — forms, wind and bushfire checkers</li>
+          <li>Try to break it. Wrong password, huge file, odd address</li>
+          <li>Reset your password and get back in</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sec">How to tell me what you find</div>
+    <table class="stack narrow">
+      <tr><td>Something's broken</td><td>Tell me the same day — don't wait for Friday.</td></tr>
+      <tr><td>Something's clumsy</td><td>Write it down as you go. You won't remember it later.</td></tr>
+      <tr><td>Wording that's wrong</td><td>Especially anything a client reads.</td></tr>
+      <tr><td>What to include</td><td>What you did, what you expected, what happened. A screenshot
+        beats a description.</td></tr>
+    </table>
+
+    <div class="callout" style="margin-top:5mm">
+      <strong>Friday:</strong> fifteen minutes on what everyone found, and what's worth fixing
+      before the first client sees it. Small things are welcome — they're the difference between a
+      portal clients use and one they ignore.
+    </div>
+
+  </div>
+
+  <div class="foot-light">
+    <span>Page 3 of 3 — what's automatic, and your trial</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+</body>
+</html>

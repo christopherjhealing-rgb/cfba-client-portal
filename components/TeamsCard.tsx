@@ -93,13 +93,22 @@ export function TeamsCard({
         <ol className="mt-2 space-y-1 rounded-md border border-rule bg-wash px-4 py-3 text-[13px] leading-relaxed text-ink/70">
           <li>1. In Teams, open the channel you want these in.</li>
           <li>2. <strong>⋯</strong> next to the channel name → <strong>Workflows</strong>.</li>
-          <li>3. Choose <em>Post to a channel when a webhook request is received</em>.</li>
+          <li>
+            3. Search for <strong>webhook</strong> and choose{" "}
+            <strong>&ldquo;Send webhook alerts to a channel&rdquo;</strong>.
+          </li>
           <li>4. Next through it, then <strong>Add workflow</strong>.</li>
           <li>5. Copy the URL it gives you and paste it above.</li>
-          <li className="pt-1 text-ink/50">
-            Microsoft retired the older &ldquo;Incoming Webhook&rdquo; connector,
-            so Workflows is what you&apos;ll find — but if you already have a
-            connector URL, that works here too.
+          <li className="pt-1 text-brass">
+            Not the ones that say <em>from specific people</em> or{" "}
+            <em>from people in an org</em> — those only accept posts from a
+            person, and this comes from the portal.
+          </li>
+          <li className="text-ink/50">
+            Microsoft renames these templates from time to time. If the name
+            above has moved on, you want any Workflows template whose trigger
+            is an incoming webhook posting to a <em>channel</em>. An old
+            &ldquo;Incoming Webhook&rdquo; connector URL also still works here.
           </li>
         </ol>
       )}
