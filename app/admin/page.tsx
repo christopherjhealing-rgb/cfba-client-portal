@@ -39,6 +39,11 @@ export default async function AdminHome() {
   for (const m of enquiries) lastByCompany.set(m.companyId, m.from);
   const enquiriesWaiting = [...lastByCompany.values()].filter((f) => f === "client").length;
 
+  // Why hasn't the evening report arrived? Three things decide it, and none
+  // of them were visible anywhere until now.
+  const lastReport = await repo.getSetting<{ at?: string; ok?: boolean; error?: string }>(
+    "last_report").catch(() => null);
+
   const uploadedForms = await repo.listFiles("forms").catch(() => []);
   const eng = (await repo.getSetting<{ enabled?: boolean; url?: string }>("engineering").catch(() => null)) || {};
   const loginDesign = (await repo.getSetting<{ design?: string }>("login_design").catch(() => null))?.design;
@@ -61,7 +66,13 @@ export default async function AdminHome() {
           </div>
         </div>
 
-        <DailyReportCard enabled={env.dailyReportEnabled} to={env.officeEmail} />
+        <DailyReportCard
+          enabled={env.dailyReportEnabled}
+          to={env.officeEmail}
+          cronSecretSet={!!process.env.CRON_SECRET}
+          mailFromSet={!!env.mailFrom}
+          last={lastReport}
+        />
 
         {enquiriesWaiting > 0 && (
           <Link href="/admin/enquiries"

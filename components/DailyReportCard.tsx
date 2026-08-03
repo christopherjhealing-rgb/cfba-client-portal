@@ -14,7 +14,13 @@ interface Report {
 /** The evening report, on demand. The whole point of that email is to be the
  *  thing that notices when nothing else does, so being able to see today's
  *  without waiting for 5pm is what makes it trustworthy. */
-export function DailyReportCard({ enabled, to }: { enabled: boolean; to: string }) {
+export function DailyReportCard({
+  enabled, to, cronSecretSet, mailFromSet, last,
+}: {
+  enabled: boolean; to: string;
+  cronSecretSet: boolean; mailFromSet: boolean;
+  last: { at?: string; ok?: boolean; error?: string } | null;
+}) {
   const [report, setReport] = useState<Report | null>(null);
   const [subject, setSubject] = useState("");
   const [busy, setBusy] = useState(false);
@@ -87,6 +93,27 @@ export function DailyReportCard({ enabled, to }: { enabled: boolean; to: string 
         </div>
       </div>
 
+      {/* Everything that decides whether 5pm works, in one place. Until this
+          existed the only way to find out was to wait for an email that never
+          came. */}
+      <ul className="mt-3 space-y-1 border-t border-rule pt-3 text-[13px]">
+        <Check ok={enabled} good="Switched on (DAILY_REPORT_ENABLED)"
+          bad="Off — set DAILY_REPORT_ENABLED=1 in Vercel, then redeploy" />
+        <Check ok={!!to} good={`Sends to ${to}`} bad="No OFFICE_EMAIL — nowhere to send it" />
+        <Check ok={mailFromSet} good="Sending mailbox set (MAIL_FROM)"
+          bad="No MAIL_FROM — nothing can send at all" />
+        <Check ok={cronSecretSet}
+          good="CRON_SECRET set — the 5pm schedule can authorise"
+          bad="CRON_SECRET is NOT set. The cron fires at 5pm, gets a 401 and sends nothing. This is the usual reason a report never arrives." />
+      </ul>
+
+      <p className="mt-3 text-[13px] text-ink/70">
+        {last?.at
+          ? <>Last run <strong>{new Date(last.at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</strong>{" "}
+              — {last.ok ? "sent." : <span className="text-flag">didn&apos;t send: {last.error}</span>}</>
+          : <span className="text-ink/50">No report has ever run. Press <em>Send It Now</em> to prove the path before waiting for 5pm.</span>}
+      </p>
+
       {msg && <p className="mt-3 text-[13px] text-ink/70">{msg}</p>}
 
       {report && (
@@ -120,5 +147,14 @@ export function DailyReportCard({ enabled, to }: { enabled: boolean; to: string 
         </div>
       )}
     </div>
+  );
+}
+
+function Check({ ok, good, bad }: { ok: boolean; good: string; bad: string }) {
+  return (
+    <li className={`flex gap-2 ${ok ? "text-ink/70" : "text-flag"}`}>
+      <span aria-hidden className="shrink-0 font-semibold">{ok ? "✓" : "✕"}</span>
+      <span>{ok ? good : bad}</span>
+    </li>
   );
 }

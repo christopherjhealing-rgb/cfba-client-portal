@@ -3,6 +3,7 @@ import { isStaff } from "@/lib/session";
 import { env } from "@/lib/env";
 import { sendMail, dailyReportEmail } from "@/lib/mail";
 import { buildDailyReport } from "@/lib/watchdog";
+import * as repo from "@/lib/repo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,15 @@ async function build() {
 export async function GET(req: Request) {
   const cron = cronAuthorised(req);
   if (!cron && !(await isStaff())) {
+    // A cron that arrives unauthorised is the failure this whole feature is
+    // meant to prevent, so it gets recorded rather than just 401'd into the
+    // void. Almost always CRON_SECRET missing from the environment.
+    await repo.setSetting("last_report", {
+      at: new Date().toISOString(), ok: false,
+      error: process.env.CRON_SECRET
+        ? "a request arrived without a valid CRON_SECRET"
+        : "CRON_SECRET is not set, so no scheduled report can ever authorise",
+    }).catch(() => {});
     return NextResponse.json({ error: "Not authorised." }, { status: 401 });
   }
   if (!cron) {
@@ -68,11 +78,19 @@ async function send() {
     const { report, mail } = await build();
     const sent = await sendMail([env.officeEmail], mail.subject, mail.html);
     // A report that can't send is the one failure nothing else would catch —
-    // it exists to be the thing that notices. Loud in the log.
+    // it exists to be the thing that notices. Loud in the log, and written
+    // down so /admin can show when one last actually went.
     if (!sent) console.error("daily report: sendMail returned false — nobody was told.");
+    await repo.setSetting("last_report", {
+      at: new Date().toISOString(), ok: sent, to: env.officeEmail,
+      error: sent ? null : "sendMail returned false — check MAIL_FROM and Mail.Send",
+    }).catch(() => {});
     return NextResponse.json({ ok: true, sent, allClear: report.allClear });
   } catch (e) {
     console.error("daily report failed:", e);
+    await repo.setSetting("last_report", {
+      at: new Date().toISOString(), ok: false, error: (e as Error).message,
+    }).catch(() => {});
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
