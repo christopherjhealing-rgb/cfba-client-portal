@@ -6,7 +6,7 @@ import {
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
   canCancel, sendColumnWrite, sendLadder, sendRank, SEND_READY, SEND_DOWNLOADED,
-  isGeneralRef, GENERAL_REF,
+  isGeneralRef, GENERAL_REF, HIDDEN_STATUSES,
 } from "../lib/core.mjs";
 
 // The labels the live board's status column actually carries, read from
@@ -18,6 +18,8 @@ const BOARD_LABELS = [
   "Cancelled", "To Do", "QUERY", "FIR - ENG", "KACIE DOCS", "Chris CDC",
   "Issued",
 ];
+// Re-read live 3 Aug 2026 and unchanged. Note QUERY and KACIE DOCS are in
+// capitals on the board — the reason status matching is case-insensitive.
 
 test("aliasKey collapses the messy client variants onto one key", () => {
   const k = aliasKey("GVF");
@@ -83,6 +85,23 @@ test("isClientVisible hides Query unless downloaded", () => {
 });
 
 // --- moving a card to Sent on download ------------------------------------
+
+test("a status matches however the office capitalised it on the board", () => {
+  // The board says QUERY in capitals; this file said "Query". The lookup was
+  // exact, so a job the office put on QUERY — a status meant to hide it from
+  // the client completely — sailed past HIDDEN_STATUSES and read "In progress".
+  assert.equal(HIDDEN_STATUSES.has("QUERY"), true);
+  assert.equal(HIDDEN_STATUSES.has("Query"), true);
+  assert.equal(HIDDEN_STATUSES.has(" query "), true);
+  assert.equal(isClientVisible({ mondayStatus: "QUERY", firstDownloadedAt: null }), false);
+
+  assert.equal(clientStatusLabel("QUERY", 0), "The job is currently on hold");
+  assert.equal(clientStatusLabel("issued", 1), clientStatusLabel("Issued", 1));
+  assert.equal(clientStatusLabel("ISSUED", 0), "Being finalised");
+  assert.equal(canCancel({ mondayStatus: "CANCELLED", fileCount: 0 }), false);
+  assert.equal(canCancel({ mondayStatus: "INVOICED / COMPLETED", fileCount: 1 }), false);
+  assert.equal(stageIndex({ mondayStatus: "to check" }), stageIndex({ mondayStatus: "To Check" }));
+});
 
 test("every label the live board carries reaches the client as words", () => {
   // The office adds labels to Status without telling anyone. Whatever they

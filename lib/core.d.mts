@@ -30,7 +30,10 @@ export function matchCompany(card: CardRef, companies: CompanyMatch[]): string |
 export function parseRef(nameOrUrl: string | null | undefined): string | null;
 export function folderMatchesRef(folderName: string | null | undefined, ref: string): boolean;
 export const READY_STATUS: string;
-export const HIDDEN_STATUSES: Set<string>;
+/** Case-insensitive label sets. Not real Sets — `has` normalises first, so
+ *  "QUERY" on the board still matches "Query" here. */
+export interface StatusSet { has(s: string | null | undefined): boolean; values(): Iterable<string>; }
+export const HIDDEN_STATUSES: StatusSet;
 export function clientStatusLabel(mondayStatus: string | null | undefined, fileCount?: number): string;
 export function isClientVisible(job: PortalJob): boolean;
 export const SEND_OFFICE_RUNGS: string[];
@@ -47,7 +50,7 @@ export function sendColumnWrite(
 export const GENERAL_REF: string;
 export function isGeneralRef(ref: string | null | undefined): boolean;
 export const CANCELLED_STATUS: string;
-export const ISSUED_STATUSES: Set<string>;
+export const ISSUED_STATUSES: StatusSet;
 /** All canCancel needs. Both repo.Job and PortalJob satisfy it. */
 export interface CancellableJob {
   mondayStatus?: string | null;
@@ -59,12 +62,12 @@ export function retention(firstDownloadedAt: string | null | undefined, now?: Da
 export function jobBucket(job: PortalJob, now?: Date | string, months?: number): Bucket;
 export function groupJobs<T extends PortalJob>(jobs: T[], now?: Date | string, months?: number): Record<Bucket, T[]>;
 export function tidyAddress(s: string | null | undefined): string;
-export const CLIENT_ACTION_STATUSES: Set<string>;
-export const IN_HOUSE_WAIT_STATUSES: Set<string>;
+export const CLIENT_ACTION_STATUSES: StatusSet;
+export const IN_HOUSE_WAIT_STATUSES: StatusSet;
 export function needsClientInfo(job: PortalJob): boolean;
 export function splitInProgress<T extends PortalJob>(jobs: T[]): { awaiting: T[]; running: T[] };
 export const STAGES: { key: string; label: string }[];
-export const PAUSED_STATUSES: Set<string>;
+export const PAUSED_STATUSES: StatusSet;
 export function stageIndex(job: PortalJob): number;
 export function stageStates(job: PortalJob): string[];
 export const WA_PUBLIC_HOLIDAYS: Set<string>;
