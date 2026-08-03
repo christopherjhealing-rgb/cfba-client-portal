@@ -7,7 +7,7 @@ import {
   clientPausedDays, nextClientPause, elapsedBusinessDays,
   canCancel, portalColumnWrite, portalLadder, portalRank,
   PORTAL_ISSUED, PORTAL_READY, PORTAL_DOWNLOADED, PORTAL_STUCK,
-  isGeneralRef, GENERAL_REF, HIDDEN_STATUSES,
+  isGeneralRef, GENERAL_REF, HIDDEN_STATUSES, hasCertificate,
   INFO_RECEIVED_STATUS, AWAITING_REPLY_STATUSES,
 } from "../lib/core.mjs";
 
@@ -216,6 +216,23 @@ test("the status a reply moves a card to is one the live board carries", () => {
   // mean the card silently never moves.
   assert.ok(BOARD_LABELS.includes(INFO_RECEIVED_STATUS), INFO_RECEIVED_STATUS);
   for (const s of ["FIR", "FIR - ENG"]) assert.ok(BOARD_LABELS.includes(s), s);
+});
+
+test("hasCertificate finds the CDC in a delivered package", () => {
+  // The autogen names it "CDC - <address>.docx"; the exported PDF inherits it.
+  assert.equal(hasCertificate(["CDC - 24 Narranbee Ridge.pdf", "Engineering.pdf"]), true);
+  assert.equal(hasCertificate(["cdc - 5 dryandra court.pdf"]), true);
+  assert.equal(hasCertificate([" CDC 56733.pdf "]), true);
+});
+
+test("hasCertificate is false when only the Word original is there", () => {
+  // This is the failure it exists for: the portal skips .docx, so a package
+  // like this reaches the client complete except for the certificate.
+  assert.equal(hasCertificate(["CDC - 24 Narranbee Ridge.docx", "Engineering.pdf"]), false);
+  assert.equal(hasCertificate(["Engineering.pdf", "Site Plan.pdf"]), false);
+  assert.equal(hasCertificate([]), false);
+  // A PDF that merely mentions the CDC somewhere in its name isn't one.
+  assert.equal(hasCertificate(["Notes about the CDC.pdf"]), false);
 });
 
 // --- the general enquiry channel -------------------------------------------

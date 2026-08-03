@@ -8,7 +8,7 @@ interface LastSync {
   unmatched?: { ref: string; client: string }[];
   issuedNoFiles?: string[]; stillSyncing?: string[]; holding?: string[];
   emailsSent?: number; emailFails?: string[]; boardWriteFails?: string[];
-  cardFails?: string[]; markedStuck?: string[];
+  cardFails?: string[]; markedStuck?: string[]; noCertificate?: string[];
 }
 
 function ago(iso?: string): string {
@@ -103,6 +103,16 @@ export function SyncHealth({
           <span className="font-mono">{last?.issuedNoFiles?.join(", ")}</span>.
           Put the package in the job&apos;s SharePoint folder; the next sync picks
           it up and sends the email.
+        </div>
+      )}
+
+      {(last?.noCertificate?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-flag/40 bg-[#FBECEC] px-4 py-3 text-[13px] text-flag">
+          <strong>No Certificate in the Package</strong> — these have files, but
+          none of them is a <span className="font-mono">CDC…pdf</span>:{" "}
+          {last?.noCertificate?.join(", ")}. The autogen leaves the CDC as a Word
+          file and nothing converts it, so the PDF only exists once somebody
+          exports it. Check the Issued folder before the client downloads.
         </div>
       )}
 

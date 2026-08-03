@@ -50,6 +50,7 @@ export function portalColumnWrite(
   ladder?: string[],
   stuck?: string,
 ): PortalWriteDecision;
+export function hasCertificate(filenames: string[], prefix?: string): boolean;
 export const GENERAL_REF: string;
 export function isGeneralRef(ref: string | null | undefined): boolean;
 export const CANCELLED_STATUS: string;

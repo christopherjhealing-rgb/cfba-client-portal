@@ -11,7 +11,7 @@
 import { DEMO_MODE, MONDAY_READY, GRAPH_READY, env } from "./env";
 import {
   matchCompany, READY_STATUS, CLIENT_ACTION_STATUSES, retention, surveyorFor,
-  nextClientPause,
+  nextClientPause, hasCertificate,
 } from "./core.mjs";
 import * as monday from "./monday";
 import { sendMail, updateEmail, issuedEmail } from "./mail";
@@ -46,6 +46,9 @@ export interface SyncResult {
   cardFails: string[];
   /** Jobs flagged STUCK on the board this run. */
   markedStuck: string[];
+  /** Issued packages with files but no "CDC*.pdf" among them — the client
+      would get everything except the certificate. */
+  noCertificate: string[];
   /** Jobs whose with-the-client clock started or stopped this cycle. */
   pausesUpdated: number;
   note?: string;
@@ -67,7 +70,8 @@ export async function runSync(): Promise<SyncResult> {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
     issuedNoFiles: [], stillSyncing: [], holding: [], emailsSent: 0, emailFails: [],
-    boardWriteFails: [], cardFails: [], markedStuck: [], pausesUpdated: 0,
+    boardWriteFails: [], cardFails: [], markedStuck: [], noCertificate: [],
+    pausesUpdated: 0,
   };
 
   if (!MONDAY_READY) {
@@ -170,7 +174,7 @@ export async function runSync(): Promise<SyncResult> {
       holding: res.holding,
       emailsSent: res.emailsSent, emailFails: res.emailFails,
       boardWriteFails: res.boardWriteFails, cardFails: res.cardFails,
-      markedStuck: res.markedStuck,
+      markedStuck: res.markedStuck, noCertificate: res.noCertificate,
       pausesUpdated: res.pausesUpdated,
     });
   } catch (e) {
@@ -303,7 +307,31 @@ async function syncIssuedCard(
       }
       }
     }
-    if (files.length === 0 && !settling && !holding) {
+    // Files arrived — but is the certificate among them? The autogen leaves
+    // the CDC as a Word file and nothing converts it, so the PDF exists only
+    // because somebody exported it. Always reported; only blocks when
+    // REQUIRE_CDC_FILE is on.
+    let noCert = false;
+    if (files.length > 0) {
+      noCert = !hasCertificate(files.map((f) => f.filename), env.certificatePrefix);
+      if (noCert) {
+        res.noCertificate.push(card.ref);
+        console.warn(
+          `sync ${card.ref}: ${files.length} file(s) but none named "${env.certificatePrefix}*.pdf" ` +
+          `— the certificate itself may not have been exported from the Word original.`
+        );
+        if (env.requireCertificate) {
+          // Hold the whole package. A client given everything except the
+          // certificate has been told their job is done when it isn't.
+          watch.stuckSince[card.ref] ||= now;
+          const st = await monday.markStuck(card.itemId);
+          if (st.ok && st.wrote) res.markedStuck.push(card.ref);
+          files = [];
+        }
+      }
+    }
+
+    if (files.length === 0 && !settling && !holding && !noCert) {
       res.issuedNoFiles.push(card.ref);
       // Remember WHEN it first went quiet. A sync result lives for one run;
       // "issued three days ago and the files still aren't here" is the thing

@@ -27,6 +27,15 @@ export const env = {
   // OneDrive settle window — or normal jobs get flagged on their way through.
   portalStuckAfterMinutes: Number(process.env.PORTAL_STUCK_AFTER_MINUTES || "45"),
 
+  // The certificate check. The autogen writes the CDC as a Word file and
+  // nothing converts it, so the PDF only exists because a human exported it.
+  // ALWAYS reported — the admin banner and the evening report name any package
+  // missing one — but only BLOCKS delivery when this is on. Off by default:
+  // confirm your exported PDFs really do start "CDC" on a real job first, then
+  // switch it on and a package can never go out without the certificate.
+  requireCertificate: process.env.REQUIRE_CDC_FILE === "1",
+  certificatePrefix: process.env.CDC_FILE_PREFIX || "CDC",
+
   // The evening report to the office: everything that should have reached a
   // client today and didn't. Off until DAILY_REPORT_ENABLED=1. Sends to
   // OFFICE_EMAIL.
