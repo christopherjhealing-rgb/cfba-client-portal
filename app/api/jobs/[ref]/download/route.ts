@@ -81,11 +81,11 @@ export async function GET(
       console.warn(`download: could not post receipt for ${ref}:`, (e as Error).message);
     }
 
-    // …and move "Send?" to DOWNLOADED — the last rung of the ladder, and the
-    // only one nobody but the portal can see. The board now reads the whole
-    // journey without anyone opening the updates: SENT by hand when the office
-    // issues it, READY when the portal has the files and the client's been
-    // told, DOWNLOADED here.
+    // …and move PORTAL to DOWNLOADED — the last rung, and the only one
+    // nobody but the portal can see. The board now reads the whole journey
+    // without anyone opening the updates: ISSUED when the portal picks the
+    // card up, READY when it has the files and the client's been told,
+    // DOWNLOADED here.
     //
     // Nothing here may cost the client their files. The zip is already built;
     // a board that is down, slow or shaped differently than we expect is the
@@ -93,7 +93,7 @@ export async function GET(
     // the client's to be told about at the moment they click Download.
     const r = await monday.markDownloaded(job.mondayItemId);
     if (!r.ok && r.reason === "failed") {
-      console.warn(`download ${ref}: "Send?" not moved to DOWNLOADED — ${r.detail}`);
+      console.warn(`download ${ref}: PORTAL not moved to DOWNLOADED — ${r.detail}`);
       await repo.noteBoardWriteFail(ref, r.detail || "unknown").catch(() => {});
     }
   }

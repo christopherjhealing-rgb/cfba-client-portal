@@ -38,12 +38,14 @@ export interface SyncResult {
   holding: string[];
   emailsSent: number;
   emailFails: string[];
-  /** Jobs the client was told about but whose "Send?" column we couldn't
-      stamp SENT. The client has the package; the board doesn't say so. */
+  /** Jobs whose PORTAL column we couldn't write. The job itself is fine;
+      the board just doesn't show where it's up to. */
   boardWriteFails: string[];
   /** Cards this run couldn't finish at all — the rest of the run carried on
       without them. Anything here is a job the portal hasn't got. */
   cardFails: string[];
+  /** Jobs flagged STUCK on the board this run. */
+  markedStuck: string[];
   /** Jobs whose with-the-client clock started or stopped this cycle. */
   pausesUpdated: number;
   note?: string;
@@ -65,7 +67,7 @@ export async function runSync(): Promise<SyncResult> {
     ok: true, demo: DEMO_MODE, issuedSeen: 0, filesCopied: 0,
     jobsUpserted: 0, messagesPulled: 0, filesPurged: 0, unmatched: [],
     issuedNoFiles: [], stillSyncing: [], holding: [], emailsSent: 0, emailFails: [],
-    boardWriteFails: [], cardFails: [], pausesUpdated: 0,
+    boardWriteFails: [], cardFails: [], markedStuck: [], pausesUpdated: 0,
   };
 
   if (!MONDAY_READY) {
@@ -107,6 +109,10 @@ export async function runSync(): Promise<SyncResult> {
       // Issued on the board and the portal hasn't got it: exactly what the
       // evening report calls stuck, so start its clock here too.
       watch.stuckSince[card.ref] ||= now;
+      // The card threw rather than merely being empty — a bad file, a refused
+      // download. That is a human problem now, so flag it without waiting out
+      // the grace period.
+      await monday.markStuck(card.itemId).catch(() => {});
     }
   }
 
@@ -164,6 +170,7 @@ export async function runSync(): Promise<SyncResult> {
       holding: res.holding,
       emailsSent: res.emailsSent, emailFails: res.emailFails,
       boardWriteFails: res.boardWriteFails, cardFails: res.cardFails,
+      markedStuck: res.markedStuck,
       pausesUpdated: res.pausesUpdated,
     });
   } catch (e) {
@@ -183,6 +190,14 @@ async function syncIssuedCard(
   watch: repo.WatchState,
 ) {
   {
+    // The portal has this card in hand. Say so on the board before anything
+    // else — this rung is what makes the ISSUED -> READY gap visible, and it
+    // has to appear even if everything after it fails.
+    const seenIt = await monday.markIssued(card.itemId);
+    if (!seenIt.ok && seenIt.reason === "failed") {
+      res.boardWriteFails.push(`${card.ref} — ${seenIt.detail}`);
+    }
+
     const existing = await repo.getJob(card.ref);
     // The client's own reference arrives via the lodgement (stashed against
     // the card id at accept time); after the first sync it lives on the job.
@@ -294,6 +309,18 @@ async function syncIssuedCard(
       // "issued three days ago and the files still aren't here" is the thing
       // worth saying, and it can only be said if the clock started somewhere.
       watch.stuckSince[card.ref] ||= now;
+
+      // Past both ordinary waits AND the grace period: this isn't the system
+      // working slowly, it's a job that isn't going to arrive on its own. Put
+      // it on the board, where somebody will actually see it.
+      const quietMs = Date.now() - new Date(watch.stuckSince[card.ref]).getTime();
+      if (quietMs >= env.portalStuckAfterMinutes * 60_000) {
+        const st = await monday.markStuck(card.itemId);
+        if (st.ok && st.wrote) res.markedStuck.push(card.ref);
+        else if (!st.ok && st.reason === "failed") {
+          res.boardWriteFails.push(`${card.ref} — ${st.detail}`);
+        }
+      }
     } else if (files.length > 0) {
       delete watch.stuckSince[card.ref];
     }
@@ -336,14 +363,22 @@ async function syncIssuedCard(
       // vanish with the sync run that found it.
       if (!emailed) {
         watch.emailFailed[card.ref] = { at: now, why };
+        // No threshold on this one. The files are downloadable and the client
+        // has no idea — that is stuck the moment it happens, and the issued
+        // email never retries.
+        const st = await monday.markStuck(card.itemId);
+        if (st.ok && st.wrote) res.markedStuck.push(card.ref);
+        else if (!st.ok && st.reason === "failed") {
+          res.boardWriteFails.push(`${card.ref} — ${st.detail}`);
+        }
       } else {
         delete watch.emailFailed[card.ref];
 
-        // Files are here and the client has been told: "Send?" -> READY, and
-        // "Job Sent" gets today. Only once the email actually went — a card
-        // marked ready for a client who was never told is the one wrong answer
-        // this column can give. DOWNLOADED comes later, from the download
-        // route, and the ladder only ever moves forward.
+        // Files are here and the client has been told: PORTAL -> READY.
+        // Only once the email actually went — a card marked ready for a client
+        // who was never told is the one wrong answer this column can give. It
+        // also clears STUCK, if this job had been flagged. DOWNLOADED comes
+        // later, from the download route.
         const r = await monday.markReady(card.itemId);
         if (!r.ok && r.reason === "failed") {
           res.boardWriteFails.push(`${card.ref} — ${r.detail}`);

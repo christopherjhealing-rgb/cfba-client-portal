@@ -650,7 +650,7 @@ export interface WatchState {
   stuckSince: Record<string, string>;
   /** ref -> the client was never told it was ready. */
   emailFailed: Record<string, WatchNote>;
-  /** ref -> a "Send?" write the board wouldn't take. */
+  /** ref -> a PORTAL write the board wouldn't take. */
   boardFailed: Record<string, WatchNote>;
 }
 

@@ -247,7 +247,7 @@ export function dailyReportEmail(r: {
         section("Issued but not in the portal", "The board says these are issued. The portal has no files, so the client can't download anything. Check the job's Issued folder." + older(r.stuckOlder), r.stuck, "red", r.stuckOlder),
         section("In the portal but the client wasn't told", "The files are there and downloadable. The ready email didn't send, and it won't retry — ring or email them.", r.untold, "red"),
         section("Ready, but nobody's opened it", "Not necessarily wrong. If it keeps appearing, check we have the right email address for them." + older(r.unopenedOlder), r.unopened, "amber", r.unopenedOlder),
-        section("The board wouldn't take a write", "The job is fine for the client. Monday's Send? column just doesn't show where it's up to — set it by hand.", r.boardFails, "amber"),
+        section("The board wouldn't take a write", "The job is fine for the client. Monday's PORTAL column just doesn't show where it's up to — set it by hand.", r.boardFails, "amber"),
         r.enquiriesWaiting > 0
           ? `<div style="border-left:3px solid #C9A227;background:#FBF4E6;padding:14px 18px;margin:0 0 16px">
                <p style="margin:0;font-size:15px"><strong>${r.enquiriesWaiting} enquir${r.enquiriesWaiting === 1 ? "y is" : "ies are"} waiting on an answer</strong></p>

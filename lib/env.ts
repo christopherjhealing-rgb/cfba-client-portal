@@ -13,12 +13,19 @@ export const env = {
   mondayBoardId: process.env.MONDAY_BOARD_ID || "7129862365",
   mondayNewGroup: process.env.MONDAY_NEW_GROUP || "topics",
 
-  // The two rungs of the board's "Send?" column that the portal writes. These
-  // labels are typed onto the board by a human, so their spelling lives here
-  // rather than in code: if the column ends up reading "Ready to Download",
-  // that's a Vercel setting away from working instead of a deploy.
-  sendReadyLabel: process.env.SEND_READY_LABEL || "READY",
-  sendDownloadedLabel: process.env.SEND_DOWNLOADED_LABEL || "DOWNLOADED",
+  // The board's PORTAL column — where a job is up to in the client portal.
+  // The portal writes every one of these; nothing here is a manual step. The
+  // labels are typed onto the board by a person, so their spelling lives here
+  // rather than in code: a renamed label is a Vercel setting, not a deploy.
+  portalColumnId: process.env.PORTAL_COLUMN_ID || "color_mm5w73hm",
+  portalIssuedLabel: process.env.PORTAL_ISSUED_LABEL || "ISSUED",
+  portalReadyLabel: process.env.PORTAL_READY_LABEL || "READY",
+  portalDownloadedLabel: process.env.PORTAL_DOWNLOADED_LABEL || "DOWNLOADED",
+  portalStuckLabel: process.env.PORTAL_STUCK_LABEL || "STUCK",
+  // How long a job may sit issued-but-not-in-the-portal before the board is
+  // told it's STUCK. Must clear BOTH ordinary waits — the issue hold and the
+  // OneDrive settle window — or normal jobs get flagged on their way through.
+  portalStuckAfterMinutes: Number(process.env.PORTAL_STUCK_AFTER_MINUTES || "45"),
 
   // The evening report to the office: everything that should have reached a
   // client today and didn't. Off until DAILY_REPORT_ENABLED=1. Sends to

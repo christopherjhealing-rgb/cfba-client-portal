@@ -370,43 +370,56 @@ payment.
 
 ---
 
-## 8. The board's "Send?" column — status: shipped 2 Aug 2026
+## 8. The board's PORTAL column — status: shipped 3 Aug 2026
 
-**What.** Monday column `status_16__1` ("Send?") with its date partner
-`date__1` ("Job Sent") is where a job's journey *to the client* is recorded.
-Not the main Status column, which tracks the assessment and carries no Sent
-label — an earlier version of this code wrote there and silently did nothing
-for its whole life.
+**What.** Monday column `color_mm5w73hm` ("PORTAL") answers one question —
+where is this job up to in the client portal? — and that is a question only the
+portal can answer, so **the portal writes all of it**. Nothing is a manual
+step: a column somebody has to remember to update is a column that goes stale
+and then gets ignored.
 
-**The ladder.** `NO` → `YES` → `SENT` → `READY` → `DOWNLOADED`. The office
-sets SENT by hand when it issues a job and puts the files out. The portal
-writes the last two, because they are the only two it can see:
+It replaced the earlier `Send?` / `Job Sent` pair, which mixed the office's own
+pre-flight flag in with the portal's progress and needed a human to move the
+first rung. Neither of those columns is written to any more.
 
-- **READY** — the portal HAS the files *and* the client has been emailed.
-  Written from `lib/sync.ts` on the transition into issued, only once the
-  email actually went. A card marked ready for a client who was never told is
-  the one wrong answer this column can give.
-- **DOWNLOADED** — written from `app/api/jobs/[ref]/download` on first
-  download.
+**The rungs.**
 
-The gap between SENT and READY is the point. It is exactly where job 56733 sat
-for a night in July: the card said issued, the files were in the folder, and
+| Label | Written when | Written by |
+|---|---|---|
+| `ISSUED` | the sync sees the card at Status = Issued and picks it up | `lib/sync.ts` |
+| `READY` | the portal HAS the files **and** the client has been emailed | `lib/sync.ts` |
+| `DOWNLOADED` | the client actually downloads it | `app/api/jobs/[ref]/download` |
+| `STUCK` | see below | `lib/sync.ts` |
+
+The gap between ISSUED and READY is the point. It is exactly where job 56733
+sat for a night: the card said issued, the files were in the folder, and
 nothing anywhere said the client still couldn't get them.
 
-**Rules.** Forward only — never rewrites a rung reached, never drags a card
-back, and leaves a label that isn't on the ladder alone (somebody put it there
-on purpose). `create_labels_if_missing` stays off, so a rung the board doesn't
-carry fails loudly in the admin banner and the evening report rather than
-appearing on a 3,700-item board unasked. `NO` and `YES` are retired from the
-board but stay in the ladder deliberately — a card that kept an old value must
-still be able to move forward; see the note in `lib/core.mjs`.
+**STUCK is not a rung.** It is a flag that replaces whatever rung a job had
+reached, and — alone among these labels — it is **reversible**: when the
+problem clears, the portal writes the rung the job should be at, which is why
+`portalColumnWrite` allows STUCK → anything. Three things set it:
 
-**Where.** `lib/core.mjs` (`sendLadder`, `sendRank`, `sendColumnWrite`),
-`lib/monday.ts` (`markReady`, `markDownloaded`), `lib/env.ts` for the two
-overridable label spellings. `Job Sent` is stamped in Perth time, not UTC, and
-only when empty.
+- **immediately** when the ready email fails (the files are downloadable and
+  the client has no idea, and that email never retries);
+- **immediately** when the sync can't read a card at all — a locked or
+  unreadable file in the Issued folder;
+- **after `PORTAL_STUCK_AFTER_MINUTES`** (default 45) when a card is issued and
+  the portal still has no files. The threshold has to clear BOTH ordinary waits
+  — `ISSUE_HOLD_MINUTES` and the 5-minute OneDrive settle window — or normal
+  jobs get flagged on their way through.
 
----
+It is never written over `DOWNLOADED`: nothing is stuck once the client has it.
+
+**Rules.** Forward only otherwise — never rewrites a rung reached, never drags
+a card back, and leaves a label that isn't on the ladder alone (somebody put it
+there on purpose). `create_labels_if_missing` stays off, so a label the board
+doesn't carry fails loudly in the admin banner and the evening report rather
+than appearing on a 3,800-item board unasked.
+
+**Where.** `lib/core.mjs` (`portalLadder`, `portalRank`, `portalColumnWrite`),
+`lib/monday.ts` (`markIssued`, `markReady`, `markDownloaded`, `markStuck`),
+`lib/env.ts` for the column id and the four overridable label spellings.
 
 ## 9. General enquiry channel — status: shipped 2 Aug 2026
 

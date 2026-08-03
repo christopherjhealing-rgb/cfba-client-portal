@@ -157,8 +157,9 @@ git push -u origin main
 | `MAIL_FROM` | the real tenant mailbox notifications send as, e.g. `admin@cfba.com.au` |
 | `OFFICE_EMAIL` | the inbox somebody actually watches — client replies, general enquiries and the evening report all land here |
 | `DAILY_REPORT_ENABLED` | `1` to switch the 5pm weekday report on. Leave unset and it builds without sending; you can preview it from `/admin` either way |
-| `SEND_READY_LABEL` | only if the board's **Send?** column spells that rung differently — confirmed `READY` on 2 Aug 2026, so normally leave unset |
-| `SEND_DOWNLOADED_LABEL` | as above — confirmed `DOWNLOADED` |
+| `PORTAL_COLUMN_ID` | the board's **PORTAL** column — `color_mm5w73hm`, already the default |
+| `PORTAL_*_LABEL` | only if the board spells a label differently — confirmed `ISSUED` / `READY` / `DOWNLOADED` / `STUCK` on 3 Aug 2026, so normally leave unset |
+| `PORTAL_STUCK_AFTER_MINUTES` | grace before a stalled job is flagged STUCK (default 45) |
 
 Plus any Graph mail variables in your v11 `.env.example` that aren't listed here. **Work from the file, not this table.**
 

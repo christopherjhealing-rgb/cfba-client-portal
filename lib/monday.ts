@@ -1,7 +1,7 @@
 // Monday client. Reads the board for status and writes a new card when a
 // portal submission is accepted. Column ids match the live CFBA / EWA board.
 import { env, MONDAY_READY, DEMO_MODE } from "./env";
-import { sendColumnWrite, sendLadder } from "./core.mjs";
+import { portalColumnWrite, portalLadder } from "./core.mjs";
 
 const API = "https://api.monday.com/v2";
 
@@ -19,11 +19,10 @@ const COL = {
   description: "text0__1",
   files: "file_mksmhvsk", // "Files" column — lodged documents land here
   people: "multiple_person_mkstvc5z",
-  // "Send?" (NO / YES / SENT) and its date partner "Job Sent". These are the
-  // office's own record of the package reaching the client — not the main
-  // Status column, which tracks the assessment and has no Sent label.
-  sendStatus: "status_16__1",
-  sentDate: "date__1",
+  // "PORTAL" — where a job is up to in the client portal. The portal writes
+  // every rung of it; see lib/core.mjs. Not the main Status column, which
+  // tracks the assessment, and no longer the old "Send?" / "Job Sent" pair.
+  portal: env.portalColumnId,
 };
 
 async function gql<T = Record<string, unknown>>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -332,82 +331,55 @@ export async function listUpdates(itemIds: string[]): Promise<MondayUpdate[]> {
   return out;
 }
 
-export type SendWrite =
+export type PortalWrite =
   | { ok: true; wrote: boolean; skipped?: "already" | "unknown" }
   | { ok: false; reason: "off" | "failed"; detail?: string };
 
 /** The ladder as this deployment's board spells it. See lib/core.mjs. */
-const LADDER = sendLadder(env.sendReadyLabel, env.sendDownloadedLabel);
-
-/** Today, in Perth. Not UTC: before 8am here the UTC date is still yesterday,
- *  and a board saying a job went out the day before it did is worse than no
- *  date at all. */
-function perthToday(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Perth" })
-    .format(new Date());
-}
+const LADDER = portalLadder(
+  env.portalIssuedLabel, env.portalReadyLabel, env.portalDownloadedLabel
+);
 
 /**
- * Move a card along the "Send?" ladder — forward only, never backwards, never
- * creating a label the board doesn't already carry.
+ * Move a card along the PORTAL column — forward only, never backwards, never
+ * creating a label the board doesn't already carry. STUCK is the exception
+ * both ways: it can replace a rung, and a rung can replace it.
  *
  * Never throws. Nothing here is worth costing a client their files or an
  * office their sync run: a board that is down is something to read in the log
  * and in the evening report.
  */
-async function markSend(
-  itemId: string, target: string, opts: { stampDate?: boolean } = {}
-): Promise<SendWrite> {
+async function markPortal(itemId: string, target: string): Promise<PortalWrite> {
   if (!CAN_WRITE) return { ok: false, reason: "off" };
   try {
     const board = env.mondayBoardId;
     const read = `query ($ids: [ID!]) {
-      items (ids: $ids) { column_values (ids: ["${COL.sendStatus}", "${COL.sentDate}"]) { id text } } }`;
+      items (ids: $ids) { column_values (ids: ["${COL.portal}"]) { id text } } }`;
     const got = await gql<{ items: { column_values: { id: string; text: string | null }[] }[] }>(
       read, { ids: [itemId] });
-    // Matched by id, not position: Monday makes no promise that column_values
-    // comes back in the order it was asked for, and reading the date as the
-    // status would strand every card wherever it already sits.
-    const cols = got.items?.[0]?.column_values || [];
-    const at = (id: string) => cols.find((c) => c.id === id)?.text || "";
-    const current = at(COL.sendStatus);
-    const dateNow = at(COL.sentDate);
+    const current =
+      (got.items?.[0]?.column_values || []).find((c) => c.id === COL.portal)?.text || "";
 
-    const decision = sendColumnWrite(current, target, LADDER);
+    const decision = portalColumnWrite(current, target, LADDER, env.portalStuckLabel);
     if (decision === "already") return { ok: true, wrote: false, skipped: "already" };
     if (decision === "unknown") {
       console.info(
-        `monday: ${itemId} "Send?" reads "${current}", which isn't on the ladder ` +
-        `(${LADDER.join(" → ")}) — left as the office has it.`
+        `monday: ${itemId} PORTAL reads "${current}", which isn't on the ladder ` +
+        `(${LADDER.join(" → ")}, or ${env.portalStuckLabel}) — left as the office has it.`
       );
       return { ok: true, wrote: false, skipped: "unknown" };
     }
     if (decision === "unknown-target") {
-      return { ok: false, reason: "failed", detail: `"${target}" isn't on the Send? ladder` };
+      return { ok: false, reason: "failed", detail: `"${target}" isn't a PORTAL label` };
     }
 
-    const q = `
-      mutation ($board: ID!, $item: ID!, $col: String!, $val: JSON!) {
-        change_column_value(board_id: $board, item_id: $item, column_id: $col,
-                            value: $val, create_labels_if_missing: false) { id }
-      }`;
-    await gql(q, {
-      board, item: itemId, col: COL.sendStatus, val: JSON.stringify({ label: target }),
-    });
-
-    // "Job Sent" is the day the client could first get it, so it's stamped
-    // when the portal writes READY — and only if it's empty, because a date
-    // the office typed is theirs, not ours to correct.
-    if (opts.stampDate && !dateNow.trim()) {
-      try {
-        await gql(q, {
-          board, item: itemId, col: COL.sentDate,
-          val: JSON.stringify({ date: perthToday() }),
-        });
-      } catch (e) {
-        console.warn(`monday: Job Sent date not written for ${itemId}:`, (e as Error).message);
-      }
-    }
+    await gql(
+      `mutation ($board: ID!, $item: ID!, $col: String!, $val: JSON!) {
+         change_column_value(board_id: $board, item_id: $item, column_id: $col,
+                             value: $val, create_labels_if_missing: false) { id }
+       }`,
+      { board, item: itemId, col: COL.portal, val: JSON.stringify({ label: target }) }
+    );
     return { ok: true, wrote: true };
   } catch (e) {
     const detail = (e as Error).message;
@@ -416,10 +388,15 @@ async function markSend(
   }
 }
 
-/** The portal has the files and the client has been told. Stamps "Job Sent". */
-export const markReady = (itemId: string) =>
-  markSend(itemId, env.sendReadyLabel, { stampDate: true });
+/** The portal has seen the card at Issued and is working on it. */
+export const markIssued = (itemId: string) => markPortal(itemId, env.portalIssuedLabel);
+
+/** The portal has the files and the client has been told. */
+export const markReady = (itemId: string) => markPortal(itemId, env.portalReadyLabel);
 
 /** The client has actually taken it. */
-export const markDownloaded = (itemId: string) =>
-  markSend(itemId, env.sendDownloadedLabel);
+export const markDownloaded = (itemId: string) => markPortal(itemId, env.portalDownloadedLabel);
+
+/** Something has gone wrong and a human needs to look. Reversible: whichever
+ *  rung the job reaches next clears it. */
+export const markStuck = (itemId: string) => markPortal(itemId, env.portalStuckLabel);

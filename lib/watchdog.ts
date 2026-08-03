@@ -41,7 +41,7 @@ export interface DailyReport {
    *  when it isn't. */
   stuckOlder: number;
   unopenedOlder: number;
-  /** A "Send?" write the board wouldn't take. */
+  /** A PORTAL write the board wouldn't take. */
   boardFails: ReportLine[];
   /** Enquiries waiting on an answer. */
   enquiriesWaiting: number;

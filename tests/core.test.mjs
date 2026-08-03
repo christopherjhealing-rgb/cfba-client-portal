@@ -5,13 +5,15 @@ import {
   addMonths, retention, jobBucket, groupJobs, isClientVisible,
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
-  canCancel, sendColumnWrite, sendLadder, sendRank, SEND_READY, SEND_DOWNLOADED,
+  canCancel, portalColumnWrite, portalLadder, portalRank,
+  PORTAL_ISSUED, PORTAL_READY, PORTAL_DOWNLOADED, PORTAL_STUCK,
   isGeneralRef, GENERAL_REF, HIDDEN_STATUSES,
 } from "../lib/core.mjs";
 
-// The labels the live board's status column actually carries, read from
-// board 7129862365 on 2 Aug 2026. Note what is NOT here: "Sent" — that lives
-// on its own column, "Send?", which is what the portal writes to.
+// The labels the live board's Status column actually carries, read from board
+// 7129862365 on 3 Aug 2026. Status tracks the ASSESSMENT. Where a job is up to
+// in the client portal lives on its own column, PORTAL, which is what the
+// portal writes to — see the ladder tests below.
 const BOARD_LABELS = [
   "To Assess", "Invoiced / Completed", "To CDC", "To Invoice", "On Hold",
   "FIR", "To FIR", "Amendment", "New Info Received", "To Issue", "To Check",
@@ -84,7 +86,7 @@ test("isClientVisible hides Query unless downloaded", () => {
   assert.equal(isClientVisible({ mondayStatus: "Query", fileCount: 1, firstDownloadedAt: "2026-07-01T00:00:00Z" }), true);
 });
 
-// --- moving a card to Sent on download ------------------------------------
+// --- status matching -------------------------------------------------------
 
 test("a status matches however the office capitalised it on the board", () => {
   // The board says QUERY in capitals; this file said "Query". The lookup was
@@ -113,73 +115,82 @@ test("every label the live board carries reaches the client as words", () => {
   }
 });
 
-test("the Send? ladder runs in the order the office works in", () => {
-  assert.deepEqual(sendLadder(), ["NO", "YES", "SENT", "READY", "DOWNLOADED"]);
-  // The office types these labels onto the board, so the spelling is settable.
+test("the PORTAL ladder runs in the order a job travels", () => {
+  assert.deepEqual(portalLadder(), ["ISSUED", "READY", "DOWNLOADED"]);
+  // The office types these onto the board, so the spelling is settable.
   assert.deepEqual(
-    sendLadder("Ready to Download", "Downloaded"),
-    ["NO", "YES", "SENT", "Ready to Download", "Downloaded"]);
+    portalLadder("Issued", "Ready to download", "Downloaded"),
+    ["Issued", "Ready to download", "Downloaded"]);
 });
 
-test("sendColumnWrite moves a card forward along the ladder", () => {
-  // The office sets SENT by hand when it issues; the portal takes it from
-  // there. Blank is the commonest starting point of all.
-  assert.equal(sendColumnWrite("", SEND_READY), "write");
-  assert.equal(sendColumnWrite(null, SEND_READY), "write");
-  assert.equal(sendColumnWrite("NO", SEND_READY), "write");
-  assert.equal(sendColumnWrite("YES", SEND_READY), "write");
-  assert.equal(sendColumnWrite("SENT", SEND_READY), "write");
-  assert.equal(sendColumnWrite("READY", SEND_DOWNLOADED), "write");
+test("portalColumnWrite moves a card forward along the ladder", () => {
+  assert.equal(portalColumnWrite("", PORTAL_ISSUED), "write");
+  assert.equal(portalColumnWrite(null, PORTAL_ISSUED), "write");
+  assert.equal(portalColumnWrite("ISSUED", PORTAL_READY), "write");
+  assert.equal(portalColumnWrite("READY", PORTAL_DOWNLOADED), "write");
   // Monday hands back whatever the label reads as, so match on shape not case.
-  assert.equal(sendColumnWrite(" sent ", SEND_READY), "write");
+  assert.equal(portalColumnWrite(" issued ", PORTAL_READY), "write");
 });
 
-test("sendColumnWrite never drags a card backwards", () => {
-  // The whole safety story. A client re-downloading, a sync re-running, an
-  // office that moved the card on — none of them may undo where it's got to.
-  assert.equal(sendColumnWrite("READY", SEND_READY), "already");
-  assert.equal(sendColumnWrite("DOWNLOADED", SEND_READY), "already");
-  assert.equal(sendColumnWrite("DOWNLOADED", SEND_DOWNLOADED), "already");
-  assert.equal(sendColumnWrite("downloaded", SEND_READY), "already");
+test("portalColumnWrite never drags a card backwards", () => {
+  // The whole safety story. A re-run, a re-download, an office that moved the
+  // card on — none of them may undo where it has got to.
+  assert.equal(portalColumnWrite("READY", PORTAL_READY), "already");
+  assert.equal(portalColumnWrite("READY", PORTAL_ISSUED), "already");
+  assert.equal(portalColumnWrite("DOWNLOADED", PORTAL_READY), "already");
+  assert.equal(portalColumnWrite("DOWNLOADED", PORTAL_ISSUED), "already");
+  assert.equal(portalColumnWrite("downloaded", PORTAL_DOWNLOADED), "already");
 });
 
-test("sendColumnWrite leaves a label it doesn't recognise alone", () => {
+test("STUCK flags a job that is issued and hasn't got there", () => {
+  assert.equal(portalColumnWrite("", PORTAL_STUCK), "write");
+  assert.equal(portalColumnWrite("ISSUED", PORTAL_STUCK), "write");
+  assert.equal(portalColumnWrite("READY", PORTAL_STUCK), "write");
+  // Saying it twice is not news.
+  assert.equal(portalColumnWrite("STUCK", PORTAL_STUCK), "already");
+  assert.equal(portalColumnWrite("stuck", PORTAL_STUCK), "already");
+});
+
+test("STUCK is never written over a job the client already has", () => {
+  // Whatever went wrong stopped mattering the moment they downloaded it.
+  assert.equal(portalColumnWrite("DOWNLOADED", PORTAL_STUCK), "already");
+});
+
+test("a stuck job can recover — the one move that isn't forward", () => {
+  // Every other rule here is forward-only. This is the exception, and it has
+  // to exist or a job that unsticks stays flagged for ever.
+  assert.equal(portalColumnWrite("STUCK", PORTAL_READY), "write");
+  assert.equal(portalColumnWrite("STUCK", PORTAL_ISSUED), "write");
+  assert.equal(portalColumnWrite("STUCK", PORTAL_DOWNLOADED), "write");
+});
+
+test("portalColumnWrite leaves a label it doesn't recognise alone", () => {
   // Somebody put that there on purpose. That's a decision, not a gap to fill.
-  assert.equal(sendColumnWrite("ON HOLD", SEND_READY), "unknown");
-  assert.equal(sendColumnWrite("Posted", SEND_DOWNLOADED), "unknown");
+  assert.equal(portalColumnWrite("ON HOLD", PORTAL_READY), "unknown");
+  assert.equal(portalColumnWrite("Posted", PORTAL_STUCK), "unknown");
 });
 
-test("sendColumnWrite refuses a rung that isn't on the ladder", () => {
-  // A caller bug, not a board problem. Refuse rather than guess — and the
-  // board would reject it anyway, since we never create labels.
-  assert.equal(sendColumnWrite("SENT", "POSTED"), "unknown-target");
-  assert.equal(sendColumnWrite("", ""), "unknown-target");
+test("portalColumnWrite refuses a label that isn't on the ladder", () => {
+  assert.equal(portalColumnWrite("ISSUED", "POSTED"), "unknown-target");
+  assert.equal(portalColumnWrite("", ""), "unknown-target");
 });
 
-test("sendColumnWrite honours a board that spells the rungs differently", () => {
-  const ladder = sendLadder("Ready to Download", "Downloaded");
-  assert.equal(sendColumnWrite("SENT", "Ready to Download", ladder), "write");
-  assert.equal(sendColumnWrite("Ready to Download", "Ready to Download", ladder), "already");
-  assert.equal(sendColumnWrite("Ready to Download", "Downloaded", ladder), "write");
+test("portalColumnWrite honours a board that spells the rungs differently", () => {
+  const l = portalLadder("Issued", "Ready to download", "Downloaded");
+  assert.equal(portalColumnWrite("Issued", "Ready to download", l), "write");
+  assert.equal(portalColumnWrite("Ready to download", "Issued", l), "already");
+  assert.equal(portalColumnWrite("STUCK", "Ready to download", l), "write");
   // The default spelling is not on THIS board, so it isn't a rung here.
-  assert.equal(sendColumnWrite("READY", "Downloaded", ladder), "unknown");
+  assert.equal(portalColumnWrite("READY", "Downloaded", l), "unknown");
 });
 
-test("a card still carrying a retired label can still move forward", () => {
-  // NO and YES came off the board in Aug 2026. Cards that kept the value must
-  // not be stranded by that: if these ever return "unknown", the portal quietly
-  // stops moving them and nothing anywhere says so.
-  assert.equal(sendColumnWrite("NO", SEND_READY), "write");
-  assert.equal(sendColumnWrite("YES", SEND_READY), "write");
-  assert.equal(sendColumnWrite("NO", SEND_DOWNLOADED), "write");
-});
-
-test("sendRank places every rung and nothing else", () => {
-  assert.equal(sendRank("NO"), 0);
-  assert.equal(sendRank("SENT"), 2);
-  assert.equal(sendRank("DOWNLOADED"), 4);
-  assert.equal(sendRank(""), -1);
-  assert.equal(sendRank("ON HOLD"), -1);
+test("portalRank places every rung and nothing else", () => {
+  assert.equal(portalRank("ISSUED"), 0);
+  assert.equal(portalRank("READY"), 1);
+  assert.equal(portalRank("DOWNLOADED"), 2);
+  assert.equal(portalRank(""), -1);
+  assert.equal(portalRank("STUCK"), -1);   // deliberately not a rung
+  assert.equal(portalRank("ON HOLD"), -1);
 });
 
 // --- the general enquiry channel -------------------------------------------

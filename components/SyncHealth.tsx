@@ -8,7 +8,7 @@ interface LastSync {
   unmatched?: { ref: string; client: string }[];
   issuedNoFiles?: string[]; stillSyncing?: string[]; holding?: string[];
   emailsSent?: number; emailFails?: string[]; boardWriteFails?: string[];
-  cardFails?: string[];
+  cardFails?: string[]; markedStuck?: string[];
 }
 
 function ago(iso?: string): string {
@@ -115,6 +115,15 @@ export function SyncHealth({
         </div>
       )}
 
+      {(last?.markedStuck?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-flag/40 bg-[#FBECEC] px-4 py-3 text-[13px] text-flag">
+          <strong>Flagged STUCK on the Board</strong> — the PORTAL column now
+          reads STUCK for: {last?.markedStuck?.join(", ")}. Each is issued and
+          the client still can&apos;t get it. Fix the cause and the portal
+          clears the flag itself on the next run.
+        </div>
+      )}
+
       {(last?.emailFails?.length ?? 0) > 0 && (
         <div className="mt-3 rounded-lg border border-flag/40 bg-[#FBECEC] px-4 py-3 text-[13px] text-flag">
           <strong>Issued email didn&apos;t send</strong> — the job is downloadable
@@ -126,10 +135,10 @@ export function SyncHealth({
 
       {(last?.boardWriteFails?.length ?? 0) > 0 && (
         <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
-          <strong>Board Not Marked Sent</strong> — the client has these and was
-          emailed, but Monday&apos;s <em>Send?</em> column still doesn&apos;t
-          say so: {last?.boardWriteFails?.join("; ")}. Set it to SENT by hand so
-          nobody chases a job that already went.
+          <strong>Board Not Updated</strong> — these jobs are fine for the
+          client, but Monday&apos;s <em>PORTAL</em> column doesn&apos;t show
+          where they&apos;re up to: {last?.boardWriteFails?.join("; ")}. Set it
+          by hand so nobody chases a job that already went.
         </div>
       )}
 
