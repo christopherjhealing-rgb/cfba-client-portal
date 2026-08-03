@@ -9,6 +9,8 @@ import {
   PORTAL_ISSUED, PORTAL_READY, PORTAL_DOWNLOADED, PORTAL_STUCK,
   isGeneralRef, GENERAL_REF, HIDDEN_STATUSES, hasCertificate,
   INFO_RECEIVED_STATUS, AWAITING_REPLY_STATUSES,
+  checkWebhook, teamsPrefersLegacy, teamsTrim, teamsAdaptiveCard, teamsMessageCard,
+  TEAMS_EVENTS, TEAMS_DEFAULT_EVENTS,
 } from "../lib/core.mjs";
 
 // The labels the live board's Status column actually carries, read from board
@@ -487,4 +489,108 @@ test("the counter never goes negative, and a rubbish record is ignored", () => {
   assert.equal(elapsedBusinessDays(from, { days: "x", since: null }, now), 2);
   assert.equal(elapsedBusinessDays(from, { since: null }, now), 2);
   assert.equal(elapsedBusinessDays("not a date", { days: 2, since: null }, now), null);
+});
+
+// ---------------------------------------------------------------------------
+// Teams notifications
+// ---------------------------------------------------------------------------
+
+test("a webhook may only point at Microsoft", () => {
+  const good = [
+    "https://prod-23.australiasoutheast.logic.azure.com/workflows/abc/triggers/manual/paths/invoke?sig=x",
+    "https://cfba.webhook.office.com/webhookb2/abc@def/IncomingWebhook/ghi/jkl",
+    "https://something.powerplatform.com/hook/abc",
+  ];
+  for (const u of good) assert.equal(checkWebhook(u).ok, true, `should allow ${u}`);
+
+  // Everything here would have had client names, addresses and message text
+  // posted to it. The suffix match is on a dotted suffix precisely so the
+  // third and fourth can't sneak through by containing the right string.
+  const bad = [
+    "https://hooks.slack.com/services/T/B/x",
+    "http://prod-23.logic.azure.com/workflows/abc",     // not https
+    "https://logic.azure.com.attacker.test/workflows",  // suffix-lookalike
+    "https://evil.test/?x=.logic.azure.com",            // string appears in the query
+    "not a url",
+    "",
+  ];
+  for (const u of bad) assert.equal(checkWebhook(u).ok, false, `should refuse ${u}`);
+});
+
+test("the card format is chosen by the kind of webhook it is", () => {
+  assert.equal(teamsPrefersLegacy("https://cfba.webhook.office.com/webhookb2/a/b"), true);
+  assert.equal(teamsPrefersLegacy("https://prod-23.logic.azure.com/workflows/a"), false);
+  assert.equal(teamsPrefersLegacy("rubbish"), false);
+});
+
+test("long client text is cut, not sent whole", () => {
+  const long = "a".repeat(900);
+  assert.equal(teamsTrim(long).length, 400);
+  assert.match(teamsTrim(long), /…$/);
+  // Newlines and runs of spaces collapse — a card is one block, not a letter.
+  assert.equal(teamsTrim("  two\n\n  lines  "), "two lines");
+  assert.equal(teamsTrim(undefined), "");
+});
+
+const NOTE = {
+  title: "Bloggs Building lodged a job",
+  facts: [["Site", "12 Kembla Way"], ["Class", ""], ["Files", "3"]],
+  text: "Patio to rear.",
+  link: { label: "Open the queue", url: "https://portal.test/admin" },
+};
+
+test("an adaptive card carries the title, the facts that have values, and the link", () => {
+  const card = teamsAdaptiveCard(NOTE);
+  assert.equal(card.type, "message");
+  const content = card.attachments[0].content;
+  assert.equal(card.attachments[0].contentType, "application/vnd.microsoft.card.adaptive");
+  assert.equal(content.type, "AdaptiveCard");
+  assert.equal(content.body[0].text, NOTE.title);
+  // The empty Class row is dropped rather than printed as a blank line.
+  assert.deepEqual(content.body[1].facts, [
+    { title: "Site", value: "12 Kembla Way" },
+    { title: "Files", value: "3" },
+  ]);
+  assert.equal(content.body[2].text, "Patio to rear.");
+  assert.equal(content.actions[0].url, "https://portal.test/admin");
+});
+
+test("a message card says the same things in the old shape", () => {
+  const card = teamsMessageCard(NOTE);
+  assert.equal(card["@type"], "MessageCard");
+  const s = card.sections[0];
+  assert.equal(s.activityTitle, NOTE.title);
+  assert.deepEqual(s.facts, [
+    { name: "Site", value: "12 Kembla Way" },
+    { name: "Files", value: "3" },
+  ]);
+  // Client text is never markdown: a stray underscore or bracket in what
+  // somebody typed must not rewrite what the office reads.
+  assert.equal(s.markdown, false);
+  assert.equal(card.potentialAction[0].targets[0].uri, "https://portal.test/admin");
+});
+
+test("both formats survive a note with nothing but a title", () => {
+  const bare = { title: "Something happened" };
+  const a = teamsAdaptiveCard(bare);
+  assert.equal(a.attachments[0].content.body.length, 1);
+  assert.equal(a.attachments[0].content.actions, undefined);
+  const m = teamsMessageCard(bare);
+  assert.deepEqual(m.sections[0].facts, []);
+  assert.equal(m.sections[0].text, undefined);
+  assert.equal(m.potentialAction, undefined);
+  // Both must still be JSON — a card that can't serialise never posts.
+  assert.ok(JSON.parse(JSON.stringify(a)));
+  assert.ok(JSON.parse(JSON.stringify(m)));
+});
+
+test("the noisy notification is the only one off by default", () => {
+  const on = Object.entries(TEAMS_DEFAULT_EVENTS).filter(([, v]) => v).map(([k]) => k);
+  assert.deepEqual(on.sort(), ["enquiry", "lodged", "message", "stuck"]);
+  assert.equal(TEAMS_DEFAULT_EVENTS.downloaded, false);
+  // Every switch on the settings page must map to a real default, or it would
+  // read as on and behave as off.
+  for (const e of TEAMS_EVENTS) {
+    assert.equal(typeof TEAMS_DEFAULT_EVENTS[e.key], "boolean", `no default for ${e.key}`);
+  }
 });

@@ -8,6 +8,7 @@ import {
   type MailAttachment,
 } from "@/lib/mail";
 import { env } from "@/lib/env";
+import { notifyTeams } from "@/lib/teams";
 import { isGeneralRef, GENERAL_REF } from "@/lib/core.mjs";
 
 /**
@@ -37,13 +38,28 @@ async function loadAttachments(stored: repo.MessageFile[]): Promise<MailAttachme
 
 /** Email the office when a client replies. Monday doesn't notify the token
  *  owner of updates posted with its own token, so without this a client's FIR
- *  reply — the event that unblocks a job — can sit on the board unseen. */
+ *  reply — the event that unblocks a job — can sit on the board unseen.
+ *
+ *  Teams goes out from here too rather than from the call sites, so the two
+ *  can't drift apart: anything that notifies the office notifies the channel. */
 async function notifyOffice(
   companyName: string, ref: string, address: string, body: string,
   stored: repo.MessageFile[]
 ) {
-  if (!env.officeEmail) return;
   const fileNames = stored.map((f) => f.name);
+
+  await notifyTeams("message", {
+    title: `${companyName} replied on ${ref}`,
+    facts: [
+      ["Job", ref],
+      ["Site", address],
+      ["Attached", fileNames.join(", ")],
+    ],
+    text: body,
+    link: { label: "Open the job", url: `${env.appUrl}/admin` },
+  });
+
+  if (!env.officeEmail) return;
   try {
     const { attach } = fitAttachments(await loadAttachments(stored));
     const mail = officeReplyEmail({
@@ -63,6 +79,16 @@ async function notifyOffice(
 async function notifyOfficeEnquiry(
   companyName: string, subject: string, body: string, stored: repo.MessageFile[]
 ): Promise<boolean> {
+  await notifyTeams("enquiry", {
+    title: `Enquiry from ${companyName}`,
+    facts: [
+      ["Subject", subject],
+      ["Attached", stored.map((f) => f.name).join(", ")],
+    ],
+    text: body,
+    link: { label: "Open Enquiries", url: `${env.appUrl}/admin/enquiries` },
+  });
+
   if (!env.officeEmail) return false;
   const { attach } = fitAttachments(await loadAttachments(stored));
   const mail = officeEnquiryEmail({

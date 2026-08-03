@@ -98,3 +98,23 @@ export function elapsedBusinessDays(
 ): number | null;
 
 export function surveyorFor(peopleText: string | null | undefined, status: string | null | undefined): string | null;
+
+// --- Teams notifications (pure parts; transport lives in lib/teams.ts) ------
+
+export interface TeamsEventDef { key: string; label: string; detail: string }
+export const TEAMS_EVENTS: readonly TeamsEventDef[];
+export const TEAMS_DEFAULT_EVENTS: Record<string, boolean>;
+export const TEAMS_ALLOWED_HOSTS: readonly string[];
+
+export function checkWebhook(url: string): { ok: true } | { ok: false; why: string };
+export function teamsPrefersLegacy(url: string): boolean;
+export function teamsTrim(s: string, n?: number): string;
+
+export interface TeamsNoteShape {
+  title: string;
+  facts?: [string, string][];
+  text?: string;
+  link?: { label: string; url: string };
+}
+export function teamsAdaptiveCard(note: TeamsNoteShape): Record<string, unknown>;
+export function teamsMessageCard(note: TeamsNoteShape): Record<string, unknown>;

@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
+import { notifyTeams } from "@/lib/teams";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,6 +97,14 @@ export async function GET(
       console.warn(`download ${ref}: PORTAL not moved to DOWNLOADED — ${r.detail}`);
       await repo.noteBoardWriteFail(ref, r.detail || "unknown").catch(() => {});
     }
+
+    // First download only. Off by default: it's the one notification here that
+    // asks nothing of anybody, and one per job is a lot of nothing.
+    await notifyTeams("downloaded", {
+      title: `${session.companyName} downloaded ${ref}`,
+      facts: [["Job", ref], ["Site", job.address || ""]],
+      text: "Their certificate is in their hands — nothing to do.",
+    });
   }
 
   const safe = (job.address || ref).replace(/[^A-Za-z0-9 .-]/g, "").slice(0, 60).trim();

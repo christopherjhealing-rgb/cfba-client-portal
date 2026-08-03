@@ -6,6 +6,7 @@ import { acceptSubmission } from "@/lib/accept";
 import { env } from "@/lib/env";
 import { pageDisabled } from "@/lib/pages";
 import { listLibrary, libraryPath, type LibraryDoc } from "@/lib/library";
+import { notifyTeams } from "@/lib/teams";
 
 const OFFLINE = {
   error: "This section is temporarily offline while we make updates — please try again shortly.",
@@ -29,6 +30,30 @@ async function maybeAutoAccept(id: string): Promise<boolean> {
     console.error(`auto-accept failed for ${id} — left in the review queue:`, e);
     return false;
   }
+}
+
+/**
+ * Accept, then say so in Teams. Both lodgement paths go through here, so a
+ * lodgement can't be announced by one and quietly not by the other.
+ *
+ * Whether it reached the board is on the card, because those are two different
+ * things for whoever reads it: one is news, the other is a task.
+ */
+async function acceptAndAnnounce(id: string, companyName: string): Promise<boolean> {
+  const accepted = await maybeAutoAccept(id);
+  const sub = await repo.getSubmission(id).catch(() => null);
+  await notifyTeams("lodged", {
+    title: `${companyName} lodged a job`,
+    facts: [
+      ["Site", sub?.address || ""],
+      ["Class", sub?.jobClass || ""],
+      ["Files", String(sub?.files.length ?? 0)],
+      ["On the board", accepted ? "Yes" : "No — waiting in the review queue"],
+    ],
+    text: sub?.description || "",
+    link: { label: "Open the queue", url: `${env.appUrl}/admin` },
+  });
+  return accepted;
 }
 
 const PDF_ONLY = (name: string, type: string) =>
@@ -196,7 +221,7 @@ async function handle(req: Request) {
     amendmentOf,
   }, id);
 
-  const accepted = await maybeAutoAccept(id);
+  const accepted = await acceptAndAnnounce(id, session.companyName);
   return NextResponse.json({ ok: true, id, accepted });
 }
 
@@ -309,6 +334,6 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     amendmentOf,
   }, id);
 
-  const accepted = await maybeAutoAccept(id);
+  const accepted = await acceptAndAnnounce(id, session.companyName);
   return NextResponse.json({ ok: true, id, accepted });
 }

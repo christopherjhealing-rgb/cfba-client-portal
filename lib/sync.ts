@@ -17,6 +17,7 @@ import * as monday from "./monday";
 import { sendMail, updateEmail, issuedEmail } from "./mail";
 import * as graph from "./graph";
 import * as repo from "./repo";
+import { notifyTeams } from "./teams";
 
 export interface SyncResult {
   ok: boolean;
@@ -179,6 +180,23 @@ export async function runSync(): Promise<SyncResult> {
     });
   } catch (e) {
     console.warn("sync: could not persist health record:", (e as Error).message);
+  }
+
+  // One notification for the whole run, not one per card. A bad afternoon in
+  // SharePoint can mark a dozen jobs stuck at once, and twelve pings say less
+  // than one line naming twelve jobs.
+  if (res.markedStuck.length) {
+    await notifyTeams("stuck", {
+      title: res.markedStuck.length === 1
+        ? "A certificate couldn't be delivered"
+        : `${res.markedStuck.length} certificates couldn't be delivered`,
+      facts: [
+        ["Jobs", res.markedStuck.join(", ")],
+        ["Marked", "STUCK on the board"],
+      ],
+      text: "These are issued on the board but the portal hasn't been able to get them to the client. They're on tonight's report too.",
+      link: { label: "Open the portal", url: `${env.appUrl}/admin` },
+    });
   }
 
   return res;
