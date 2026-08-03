@@ -31,15 +31,42 @@ export default async function Messages({
     repo.getReadMarks(session.companyId),
   ]);
 
-  const refs = Array.from(new Set(msgs.map((m) => m.ref))).filter((r) => !isGeneralRef(r));
+  // Two clocks per thread: when anything last happened on it, which decides
+  // the order, and when WE last said something, which decides whether it's
+  // unread. Built in one pass rather than re-scanning the messages per ref.
+  const lastAt = new Map<string, string>();
+  const lastFromUs = new Map<string, string>();
+  for (const m of msgs) {
+    if (!lastAt.has(m.ref) || m.createdAt > lastAt.get(m.ref)!) lastAt.set(m.ref, m.createdAt);
+    if (m.from === "cfba" &&
+        (!lastFromUs.has(m.ref) || m.createdAt > lastFromUs.get(m.ref)!)) {
+      lastFromUs.set(m.ref, m.createdAt);
+    }
+  }
+  const isUnread = (ref: string) => {
+    const latest = lastFromUs.get(ref);
+    return !!latest && (!reads[ref] || reads[ref] < latest);
+  };
+
+  // Newest conversation first. These used to arrive in the order the threads
+  // were STARTED, so a job somebody messaged about months ago sat at the top
+  // and this morning's FIR was three down the list.
+  const refs = Array.from(new Set(msgs.map((m) => m.ref)))
+    .filter((r) => !isGeneralRef(r))
+    .sort((a, b) => (lastAt.get(b) || "").localeCompare(lastAt.get(a) || ""));
+
   // Honour ?ref= for ANY job this company owns — not only ones that already
   // have a thread. Previously an unknown ref silently fell back to refs[0],
   // so a link to a not-yet-messaged job opened a DIFFERENT job's thread and a
   // reply could post to the wrong Monday card.
   const ownsRef = (r?: string) => !!r && jobs.some((j) => j.ref === r);
+  // Arriving with nothing chosen — which is what the sidebar badge does —
+  // opens whatever put the badge there. Clicking a "1" and landing on a
+  // conversation from last month is how an FIR sits unread for a week.
+  const needsReading = [...refs, GENERAL_REF].find(isUnread);
   const open = isGeneralRef(sp.ref) ? GENERAL_REF
     : ownsRef(sp.ref) ? sp.ref
-    : refs[0] || GENERAL_REF;
+    : needsReading || refs[0] || GENERAL_REF;
   // Show the opened job in the thread list even if it has no messages yet, so
   // a deep-linked new conversation has somewhere to live. The enquiry thread
   // sits at the bottom and is always there: a client with a question and no
@@ -71,11 +98,6 @@ export default async function Messages({
   const thread = msgs.filter((m) => m.ref === open);
   const job = open ? jobFor(open) : undefined;
 
-  const isUnread = (ref: string) => {
-    const latest = msgs.filter((m) => m.ref === ref && m.from === "cfba")
-      .map((m) => m.createdAt).sort().pop();
-    return !!latest && (!reads[ref] || reads[ref] < latest);
-  };
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
@@ -106,6 +128,13 @@ export default async function Messages({
                     </span>
                     {isUnread(ref) && !active && (
                       <span className="h-1.5 w-1.5 rounded-full bg-brass" aria-label="Unread" />
+                    )}
+                    {/* The list runs newest first; without a date on it that
+                        order looks arbitrary. */}
+                    {lastAt.get(ref) && (
+                      <span className="ml-auto shrink-0 text-[11px] text-ink/40">
+                        {when(lastAt.get(ref)!).split(" · ")[0]}
+                      </span>
                     )}
                   </div>
                   <div className="mt-0.5 truncate text-[14px] font-medium text-ink">
