@@ -5,10 +5,12 @@
 <title>Go-live audit — check everything before the first client</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  ul.boxes { list-style: none; margin: 0 0 4mm; padding: 0; }
-  ul.boxes li { position: relative; padding: 1.1mm 0 1.1mm 7.5mm; font-size: 10.2pt; line-height: 1.45; }
+  /* Four sheets of tick boxes: the row rhythm is the only lever that matters,
+     and a page that overflows prints as two with a footer that lies. */
+  ul.boxes { list-style: none; margin: 0 0 3.2mm; padding: 0; }
+  ul.boxes li { position: relative; padding: 0.8mm 0 0.8mm 7.5mm; font-size: 10pt; line-height: 1.4; }
   ul.boxes li::before {
-    content: ""; position: absolute; left: 0; top: 2.1mm; width: 3.6mm; height: 3.6mm;
+    content: ""; position: absolute; left: 0; top: 1.7mm; width: 3.6mm; height: 3.6mm;
     border: 0.5mm solid #1E5B3C; border-radius: 0.8mm; background: #fff;
   }
   .pass { color: #1E5B3C; font-weight: 600; }
@@ -23,7 +25,8 @@
     <h1>Before the first client goes on</h1>
     <div class="goldrule"></div>
     <div class="sub">Work top to bottom with a pen. Every box ticked once, in order, and the
-    portal is ready. Page 1 is the plumbing; page 2 is the client journey, end to end.</div>
+    portal is ready. Plumbing first, then the client journey, then what we&#39;ve built
+    them — and section 6 has changed since you last read this.</div>
   </div>
 
   <div class="content">
@@ -75,7 +78,7 @@
 
   <div class="foot">
     <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — go-live audit</span>
-    <span>Page 1 of 2</span>
+    <span>Page 1 of 4</span>
   </div>
 </div>
 
@@ -113,28 +116,108 @@
       <li>"Download again" works, and the retention countdown shows under Downloads.</li>
     </ul>
 
-    <div class="sec">6 · Amendments</div>
+    <div class="sec">6 · Amendments — changed, do this one properly</div>
     <ul class="boxes">
-      <li>Lodge an amendment against the test job — a fresh card appears, linked to the
-        original, and shows under "What you've sent us" as an amendment.</li>
+      <li><strong>Settings → Amendments:</strong> Chris and Rebecca's email addresses in,
+        Rebecca set as the fallback. Until both are done, a lodged amendment sits silently
+        and the client thinks it's with us.</li>
+      <li><strong>Admin → Amendments → Rebuild Now.</strong> Builds each client's list of
+        past jobs so the picker pre-populates. Rebuilds itself at 5pm daily after that.</li>
+      <li>Only then switch <strong>Amend a Job</strong> on in Settings.</li>
+      <li>Lodge an amendment against the test job. Check: <em>no new Monday card</em>, one
+        note on the original card, and the email arrives with whoever is in
+        <strong>Certified By</strong> — or Rebecca when that column is empty.</li>
+      <li>Upload a revised certificate on the Amendments page — the client is emailed and
+        can download it beside the original.</li>
+      <li>Lodge one against a job we finished years ago, by reference — it finds the old
+        card and notes it.</li>
     </ul>
 
-    <div class="sec">7 · Content</div>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — go-live audit</span>
+    <span>Page 2 of 4</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="band band-slim">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">Internal — go-live audit</div>
+    <h1>What we&#39;ve built them, and going live</h1>
+    <div class="goldrule"></div>
+  </div>
+
+  <div class="content">
+    <div class="sec" style="margin-top:4mm">7 · The tools on Resources</div>
     <ul class="boxes">
-      <li>The six council forms (BA1, BA2, BA5, BA13, BA19, BA22) uploaded via /admin.</li>
+      <li><strong>Wind classification checker:</strong> run one you know the answer to. Confirm
+        the two DFES / Building and Energy links open.</li>
+      <li><strong>Soakwell calculator:</strong> both halves — new wells, and adding to a lot
+        that already has them. It sizes on Bayswater's 0.0125 throughout;
+        <strong>decide whether that stands for Wanneroo and Joondalup</strong> or ask them.</li>
+      <li><strong>Bushfire map check:</strong> an address goes through to Landgate's map.</li>
+      <li><strong>Site plan tool:</strong> draw one, print it, check the scale bar and the
+        dimensions are right on paper.</li>
+      <li><strong>FIR library:</strong> red-pen the 24 requests in Admin → FIR Library. They
+        go out over your name. Then test one live —
+        <span style="font-family:monospace">FIR: Soil Class</span> on a test card.</li>
+    </ul>
+
+    <div class="sec">8 · Content</div>
+    <ul class="boxes">
+      <li>The <strong>eight</strong> council forms — BA1, BA2, BA5, BA7, BA9, BA13, BA19,
+        BA22 — uploaded via /admin. Word or PDF; both work.</li>
       <li>Resources links click-through done — especially the ones flagged
         <span style="font-family:monospace">// confirm</span> in the code.</li>
       <li>All 14 info sheets open on a phone.</li>
-      <li>Guidance notes 08–14: figures verified by the registered surveyor.</li>
-      <li>Engineering: checker set uploaded in /admin, restriction set (or blank for all), opened and tested as the test client — or the toggle left <strong>off</strong>.</li>
+      <li>Guidance notes 08–14: figures verified by the registered surveyor.
+        <strong>Note 13</strong> in particular — the seven-day rule is BA7's, not BA13's.</li>
+      <li>The welcome guide (Content → Welcome Guide) still describes the portal accurately.
+        It predates the wind checker, the soakwell calculator and the amendment change.</li>
+      <li>Engineering: checker set uploaded in /admin, restriction set (or blank for all),
+        opened and tested as the test client — or the toggle left <strong>off</strong>. The
+        <span style="font-family:monospace">engineeringchecker</span> repo is still public
+        with Pages on — make it private.</li>
     </ul>
 
-    <div class="sec">8 · Housekeeping, then go</div>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — go-live audit</span>
+    <span>Page 3 of 4</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="band band-slim">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">Internal — go-live audit</div>
+    <h1>Content, notifications and go</h1>
+    <div class="goldrule"></div>
+  </div>
+
+  <div class="content">
+    <div class="sec" style="margin-top:4mm">9 · Notifications</div>
+    <ul class="boxes">
+      <li>Teams webhook connected and <strong>unmuted</strong> — Settings → Teams. Post a
+        test and confirm it lands in the right channel.</li>
+      <li>The 5pm report arrives on a weekday, even when there's nothing in it. An empty
+        inbox at 5pm means the report itself didn't run.</li>
+      <li>Monday 7am digest — check one arrives.</li>
+    </ul>
+
+    <div class="sec">10 · Housekeeping, then go</div>
     <ul class="boxes">
       <li>Delete the Monday test cards; disable the test client's login in /admin.</li>
       <li>Activity log (/admin/audit) shows your test downloads and actions.</li>
       <li>Reports page loads and the turnaround numbers look sane.</li>
       <li>Kacie and Rebecca briefed — job-flow (09) and admin guide (10) in hand.</li>
+      <li><span style="font-family:monospace">REQUIRE_CDC_FILE=1</span> set, so a package
+        can't go out without the certificate in it.</li>
+      <li>Portal on our own domain rather than the build address.</li>
+      <li>Privacy wording (12) signed off before anyone real signs in.</li>
       <li>Incident card (11) printed and by the desk.</li>
       <li>First client's welcome: login issued in /admin, first-job email (18) filled and
         ready to send on their next issued certificate.</li>
@@ -151,7 +234,7 @@
 
   <div class="foot">
     <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — go-live audit</span>
-    <span>Page 2 of 2</span>
+    <span>Page 4 of 4</span>
   </div>
 </div>
 
