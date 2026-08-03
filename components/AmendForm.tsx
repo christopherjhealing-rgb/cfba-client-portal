@@ -39,8 +39,8 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
   const target = ref || found?.ref || "";
 
   // Some clients have hundreds of jobs, so this is a text field that filters as
-  // you type rather than a dropdown. Anything typed is accepted — if it doesn't
-  // resolve to a job we know, the office links it at review.
+  // you type rather than a dropdown. It searches everything we've ever done
+  // for them — see the past-jobs index in lib/history.
   const q = query.trim().toLowerCase();
   const matches = q.length < 2 ? [] : jobs.filter((j) =>
     j.ref.toLowerCase().includes(q) || j.address.toLowerCase().includes(q)
@@ -48,8 +48,17 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
 
   function choose(j: AmendableJob) {
     setRef(j.ref);
-    setQuery(`${j.ref} — ${j.address}`);
+    setQuery(j.address);
+    setOldRef(j.ref);
     setOpen(false);
+  }
+
+  /** Typing over the reference means they're identifying the job that way, so
+   *  the picked job is released — otherwise the form would keep lodging
+   *  against the old one while showing a different number. */
+  function editRef(v: string) {
+    setOldRef(v);
+    if (ref) { setRef(""); setQuery(""); }
   }
 
   // Checked as they type, so they find out the reference is good BEFORE
@@ -138,7 +147,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
       <label className="label" htmlFor="job">Which job is changing?</label>
       <div className="relative">
         <input id="job" required autoComplete="off" value={query}
-          onChange={(e) => { setQuery(e.target.value); setRef(""); setOpen(true); }}
+          onChange={(e) => { setQuery(e.target.value); if (ref) { setRef(""); setOldRef(""); } setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           className="field"
@@ -171,39 +180,39 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
           finished — which for most clients is nearly everything they've ever
           had from us — has to be found by its reference. Checked as they type
           so nobody discovers it was wrong after filling the whole form in. */}
-      {!ref && (
-        <div className="mt-4 rounded-md border border-rule bg-wash p-4">
-          <label className="label" htmlFor="oldRef">
-            Can&apos;t see it? Enter our reference
-            <span className="ml-1.5 font-normal text-ink/45">(optional)</span>
-          </label>
-          <input
-            id="oldRef" value={oldRef} autoComplete="off" spellCheck={false}
-            onChange={(e) => setOldRef(e.target.value)}
-            className="field" placeholder="e.g. 51205 or BA2025094" />
-          <p className="mt-1.5 text-[12px] leading-relaxed">
-            {looking ? (
-              <span className="text-ink/45">Checking…</span>
-            ) : found ? (
-              <span className="text-seal">
-                Found — <strong>{found.ref}</strong>
-                {found.address ? `, ${found.address}` : ""}.
-                {found.historic ? " A completed job." : ""}
-              </span>
-            ) : oldRef.trim().length >= 3 ? (
-              <span className="text-flag">
-                We can&apos;t find that reference on your account. Check it against
-                your certificate — or message us and we&apos;ll track it down.
-              </span>
-            ) : (
-              <span className="text-ink/45">
-                For a job too old to be in the list above. It&apos;s on your
-                certificate and on our emails — spaces and dashes don&apos;t matter.
-              </span>
-            )}
-          </p>
-        </div>
-      )}
+      <div className="mt-4">
+        <label className="label" htmlFor="oldRef">Our reference</label>
+        <input
+          id="oldRef" value={oldRef} autoComplete="off" spellCheck={false}
+          onChange={(e) => editRef(e.target.value)}
+          className="field font-mono text-[13px]" placeholder="e.g. 51205 or BA2025094" />
+        <p className="mt-1.5 text-[12px] leading-relaxed">
+          {ref ? (
+            <span className="text-seal">
+              Matches the job above. This is the reference we&apos;ll amend.
+            </span>
+          ) : looking ? (
+            <span className="text-ink/45">Checking…</span>
+          ) : found ? (
+            <span className="text-seal">
+              Found — <strong>{found.ref}</strong>
+              {found.address ? `, ${found.address}` : ""}.
+              {found.historic ? " A completed job." : ""}
+            </span>
+          ) : oldRef.trim().length >= 3 ? (
+            <span className="text-flag">
+              We can&apos;t find that reference on your account. Check it against
+              your certificate — or message us and we&apos;ll track it down.
+            </span>
+          ) : (
+            <span className="text-ink/45">
+              Filled in when you pick a job above. Type it yourself for a job too
+              old to be listed — it&apos;s on your certificate, and spaces and
+              dashes don&apos;t matter.
+            </span>
+          )}
+        </p>
+      </div>
 
       {job?.issued && (
         <p className="mt-3 rounded-sm border-l-[3px] border-brass bg-[#FBF6EA] px-3 py-2.5 text-[13px] leading-relaxed text-ink/75">
