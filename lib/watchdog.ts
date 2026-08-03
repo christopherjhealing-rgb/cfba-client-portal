@@ -9,7 +9,7 @@
 
 import * as repo from "./repo";
 import { env } from "./env";
-import { ISSUED_STATUSES, READY_STATUS, GENERAL_REF } from "./core.mjs";
+import { ISSUED_STATUSES, READY_STATUS, GENERAL_REF, AMENDMENT_OPEN } from "./core.mjs";
 
 export interface ReportLine {
   ref: string;
@@ -51,6 +51,11 @@ export interface DailyReport {
    *  straight onto the board. One that couldn't — Monday down at the moment
    *  they pressed Lodge — lands here, and the client believes it's lodged. */
   queued: ReportLine[];
+  /** Amendments nobody has sent back yet. These are deliberately NOT on the
+   *  board, so the board cannot notice one going quiet — this list is the only
+   *  thing that can, and it's the whole reason the portal keeps a record of a
+   *  process otherwise run entirely by email. */
+  amendments: ReportLine[];
   /** Set when the sync itself is the problem — everything above is only as
    *  current as the last run, so a stale sync is said first, not last. */
   syncProblem: string | null;
@@ -85,7 +90,7 @@ function stuckDays(
 
 export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
   const today = perthDate(now);
-  const [jobs, companies, watch, lastSync, enquiries, pending] = await Promise.all([
+  const [jobs, companies, watch, lastSync, enquiries, pending, openAmendments] = await Promise.all([
     repo.listAllJobs().catch(() => []),
     repo.listCompanies().catch(() => []),
     repo.getWatch().catch(() => repo.EMPTY_WATCH),
@@ -93,6 +98,7 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
       "last_sync").catch(() => null),
     repo.listMessagesByRef(GENERAL_REF).catch(() => []),
     repo.listSubmissions("pending").catch(() => []),
+    repo.listSubmissions(AMENDMENT_OPEN).catch(() => []),
   ]);
 
   const nameOf = new Map(companies.map((c) => [c.id, c.name]));
@@ -191,6 +197,19 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
     days: daysSince(s.createdAt, now),
   })).sort((a, b) => b.days - a.days);
 
+  // --- amendments nobody has answered --------------------------------------
+  // An amendment is handled by email and kept off the board on purpose, which
+  // means nothing else in the system can notice one going quiet. This is it.
+  const amendments: ReportLine[] = openAmendments.map((s) => ({
+    ref: s.amendmentOf || "—",
+    address: s.address || "",
+    company: nameOf.get(s.companyId) || "",
+    detail: s.reviewNote?.includes("did NOT send")
+      ? "amendment lodged — THE EMAIL DIDN'T SEND"
+      : "amendment lodged, nothing sent back yet",
+    days: daysSince(s.createdAt, now),
+  })).sort((a, b) => b.days - a.days);
+
   // --- enquiries waiting ---------------------------------------------------
   const lastFrom = new Map<string, string>();
   for (const m of enquiries) lastFrom.set(m.companyId, m.from);
@@ -206,10 +225,11 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
     date: today,
     allClear: !syncProblem && !stuck.length && !untold.length && !unopened.length
       && !boardFails.length && !queued.length && !noCertificate.length
+      && !amendments.length
       && enquiriesWaiting === 0
       && stuckOlder === 0 && unopenedOlder === 0,
     issuedToday, readyToday, downloadedToday,
     stuck, untold, unopened, boardFails, stuckOlder, unopenedOlder,
-    queued, noCertificate, enquiriesWaiting, syncProblem,
+    queued, amendments, noCertificate, enquiriesWaiting, syncProblem,
   };
 }

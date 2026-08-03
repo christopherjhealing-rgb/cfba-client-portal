@@ -13,6 +13,11 @@ export const env = {
   mondayBoardId: process.env.MONDAY_BOARD_ID || "7129862365",
   mondayNewGroup: process.env.MONDAY_NEW_GROUP || "topics",
 
+  // The board's "Certified By" column — who signed the certificate, and so
+  // who an amendment belongs to. Not the People column: People sits empty on
+  // most issued cards, Certified By is filled in by definition.
+  certifiedByColumnId: process.env.CERTIFIED_BY_COLUMN_ID || "multiple_person_mm5ed18d",
+
   // The board's PORTAL column — where a job is up to in the client portal.
   // The portal writes every one of these; nothing here is a manual step. The
   // labels are typed onto the board by a person, so their spelling lives here

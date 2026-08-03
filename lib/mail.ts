@@ -241,7 +241,8 @@ export function dailyReportEmail(r: {
   allClear: boolean;
   issuedToday: number; readyToday: number; downloadedToday: number;
   stuck: ReportRow[]; untold: ReportRow[]; unopened: ReportRow[];
-  boardFails: ReportRow[]; queued: ReportRow[]; noCertificate: ReportRow[];
+  boardFails: ReportRow[]; queued: ReportRow[]; amendments: ReportRow[];
+  noCertificate: ReportRow[];
   stuckOlder: number; unopenedOlder: number;
   enquiriesWaiting: number;
   syncProblem: string | null;
@@ -252,7 +253,7 @@ export function dailyReportEmail(r: {
 
   const needsYou =
     r.stuck.length + r.untold.length + r.unopened.length + r.boardFails.length
-    + r.queued.length + r.noCertificate.length + r.enquiriesWaiting
+    + r.queued.length + r.amendments.length + r.noCertificate.length + r.enquiriesWaiting
     + r.stuckOlder + r.unopenedOlder;
   const older = (n: number) =>
     n > 0 ? ` Plus ${n} more over three weeks old, not listed here.` : "";
@@ -301,6 +302,7 @@ export function dailyReportEmail(r: {
              </div>`
           : "",
         section("Package has no certificate in it", "The files are there and downloadable, but none of them is a CDC…pdf — so the client would get everything except the certificate. The autogen leaves the CDC as a Word file; the PDF only exists once somebody exports it.", r.noCertificate, "red"),
+        section("Amendments waiting", "An amendment is handled by email and deliberately kept off the board, so nothing else can notice one going quiet. Chase whoever it was sent to, or send the revised certificate back from /admin/amendments.", r.amendments, "amber"),
         section("Lodged, but not on the board", "A job normally reaches Monday the second it's lodged. These didn't, so they're sitting in the review queue at /admin — and the client believes the job is with us. Accept them, or ring the client.", r.queued, "red"),
         section("Issued but not in the portal", "The board says these are issued. The portal has no files, so the client can't download anything. Check the job's Issued folder." + older(r.stuckOlder), r.stuck, "red", r.stuckOlder),
         section("In the portal but the client wasn't told", "The files are there and downloadable. The ready email didn't send, and it won't retry — ring or email them.", r.untold, "red"),
@@ -464,6 +466,87 @@ export function officeCancelEmail(opts: {
     </a>
   </p>
   <p style="margin:0;color:#5B6660;font-size:13px">If this looks like a mistake, ring the client — they were told the portal can't undo it.</p>
+</div>`.trim();
+  return { subject, html };
+}
+
+/**
+ * The amendment email — the one that actually carries the process.
+ *
+ * Goes to whoever certified the original, with the office copied. An amendment
+ * never opens a Monday card, so this email IS the handover: it has to be
+ * answerable without opening anything, which is why the reason and the
+ * documents come with it rather than being linked to.
+ */
+export function amendmentEmail(opts: {
+  companyName: string; parentRef: string; address: string;
+  reason: string; notes?: string;
+  fileNames: string[]; attachedNames?: string[]; tooBigNames?: string[];
+  /** Why this landed with this person — routing is automatic, so it says so. */
+  routedWhy: string;
+  url: string;
+}): { subject: string; html: string } {
+  const { companyName, parentRef, address, reason, notes, fileNames, routedWhy, url } = opts;
+  const attached = opts.attachedNames || [];
+  const tooBig = opts.tooBigNames || [];
+  const subject = `Amendment — ${companyName}, Job ${parentRef}`;
+
+  const files = fileNames.length
+    ? (attached.length
+        ? `<p style="margin:0 0 6px;font-size:14px"><strong>Attached:</strong> ${attached.map(esc).join(", ")}</p>`
+        : "") +
+      (tooBig.length
+        ? `<p style="margin:0 0 12px;font-size:14px"><strong>Too large to attach:</strong> ${tooBig.map(esc).join(", ")} — open it in the portal below.</p>`
+        : "")
+    : `<p style="margin:0 0 12px;font-size:14px;color:#5B6660">No documents were attached to the lodgement.</p>`;
+
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 12px"><strong>${esc(companyName)}</strong> has lodged an amendment to job <strong>${esc(parentRef)}</strong>${address ? ` (${esc(address)})` : ""}.</p>
+
+  <p style="margin:0 0 8px;font-size:14px;color:#5B6660">Why they need it changed:</p>
+  <div style="border-left:3px solid #C9A227;background:#FBF4E6;padding:14px 18px;margin:0 0 14px;white-space:pre-line">${esc(reason || "(no reason given)")}</div>
+  ${notes && notes.trim()
+    ? `<p style="margin:0 0 8px;font-size:14px;color:#5B6660">Their note:</p>
+       <div style="border-left:3px solid #E3E8E4;background:#F4F8F4;padding:12px 16px;margin:0 0 14px;white-space:pre-line;font-size:14px">${esc(notes)}</div>`
+    : ""}
+  ${files}
+
+  <p style="margin:14px 0 12px;font-size:14px"><strong>If it's acceptable, reply to this email and say so.</strong> The office will watermark the new documents and re-issue the certificate. There's nothing to do in the portal or on the board.</p>
+
+  <p style="margin:0 0 18px">
+    <a href="${esc(url)}"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Open it in the portal
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">${esc(routedWhy)} This amendment is not on the Monday board — the original card carries a note that it exists.</p>
+</div>`.trim();
+  return { subject, html };
+}
+
+/** The revised certificate going back to the client. Deliberately reads like
+ *  the issued email they already know, because to them it's the same event. */
+export function amendmentReadyEmail(opts: {
+  companyName: string; parentRef: string; address: string;
+  fileNames: string[]; url: string;
+}): { subject: string; html: string } {
+  const { companyName, parentRef, address, fileNames, url } = opts;
+  const subject = `Amended certificate ready — Job ${parentRef}`;
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 12px">Hello${companyName ? ` ${esc(companyName)}` : ""},</p>
+  <p style="margin:0 0 12px">The amended documents for job <strong>${esc(parentRef)}</strong>${address ? ` (${esc(address)})` : ""} are ready and waiting in your portal.</p>
+  ${fileNames.length
+    ? `<p style="margin:0 0 14px;font-size:14px"><strong>What's there:</strong> ${fileNames.map(esc).join(", ")}</p>`
+    : ""}
+  <p style="margin:0 0 18px">
+    <a href="${esc(url)}"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Download the amended documents
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">Your original certificate is still there too — the amendment sits alongside it rather than replacing it.</p>
 </div>`.trim();
   return { subject, html };
 }

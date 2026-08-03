@@ -6,7 +6,7 @@ interface Report {
   date: string; allClear: boolean;
   issuedToday: number; readyToday: number; downloadedToday: number;
   stuck: Line[]; untold: Line[]; unopened: Line[]; boardFails: Line[];
-  queued: Line[]; noCertificate: Line[];
+  queued: Line[]; amendments: Line[]; noCertificate: Line[];
   stuckOlder: number; unopenedOlder: number;
   enquiriesWaiting: number; syncProblem: string | null;
 }
@@ -131,6 +131,7 @@ export function DailyReportCard({
           )}
           {group("No certificate in the package", report.noCertificate)}
           {group("Lodged, not on the board", report.queued)}
+          {group("Amendments waiting", report.amendments)}
           {group("Issued but not in the portal", report.stuck, report.stuckOlder)}
           {group("Client wasn't told", report.untold)}
           {group("Ready, not opened", report.unopened, report.unopenedOlder)}

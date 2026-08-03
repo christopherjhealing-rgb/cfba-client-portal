@@ -449,15 +449,21 @@ export async function upsertJob(job: Job, files: JobFile[]) {
 // ---------------------------------------------------------------------------
 // Submissions
 // ---------------------------------------------------------------------------
+/** `status` is a parameter rather than always "pending" because an amendment
+ *  lands here too and must never appear in the review queue — it isn't waiting
+ *  to go on the board, it's waiting on somebody's yes. The column is plain
+ *  text with no constraint, so a new state costs no migration. */
 export async function addSubmission(
   s: Omit<Submission, "id" | "status" | "mondayItemId" | "reviewNote" | "reviewedAt">,
-  preId?: string
+  preId?: string,
+  status = "pending"
 ): Promise<string> {
   const id = preId || "sub_" + Math.random().toString(36).slice(2, 10);
   if (DEMO_MODE) {
     const db = await demo.load();
     db.submissions.unshift({
-      ...s, id, status: "pending", mondayItemId: null, reviewNote: null, reviewedAt: null,
+      ...s, id, status: status as Submission["status"],
+      mondayItemId: null, reviewNote: null, reviewedAt: null,
     });
     await demo.save(db);
     return id;
@@ -465,7 +471,7 @@ export async function addSubmission(
   must(await sb().from("submissions").insert({
     id, company_id: s.companyId, email: s.email, address: s.address,
     job_class: s.jobClass, description: s.description, notes: s.notes,
-    files: s.files, client_ref: s.clientRef ?? null, status: "pending",
+    files: s.files, client_ref: s.clientRef ?? null, status,
     amendment_of: s.amendmentOf ?? null,
   }));
   return id;
@@ -499,9 +505,12 @@ export async function getSubmission(id: string): Promise<Submission | null> {
   return data ? rowToSub(data) : null;
 }
 
+/** Only the keys actually passed are written. `files` is here for amendments:
+ *  the revised certificate is uploaded through /admin rather than collected
+ *  from SharePoint, because with no Monday card the sync has nothing to find. */
 export async function setSubmission(
   id: string,
-  patch: Partial<Pick<Submission, "status" | "mondayItemId" | "reviewNote">>
+  patch: Partial<Pick<Submission, "status" | "mondayItemId" | "reviewNote" | "files">>
 ) {
   if (DEMO_MODE) {
     const db = await demo.load();
@@ -509,10 +518,14 @@ export async function setSubmission(
     if (s) { Object.assign(s, patch, { reviewedAt: new Date().toISOString() }); await demo.save(db); }
     return;
   }
-  must(await sb().from("submissions").update({
-    status: patch.status, monday_item_id: patch.mondayItemId,
-    review_note: patch.reviewNote, reviewed_at: new Date().toISOString(),
-  }).eq("id", id));
+  // Built key by key rather than passed wholesale: a patch of {reviewNote}
+  // must not blank the monday_item_id of a submission that has one.
+  const row: Record<string, unknown> = { reviewed_at: new Date().toISOString() };
+  if (patch.status !== undefined) row.status = patch.status;
+  if (patch.mondayItemId !== undefined) row.monday_item_id = patch.mondayItemId;
+  if (patch.reviewNote !== undefined) row.review_note = patch.reviewNote;
+  if (patch.files !== undefined) row.files = patch.files;
+  must(await sb().from("submissions").update(row).eq("id", id));
 }
 
 // ---------------------------------------------------------------------------

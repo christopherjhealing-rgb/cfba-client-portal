@@ -9,6 +9,8 @@ import { TOGGLEABLE_PAGES } from "@/lib/pages";
 import { LoginDesignToggle } from "@/components/LoginDesignToggle";
 import { DailyReportCard } from "@/components/DailyReportCard";
 import { TeamsCard } from "@/components/TeamsCard";
+import { AmendmentRouting } from "@/components/AmendmentRouting";
+import { getAmendmentConfig } from "@/lib/amendments";
 import { getTeamsConfig, getTeamsLast, TEAMS_EVENTS } from "@/lib/teams";
 
 export const dynamic = "force-dynamic";
@@ -18,12 +20,13 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [disabled, loginDesign, lastReport, teams, teamsLast] = await Promise.all([
+  const [disabled, loginDesign, lastReport, teams, teamsLast, amendments] = await Promise.all([
     repo.disabledPages(),
     repo.getSetting<{ design?: string }>("login_design").catch(() => null),
     repo.getSetting<{ at?: string; ok?: boolean; error?: string }>("last_report").catch(() => null),
     getTeamsConfig(),
     getTeamsLast(),
+    getAmendmentConfig(),
   ]);
 
   return (
@@ -64,6 +67,11 @@ export default async function SettingsPage() {
         initial={teams}
         events={TEAMS_EVENTS.map((e) => ({ key: e.key, label: e.label, detail: e.detail }))}
         last={teamsLast}
+      />
+
+      <AmendmentRouting
+        initial={amendments}
+        knownNames={["Chris Healing", "Rebecca Creighan"]}
       />
 
       <PageToggles

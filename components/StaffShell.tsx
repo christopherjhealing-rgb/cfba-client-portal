@@ -1,12 +1,13 @@
 import Link from "next/link";
 
-// Five destinations, not one page with everything on it. The homepage is what
-// somebody opens every morning; the rest is what they set up once and revisit
-// occasionally, and mixing the two buries the first in the second.
+// Separate destinations, not one page with everything on it. The homepage is
+// what somebody opens every morning; the rest is what they set up once and
+// revisit occasionally, and mixing the two buries the first in the second.
 const NAV = [
   { href: "/admin", label: "Queue" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/enquiries", label: "Enquiries" },
+  { href: "/admin/amendments", label: "Amendments" },
   { href: "/admin/content", label: "Content" },
   { href: "/admin/settings", label: "Settings" },
 ];

@@ -118,3 +118,31 @@ export interface TeamsNoteShape {
 }
 export function teamsAdaptiveCard(note: TeamsNoteShape): Record<string, unknown>;
 export function teamsMessageCard(note: TeamsNoteShape): Record<string, unknown>;
+
+// --- Amendments (routing; the orchestration lives in lib/amendments.ts) -----
+
+export interface AmendmentRouteDef { name: string; email: string }
+export interface AmendmentRouting extends AmendmentRouteDef {
+  /** True when Certified By named someone we have an address for. */
+  matched: boolean;
+  reason:
+    | "certified-by"
+    | "unallocated"
+    | "name-not-configured"
+    | "no-route-and-no-fallback"
+    | "unallocated-and-no-fallback";
+}
+
+export function routeAmendment(
+  certifiedByText: string | null | undefined,
+  routes?: AmendmentRouteDef[],
+  fallbackName?: string
+): AmendmentRouting;
+
+export function routeExplanation(
+  route: AmendmentRouting | null | undefined,
+  certifiedByText: string | null | undefined
+): string;
+
+export const AMENDMENT_OPEN: string;
+export const AMENDMENT_DONE: string;

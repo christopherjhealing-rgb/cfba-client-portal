@@ -7,6 +7,7 @@ import { env } from "@/lib/env";
 import { pageDisabled } from "@/lib/pages";
 import { listLibrary, libraryPath, type LibraryDoc } from "@/lib/library";
 import { notifyTeams } from "@/lib/teams";
+import { lodgeAmendment, AMENDMENT_OPEN } from "@/lib/amendments";
 
 const OFFLINE = {
   error: "This section is temporarily offline while we make updates — please try again shortly.",
@@ -33,8 +34,30 @@ async function maybeAutoAccept(id: string): Promise<boolean> {
 }
 
 /**
- * Accept, then say so in Teams. Both lodgement paths go through here, so a
- * lodgement can't be announced by one and quietly not by the other.
+ * What happens to a lodgement once it's saved.
+ *
+ * An amendment takes a different road entirely: no Monday card, an email to
+ * whoever certified the original, and one note on that original card. An
+ * amendment on the board looks like a fresh assessment and sits there for
+ * days, when the real work is a watermark and a re-issue. See lib/amendments.
+ *
+ * Both lodgement paths come through here so neither can be handled one way and
+ * quietly the other.
+ */
+async function finishLodgement(
+  id: string, companyName: string, isAmendment: boolean
+): Promise<boolean> {
+  if (isAmendment) {
+    await lodgeAmendment(id);
+    // Never "accepted" — there's no card to accept it onto, and telling the
+    // client otherwise would be a lie about where their job is.
+    return false;
+  }
+  return acceptAndAnnounce(id, companyName);
+}
+
+/**
+ * Accept, then say so in Teams.
  *
  * Whether it reached the board is on the card, because those are two different
  * things for whoever reads it: one is news, the other is a task.
@@ -219,10 +242,10 @@ async function handle(req: Request) {
     files: stored,
     createdAt: new Date().toISOString(),
     amendmentOf,
-  }, id);
+  }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
 
-  const accepted = await acceptAndAnnounce(id, session.companyName);
-  return NextResponse.json({ ok: true, id, accepted });
+  const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
+  return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });
 }
 
 /** Metadata-only lodgement referencing files the browser already PUT into the
@@ -332,8 +355,8 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     files: claimed,
     createdAt: new Date().toISOString(),
     amendmentOf,
-  }, id);
+  }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
 
-  const accepted = await acceptAndAnnounce(id, session.companyName);
-  return NextResponse.json({ ok: true, id, accepted });
+  const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
+  return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });
 }

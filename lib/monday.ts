@@ -21,6 +21,10 @@ const COL = {
   description: "text0__1",
   files: "file_mksmhvsk", // "Files" column — lodged documents land here
   people: "multiple_person_mkstvc5z",
+  // "Certified By" — who signed the certificate. This, not People, is what
+  // says whose job an amendment belongs to: People sits empty on most issued
+  // cards, while Certified By is filled in by definition once a CDC exists.
+  certifiedBy: env.certifiedByColumnId,
   // "PORTAL" — where a job is up to in the client portal. The portal writes
   // every rung of it; see lib/core.mjs. Not the main Status column, which
   // tracks the assessment, and no longer the old "Send?" / "Job Sent" pair.
@@ -317,6 +321,30 @@ export async function setStatus(
  */
 export async function markInfoReceived(itemId: string): Promise<StatusWrite> {
   return setStatus(itemId, INFO_RECEIVED_STATUS, [...AWAITING_REPLY_STATUSES.values()]);
+}
+
+/**
+ * Who signed the certificate on a card, straight off the board.
+ *
+ * Read live rather than remembered on the job row: an amendment is rare enough
+ * that one query costs nothing, and reading it now means it's the answer as at
+ * today rather than as at whenever the sync last looked. Returns "" when the
+ * column is empty or unreadable, which the caller treats as "unallocated" —
+ * never as an error worth stopping for.
+ */
+export async function certifiedBy(itemId: string): Promise<string> {
+  if (!MONDAY_READY) return "";
+  try {
+    const d = await gql<{ items: { column_values: { text: string | null }[] }[] }>(
+      `query ($item: [ID!]) {
+         items(ids: $item) { column_values(ids: ["${COL.certifiedBy}"]) { text } } }`,
+      { item: [itemId] }
+    );
+    return (d.items?.[0]?.column_values?.[0]?.text || "").trim();
+  } catch (e) {
+    console.warn(`monday: couldn't read Certified By for ${itemId}:`, (e as Error).message);
+    return "";
+  }
 }
 
 /** Post a note into the card's Updates (conversation) section — not a column.

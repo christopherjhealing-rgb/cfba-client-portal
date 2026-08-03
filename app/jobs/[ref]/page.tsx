@@ -5,6 +5,7 @@ import * as repo from "@/lib/repo";
 import {
   isClientVisible, needsClientInfo, clientStatusLabel, jobBucket,
   elapsedBusinessDays, PAUSED_STATUSES, canCancel, CANCELLED_STATUS,
+  AMENDMENT_OPEN, AMENDMENT_DONE,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -51,8 +52,13 @@ export default async function JobDetail({
   const thread = allMsgs.filter((m) => m.ref === ref);
   // The lodgements behind this job: the original (matched via the Monday card
   // it created) and any amendments lodged against this ref.
+  // "accepted" for an ordinary lodgement — a pending or rejected one must not
+  // show as though it's with us. An amendment is never accepted onto the board
+  // at all (that's the point of it), so its own two states count instead, and
+  // both are shown: the client needs to see it arrive and see it come back.
+  const VISIBLE_SUB = new Set(["accepted", AMENDMENT_OPEN, AMENDMENT_DONE]);
   const lodgements = allSubs
-    .filter((s) => s.status === "accepted" &&
+    .filter((s) => VISIBLE_SUB.has(s.status) &&
       ((raw.mondayItemId && s.mondayItemId === raw.mondayItemId) || s.amendmentOf === ref))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const bucket = jobBucket(job, new Date(), env.retentionMonths);
@@ -187,13 +193,27 @@ export default async function JobDetail({
                   {" "}· {fmtDate(s.createdAt)}
                   {s.files.length > 0 &&
                     ` · ${s.files.length} file${s.files.length === 1 ? "" : "s"}`}
+                  {/* An amendment is handled off the board, so its progress is
+                      invisible unless it's said here. */}
+                  {s.amendmentOf && s.status === AMENDMENT_DONE && (
+                    <span className="ml-2 chip chip-seal">Amended documents ready</span>
+                  )}
+                  {s.amendmentOf && s.status === AMENDMENT_OPEN && (
+                    <span className="ml-2 chip chip-brass">With us</span>
+                  )}
                 </p>
                 {s.files.length > 0 && (
                   <ul className="text-[13.5px] text-ink/70">
                     {s.files.map((f, i) => (
                       <li key={i} className="flex items-center gap-2 py-0.5">
                         <span className="text-seal"><Icon name="folder" size={13} /></span>
-                        <span className="truncate">{f.name}</span>
+                        {s.amendmentOf && s.status === AMENDMENT_DONE ? (
+                          <a href={`/api/amendments/${s.id}/${encodeURIComponent(f.name)}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="truncate text-seal underline">{f.name}</a>
+                        ) : (
+                          <span className="truncate">{f.name}</span>
+                        )}
                         {f.category && (
                           <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/50">
                             {f.category}
