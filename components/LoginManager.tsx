@@ -1,26 +1,32 @@
 "use client";
 import { useState } from "react";
+import { suggestUsername } from "@/lib/core.mjs";
 
 export function LoginManager({
   companyId, companyName, existing,
 }: { companyId: string; companyName: string; existing: string[] }) {
   const [open, setOpen] = useState(false);
-  const [username, setUsername] = useState("");
+  // Suggested from the client name, and editable — nobody should have to
+  // type "kaciespatiosandsheds" by hand.
+  const [username, setUsername] = useState(() => suggestUsername(companyName));
   const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
-  const [issued, setIssued] = useState<{ username: string; setupCode: string } | null>(null);
+  const [issued, setIssued] = useState<
+    { username: string; setupCode: string; emailed?: boolean; emailError?: string } | null
+  >(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function call(action: "create" | "reset", u: string) {
     setBusy(true); setMsg(null); setIssued(null);
     const r = await fetch("/api/admin/logins", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, companyId, username: u, displayName }),
+      body: JSON.stringify({ action, companyId, username: u, displayName, email }),
     });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Failed."); return; }
-    setIssued({ username: d.username, setupCode: d.setupCode });
+    setIssued({ username: d.username, setupCode: d.setupCode, emailed: d.emailed, emailError: d.emailError });
   }
 
   if (!open) {
@@ -45,6 +51,11 @@ export function LoginManager({
           <label className="label">Person&apos;s Name (optional)</label>
           <input className="field" value={displayName}
             onChange={(e) => setDisplayName(e.target.value)} placeholder="Joe Bloggs" />
+        </div>
+        <div className="min-w-[180px] flex-1">
+          <label className="label">Email It To (optional)</label>
+          <input className="field" type="email" value={email} autoCapitalize="none"
+            onChange={(e) => setEmail(e.target.value)} placeholder="kacie@cfba.com.au" />
         </div>
         <button className="btn" disabled={busy || !username} onClick={() => call("create", username)}>
           {busy ? "…" : "Create"}
@@ -79,6 +90,13 @@ export function LoginManager({
           </div>
           <div className="mt-1.5 text-ink/55">
             They enter these under &ldquo;First time&rdquo; on the sign-in page and choose their own password.
+          </div>
+          {/* Said plainly either way. "Emailed" when it wasn't is how a client
+              sits waiting for something nobody sent. */}
+          <div className={`mt-2 ${issued.emailed ? "text-seal" : "text-flag"}`}>
+            {issued.emailed
+              ? "✓ Emailed to them, with the getting-started guide attached."
+              : `✕ Not emailed — ${issued.emailError || "no address given"}. Read the code out or paste it to them.`}
           </div>
         </div>
       )}

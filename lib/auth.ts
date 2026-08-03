@@ -53,17 +53,10 @@ export function normUsername(u: string | null | undefined): string {
   return (u || "").toString().trim().toLowerCase().replace(/\s+/g, "");
 }
 
-export function suggestUsername(companyName: string): string {
-  const base = (companyName || "")
-    .toLowerCase()
-    .replace(/\(.*?\)/g, " ")
-    .replace(/[^a-z0-9 ]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .join("");
-  return base || "client";
-}
+// suggestUsername lives in core.mjs — this file pulls in node:crypto, and a
+// client component can't import that. Re-exported here so callers can carry on
+// importing it from where they always did.
+export { suggestUsername } from "./core.mjs";
 
 // --- one-time setup codes (issued by staff, used once to set a password) ----
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1

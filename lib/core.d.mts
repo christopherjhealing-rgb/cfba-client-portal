@@ -26,6 +26,7 @@ export interface Retention {
 
 export function aliasKey(name: string | null | undefined): string;
 export function normEmail(email: string | null | undefined): string;
+export function suggestUsername(companyName: string | null | undefined): string;
 export function matchCompany(card: CardRef, companies: CompanyMatch[]): string | null;
 export function parseRef(nameOrUrl: string | null | undefined): string | null;
 export function folderMatchesRef(folderName: string | null | undefined, ref: string): boolean;

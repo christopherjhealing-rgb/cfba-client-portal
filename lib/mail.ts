@@ -334,6 +334,50 @@ interface ReportRow {
   ref: string; address: string; company: string; detail: string; days: number;
 }
 
+/** The credentials email. Username plus the one-time setup code, and the
+ *  getting-started guide attached so the first thing they read isn't a login
+ *  box with no context.
+ *
+ *  The code is in the body on purpose: an email nobody can act on without a
+ *  second email is an email that generates a phone call. It works once and
+ *  expires, which is what makes that safe. */
+export function loginEmail(opts: {
+  companyName: string; username: string; setupCode: string;
+  displayName?: string; guideAttached?: boolean;
+}): { subject: string; html: string } {
+  const { companyName, username, setupCode, displayName, guideAttached } = opts;
+  const subject = "Your CF Building Approvals client portal login";
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 12px">Hello${displayName ? " " + esc(displayName) : ""},</p>
+  <p style="margin:0 0 14px">Your login for the CF Building Approvals client portal is ready. It's where
+    you lodge jobs, see where each one is up to, answer anything we ask for, and download your
+    CDC Package when it's issued — no phone call, no chasing.</p>
+
+  <div style="border:1px solid #D3D8D1;border-radius:8px;padding:16px 18px;margin:0 0 16px;background:#F5F7F3">
+    <p style="margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#5B6660">Signing in the first time</p>
+    <p style="margin:0 0 6px">Username: <strong style="font-family:ui-monospace,Menlo,monospace;font-size:16px">${esc(username)}</strong></p>
+    <p style="margin:0 0 10px">Setup code: <strong style="font-family:ui-monospace,Menlo,monospace;font-size:16px">${esc(setupCode)}</strong></p>
+    <p style="margin:0;font-size:13px;color:#5B6660">Choose <em>First time</em> on the sign-in page, enter both, and pick your own password. The setup code works once.</p>
+  </div>
+
+  <p style="margin:0 0 18px">
+    <a href="${env.appUrl}"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;display:inline-block;font-weight:600">
+      Open the portal
+    </a>
+  </p>
+
+  ${guideAttached
+    ? `<p style="margin:0 0 12px;font-size:14px">There's a short guide attached — signing in, lodging your first job, and what each status means.</p>`
+    : ""}
+
+  <p style="margin:0 0 4px;font-size:14px">Anything at all, ring us on 1300 029 074 — we'd rather sort it in two minutes than have you stuck.</p>
+  <p style="margin:0;color:#5B6660;font-size:13px">CF Building Approvals · ${esc(companyName)}</p>
+</div>`.trim();
+  return { subject, html };
+}
+
 /** Internal notice to the office when a client sends a general enquiry — one
  *  that isn't about a job, so there is no Monday card to post it on and no
  *  sync that will surface it. This email IS the notification: if it doesn't
