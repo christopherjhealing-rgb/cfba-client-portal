@@ -1,34 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isStaff } from "@/lib/session";
-import { DEMO_MODE, GRAPH_READY, MONDAY_READY, env } from "@/lib/env";
+import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import { StaffShell } from "@/components/StaffShell";
 import { SyncButton } from "@/components/SyncButton";
 import { DecisionButtons } from "@/components/DecisionButtons";
-import { PageToggles } from "@/components/PageToggles";
-import { TOGGLEABLE_PAGES } from "@/lib/pages";
-import { InfoSheetManager } from "@/components/InfoSheetManager";
-import { PUBLISHED_SHEETS } from "@/lib/info-sheets";
 import { SyncHealth } from "@/components/SyncHealth";
-import { FormManager } from "@/components/FormManager";
-import { PORTAL_FORMS } from "@/lib/resources";
-import { EngineeringControl } from "@/components/EngineeringControl";
-import { listEngSets } from "@/lib/engineering";
-import { LoginDesignToggle } from "@/components/LoginDesignToggle";
 import { GENERAL_REF } from "@/lib/core.mjs";
-import { DailyReportCard } from "@/components/DailyReportCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [pending, companies, disabled, sheetOverrides, lastSync] = await Promise.all([
+  const [pending, companies, lastSync] = await Promise.all([
     repo.listSubmissions("pending"),
     repo.listCompanies(),
-    repo.disabledPages(),
-    repo.listFiles("info-sheets").catch(() => []),
     repo.getSetting<Record<string, unknown>>("last_sync").catch(() => null),
   ]);
   // Enquiries have no card and no sync — the notification email is the only
@@ -44,35 +32,39 @@ export default async function AdminHome() {
   const lastReport = await repo.getSetting<{ at?: string; ok?: boolean; error?: string }>(
     "last_report").catch(() => null);
 
-  const uploadedForms = await repo.listFiles("forms").catch(() => []);
-  const eng = (await repo.getSetting<{ enabled?: boolean; url?: string }>("engineering").catch(() => null)) || {};
-  const loginDesign = (await repo.getSetting<{ design?: string }>("login_design").catch(() => null))?.design;
-  const engSets = await listEngSets().catch(() => []);
+  const reportHealthy = !!(env.dailyReportEnabled && env.officeEmail
+    && process.env.CRON_SECRET && lastReport?.ok);
+  const reportNote = !env.dailyReportEnabled ? "switched off."
+    : !process.env.CRON_SECRET ? "CRON_SECRET isn't set, so the 5pm run can't authorise."
+    : !lastReport?.at ? "never run yet."
+    : lastReport.ok
+      ? `last sent ${new Date(lastReport.at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.`
+      : `last run didn't send — ${lastReport.error}.`;
+
   const names: Record<string, string> = {};
   for (const c of companies) names[c.id] = c.name;
 
   return (
     <StaffShell title="Submission Queue" sub="Jobs lodged through the portal, waiting to be accepted onto the board." active="/admin">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="eyebrow">CFBA Office</p>
-            <h1 className="mt-1 font-display text-[26px] font-semibold">Portal Admin</h1>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/admin/reports" className="btn-ghost">Reports</Link>
-            <Link href="/admin/audit" className="btn-ghost">Activity Log</Link>
-            <Link href="/admin/clients" className="btn-ghost">Clients &amp; Logins</Link>
-            <SyncButton />
-          </div>
+        {/* Clients has its own nav item now, so it isn't repeated here.
+            Reports and the activity log are occasional, so they stay as
+            buttons rather than taking up a fifth and sixth nav slot. */}
+        <div className="mb-6 flex flex-wrap justify-end gap-2">
+          <Link href="/admin/reports" className="btn-ghost">Turnaround Reports</Link>
+          <Link href="/admin/audit" className="btn-ghost">Activity Log</Link>
+          <SyncButton />
         </div>
 
-        <DailyReportCard
-          enabled={env.dailyReportEnabled}
-          to={env.officeEmail}
-          cronSecretSet={!!process.env.CRON_SECRET}
-          mailFromSet={!!env.mailFrom}
-          last={lastReport}
-        />
+        {/* One line here, the controls on Settings. Worth keeping in sight
+            because a report that has stopped sending is invisible by nature. */}
+        <Link href="/admin/settings"
+          className={`mb-6 block rounded-lg border px-4 py-3 text-[13px] transition ${
+            reportHealthy
+              ? "border-seal/30 bg-[#EDF3EE] text-seal hover:border-seal/60"
+              : "border-brass/40 bg-[#FBF4E6] text-brass hover:border-brass"}`}>
+          <strong>Evening report</strong> — {reportNote}{" "}
+          <span className="underline">Settings →</span>
+        </Link>
 
         {enquiriesWaiting > 0 && (
           <Link href="/admin/enquiries"
@@ -84,36 +76,10 @@ export default async function AdminHome() {
           </Link>
         )}
 
-        <div className="card mb-8 divide-y divide-rule text-[13px]">
-          <Row label="Data Store" value={DEMO_MODE ? "Demo (no Supabase configured)" : "Supabase"} warn={DEMO_MODE} />
-          <Row label="Monday Board" value={MONDAY_READY ? `Connected · ${env.mondayBoardId}` : "No MONDAY_TOKEN set"} warn={!MONDAY_READY} />
-          <Row label="SharePoint (Graph)" value={GRAPH_READY ? "Connected" : "No Graph credentials set"} warn={!GRAPH_READY} />
-          <Row label="Retention" value={`${env.retentionMonths} months from first download`} />
-        </div>
-
         <SyncHealth
           last={lastSync as never}
           companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         />
-
-        <PageToggles
-          pages={TOGGLEABLE_PAGES.map((p) => ({ key: p.key, label: p.label }))}
-          initialDisabled={[...disabled]}
-        />
-
-        <LoginDesignToggle initial={loginDesign === "classic" ? "classic" : "new"} />
-
-        <InfoSheetManager
-          sheets={PUBLISHED_SHEETS.map((s) => ({ file: s.file, title: s.title }))}
-          overridden={sheetOverrides.map((f) => f.name)}
-        />
-
-        <FormManager
-          forms={PORTAL_FORMS.map((f) => ({ key: f.key, code: f.code, title: f.title }))}
-          uploaded={uploadedForms.map((f) => f.name)}
-        />
-
-        <EngineeringControl initial={{ enabled: !!eng.enabled, url: eng.url || "" }} initialSets={engSets} />
 
         <section>
           <div className="mb-2.5 flex items-center gap-3">
@@ -171,11 +137,3 @@ export default async function AdminHome() {
   );
 }
 
-function Row({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-      <span className="text-ink/55">{label}</span>
-      <span className={warn ? "text-brass" : "text-ink/80"}>{value}</span>
-    </div>
-  );
-}
