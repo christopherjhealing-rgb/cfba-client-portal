@@ -15,14 +15,36 @@ test("the form registry has no duplicate keys or codes", () => {
   for (const k of keys) assert.match(k, /^[a-z0-9]+$/, `bad key: ${k}`);
 });
 
-test("BA7 is there, and every form says what it's for", () => {
-  const ba7 = PORTAL_FORMS.find((f) => f.code === "BA7");
-  assert.ok(ba7, "BA7 missing");
-  assert.equal(ba7.title, "Notice of Completion");
+test("every form carries its official title, and says what it's for", () => {
+  // Titles as published on wa.gov.au. A client searching a council site for
+  // the name we printed has to find the same form — and BA7 vs BA13, and
+  // BA9 vs BA22, are the two pairs that were already mixed up here once.
+  const OFFICIAL = {
+    BA1: "Application for Building Permit — Certified",
+    BA2: "Application for Building Permit — Uncertified",
+    BA5: "Application for Demolition Permit",
+    BA7: "Notice of Completion",
+    BA9: "Application for Occupancy Permit",
+    BA13: "Application for Building Approval Certificate",
+    BA19: "Request to Amend Building Permit or Builder's Details",
+    BA22: "Application to Extend Time — Building or Demolition Permit",
+  };
+  for (const [code, title] of Object.entries(OFFICIAL)) {
+    const f = PORTAL_FORMS.find((x) => x.code === code);
+    assert.ok(f, `${code} missing from the registry`);
+    assert.equal(f.title, title, `${code} title`);
+  }
+  assert.equal(PORTAL_FORMS.length, Object.keys(OFFICIAL).length,
+    "a form was added without its official title being checked here");
   for (const f of PORTAL_FORMS) {
-    assert.ok(f.title.trim(), `${f.code} has no title`);
     assert.ok(f.note.trim(), `${f.code} has no note`);
   }
+});
+
+test("the forms are listed in the order a client looks for them", () => {
+  // By form number, not by the order we happened to add them.
+  const nums = PORTAL_FORMS.map((f) => Number(f.code.replace(/\D/g, "")));
+  assert.deepEqual(nums, [...nums].sort((a, b) => a - b), "forms are out of order");
 });
 
 test("a form is recognised in every format we host, and nothing else", () => {

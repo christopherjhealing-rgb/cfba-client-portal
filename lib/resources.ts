@@ -31,6 +31,8 @@ export const PORTAL_FORMS: PortalForm[] = [
     note: "To demolish a building or structure." },
   { key: "ba7", code: "BA7", title: "Notice of Completion",
     note: "Given to the permit authority within 7 days of the work being finished. The builder's job, not ours." },
+  { key: "ba9", code: "BA9", title: "Application for Occupancy Permit",
+    note: "Before a new commercial building can be occupied, or on a change of use. Needs a certificate of construction compliance (BA17) for new work, or a certificate of building compliance (BA18) for an existing building." },
   { key: "ba13", code: "BA13", title: "Application for Building Approval Certificate",
     note: "For work already built, or an existing building that needs certifying after the fact." },
   { key: "ba19", code: "BA19", title: "Request to Amend Building Permit or Builder's Details",
