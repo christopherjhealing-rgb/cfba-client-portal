@@ -8,6 +8,7 @@ export const TOGGLEABLE_PAGES = [
   { key: "amend", href: "/amend", label: "Amend a Job" },
   { key: "downloads", href: "/downloads", label: "Downloads" },
   { key: "infoSheets", href: "/info-sheets", label: "Info Sheets" },
+  { key: "tools", href: "/tools", label: "Tools" },
   { key: "resources", href: "/resources", label: "Resources" },
   { key: "sitePlan", href: "/site-plan", label: "Site Plan Tool" },
   { key: "messages", href: "/messages", label: "Messages" },

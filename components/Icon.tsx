@@ -2,7 +2,7 @@ type Name =
   | "plus" | "folder" | "check" | "download" | "clock" | "arrowRight"
   | "grid" | "list" | "edit" | "mail" | "user" | "help" | "signOut"
   | "book" | "menu" | "close" | "eye" | "eyeOff" | "alert" | "inbox"
-  | "ruler" | "beam" | "chevronsLeft";
+  | "ruler" | "beam" | "tools" | "chevronsLeft";
 
 const paths: Record<Name, React.ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
@@ -29,6 +29,9 @@ const paths: Record<Name, React.ReactNode> = {
   ruler: <><path d="M16 3l5 5L8 21l-5-5z" /><path d="m7 12 2 2M10 9l2 2M13 6l2 2" /></>,
   // Structural truss — engineering. Rafters, bottom chord, collar tie.
   beam: <><path d="M3 18h18" /><path d="m12 6-7.2 12M12 6l7.2 12" /><path d="M8.4 12h7.2" /></>,
+  // Spanner over a rule — the tools page. Deliberately not a hammer: these
+  // are measuring tools, not building ones.
+  tools: <><path d="M14.5 3.5a4.5 4.5 0 0 0 5.9 5.9l-9.4 9.4a2.5 2.5 0 0 1-3.5-3.5z" /><path d="M4 4l3.5 3.5" /></>,
   // Double chevron — the sidebar collapse control. Rotated 180° in CSS when
   // the menu is already collapsed, so one glyph serves both directions.
   chevronsLeft: <><path d="m11 17-5-5 5-5" /><path d="m18 17-5-5 5-5" /></>,

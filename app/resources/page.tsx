@@ -5,10 +5,8 @@ import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
-import { BushfireCheck } from "@/components/BushfireCheck";
-import { WindClassCheck } from "@/components/WindClassCheck";
-import { SoakwellCheck } from "@/components/SoakwellCheck";
 import { Icon } from "@/components/Icon";
+import Link from "next/link";
 import {
   PORTAL_FORMS, FORMS_OFFICIAL_SOURCE, LINK_GROUPS, COUNCILS,
   FORM_LABEL, hostedFormFile,
@@ -39,12 +37,24 @@ export default async function Resources() {
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
       <PageHead hero="/heroes/retaining.jpg" title="Resources" sub="Forms, maps and the links you need to lodge with your local government." />
 
-      {/* The questions every client asks about a site before anything else:
-          is it bushfire prone, what wind class is it, and how much soakwell
-          does the new roof need. */}
-      <div className="mb-6"><BushfireCheck /></div>
-      <div className="mb-6"><WindClassCheck /></div>
-      <div className="mb-6"><SoakwellCheck /></div>
+      {/* The checkers used to sit here, above the forms. They've moved to
+          their own page — this is the signpost for anyone who knew where
+          they were. */}
+      {!hidden.has("tools") && (
+        <Link href="/tools"
+          className="card mb-6 flex items-start gap-3.5 p-4 transition hover:border-seal/40 hover:bg-wash">
+          <span className="mt-0.5 shrink-0 text-seal"><Icon name="tools" size={20} /></span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
+              Looking for the checkers? <Icon name="arrowRight" size={14} />
+            </span>
+            <span className="mt-1 block text-[13px] leading-relaxed text-ink/60">
+              Bushfire, wind class, soakwell sizing, the site plan tool and the
+              engineering checker are all on <strong className="font-medium text-ink/75">Tools</strong> now.
+            </span>
+          </span>
+        </Link>
+      )}
 
       {/* Council forms */}
       <section className="mb-8">

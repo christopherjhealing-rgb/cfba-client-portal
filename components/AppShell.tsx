@@ -10,6 +10,8 @@ interface NavItem {
   label: string;
   icon: IconName;
   badge?: number;
+  /** Other routes this row owns — it stays lit while you're on one of them. */
+  also?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -65,9 +67,11 @@ const NAV: NavItem[] = [
   { href: "/amend", label: "Amend a Job", icon: "edit" },
   { href: "/downloads", label: "Downloads", icon: "download" },
   { href: "/info-sheets", label: "Info Sheets", icon: "book" },
+  // One entry, not three. The site plan tool and the engineering checker are
+  // still their own screens — they're reached from Tools, and `also` keeps
+  // this row lit while you're on them so the menu doesn't go blank.
+  { href: "/tools", label: "Tools", icon: "tools", also: ["/site-plan", "/engineering"] },
   { href: "/resources", label: "Resources", icon: "folder" },
-  { href: "/site-plan", label: "Site Plan Tool", icon: "ruler" },
-  { href: "/engineering", label: "Engineering", icon: "beam" },
   { href: "/details", label: "My Details", icon: "user" },
   { href: "/help", label: "Help & Support", icon: "help" },
 ];
@@ -191,8 +195,9 @@ export function AppShell({
 
         <nav id="shell-nav" className="flex-1 overflow-y-auto px-3 pb-4">
           {nav.map((n) => {
-            const active =
-              pathname === n.href || pathname.startsWith(n.href + "/");
+            const owns = (h: string) =>
+              pathname === h || pathname.startsWith(h + "/");
+            const active = owns(n.href) || (n.also ?? []).some(owns);
             return (
               <Link
                 key={n.href}
