@@ -5,164 +5,185 @@
 <title>CFBA Client Portal — infographic</title>
 <style>
 /* ---------------------------------------------------------------------------
-   The portal, as one dark infographic.
-   Structure follows the workshop agenda — hero, then a run of sections that
-   each answer one question. Treatment follows the seminar poster: near-black
-   green, light text, a bright green that survives being looked at on a phone.
-   The deep brand green (#1E5B3C) is a background colour here, not a text one;
-   at 14px on black it disappears, which is why the accent is lifted.
+   The portal, one dark sheet.
+
+   Second pass, after a design exploration came back with a better answer than
+   the first: serif for display rather than heavy sans, section labels demoted
+   to quiet letter-spaced eyebrows instead of big white headings, icons beside
+   their text rather than above it, and brass given real work to do on the two
+   panels that ask for something. The result reads as a document rather than a
+   deck, which suits a firm that certifies things.
+
+   Serif is also simply more CFBA: the printed collateral has always set its
+   display type in Georgia, and the first pass quietly abandoned that.
    --------------------------------------------------------------------------- */
 :root {
   --bg:      #08150F;
-  --panel:   #0F2419;
-  --panel-2: #12301F;
-  --line:    rgba(255,255,255,.11);
-  --lime:    #86C440;   /* accent — headings, icons, rules */
-  --brass:   #C9A227;   /* secondary — the "free" marks */
-  --dim:     rgba(255,255,255,.62);
-  --dimmer:  rgba(255,255,255,.42);
+  --panel:   #0B1D14;
+  --band:    #0E2417;
+  --line:    rgba(255,255,255,.10);
+  --lime:    #86C440;
+  --brass:   #C9A227;
+  --dim:     rgba(255,255,255,.60);
+  --dimmer:  rgba(255,255,255,.40);
+  --display: Georgia, "Times New Roman", serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #3A423E; padding: 40px; display: flex; gap: 40px; align-items: flex-start;
   font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; }
 
-/* flex-shrink:0 — laid out side by side for review, two sheets in a 1400px
-   window will otherwise both squeeze to 640 and every measurement lies. */
+/* flex-shrink:0 — two sheets side by side in a narrow window will otherwise
+   both squeeze, and every measurement taken afterwards is wrong. */
 .sheet { width: 1080px; flex: 0 0 auto; background: var(--bg); color: #fff;
   position: relative; overflow: hidden; }
-.sheet.tall { width: 1080px; }
 
-/* A faint photograph under the hero, so the black has depth. It has to END
-   before the feature grid: it was overlaying the first row of icons, which
-   sits above 1180px, and half a grid faded to near-black looked like a
-   rendering fault rather than a design. */
-.wash { position: absolute; inset: 0 0 auto 0; height: 940px; z-index: 0; }
-.wash img { width: 100%; height: 100%; object-fit: cover; opacity: .20; }
+/* A faint photograph under the hero. It must END before the first grid, and
+   everything below it needs a stacking context, or it fades out the section
+   beneath — which is exactly what happened on the first pass. */
+.wash { position: absolute; inset: 0 0 auto 0; height: 860px; z-index: 0; }
+.wash img { width: 100%; height: 100%; object-fit: cover; opacity: .16; }
 .wash .fade { position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(8,21,15,.72) 0%, rgba(8,21,15,.86) 55%, var(--bg) 100%); }
+  background: linear-gradient(180deg, rgba(8,21,15,.74) 0%, rgba(8,21,15,.88) 58%, var(--bg) 100%); }
 
-/* Everything sits above the wash. A block that forgets this gets faded out
-   by it, which is how the feature grid lost its first row. */
-section, .feats, .promise, .cta, .foot { position: relative; z-index: 1; }
-section { padding: 0 68px; }
-
-/* ---- shared bits ---- */
-.eyebrow { font-size: 21px; letter-spacing: .26em; text-transform: uppercase;
-  color: var(--lime); font-weight: 700; }
-.rule { width: 88px; height: 6px; background: var(--lime); border-radius: 3px; }
-.hrule { display: flex; align-items: center; gap: 22px; margin-bottom: 30px; }
-.hrule h2 { font-size: 34px; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
-.hrule .ln { flex: 1; height: 1px; background: var(--line); }
-.hrule .tag { font-size: 18px; color: var(--dimmer); letter-spacing: .12em; text-transform: uppercase; }
+section, .band, .foot { position: relative; z-index: 1; }
+section { padding: 0 62px; }
 
 .i { width: 1em; height: 1em; stroke: currentColor; fill: none;
-     stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+     stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- the section label: small, wide, lime, with a rule running off it ---- */
+.lab { display: flex; align-items: center; gap: 22px; margin-bottom: 26px; }
+.lab b { font-size: 19px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase;
+  color: var(--lime); white-space: nowrap; }
+.lab .ln { flex: 1; height: 1px; background: var(--line); }
+.lab .note { font-size: 17px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--dimmer); white-space: nowrap; }
 
 /* ═══════════════ HERO ═══════════════ */
-/* Two columns rather than an overlap: absolutely placed, the devices sat on
-   top of the headline, and a headline you can't read is not a headline.
-   Text owns the left, the screens own the right. */
-.hero { padding-top: 62px; padding-bottom: 46px; }
-.hero .split { display: grid; grid-template-columns: 545px 1fr; gap: 30px; align-items: start; }
-.hero .brandrow { display: flex; align-items: center; gap: 22px; margin-bottom: 40px; }
-.hero .brandrow img { width: 108px; height: 108px; object-fit: contain; }
-.hero .brandrow .bn { font-size: 26px; font-weight: 800; letter-spacing: .06em; line-height: 1.25; }
-.hero .brandrow .bn span { display: block; font-size: 17px; font-weight: 600;
-  letter-spacing: .22em; color: var(--lime); margin-top: 3px; }
+.hero { padding-top: 52px; padding-bottom: 34px; }
+.brandrow { display: flex; align-items: center; gap: 20px; margin-bottom: 34px; }
+.brandrow img { width: 96px; height: 96px; object-fit: contain; }
+.brandrow .bn { font-family: var(--display); font-size: 30px; font-weight: 700;
+  letter-spacing: .04em; line-height: 1.2; }
+.brandrow .bn span { display: block; font-family: "Segoe UI", sans-serif; font-size: 16px;
+  font-weight: 600; letter-spacing: .26em; color: var(--lime); margin-top: 6px; }
 
-.hero h1 { font-size: 74px; font-weight: 800; line-height: 1.02; letter-spacing: -.015em;
-  margin-top: 20px; text-transform: uppercase; }
-.hero h1 em { font-style: normal; color: var(--lime); }
-.hero .sub { font-size: 27px; color: #fff; font-weight: 600; margin-top: 20px; }
-.hero p.lede { font-size: 21px; line-height: 1.5; color: var(--dim); margin-top: 18px; }
+.eyebrow { font-size: 19px; letter-spacing: .26em; text-transform: uppercase;
+  color: var(--lime); font-weight: 600; }
+.rule { width: 78px; height: 5px; background: var(--lime); border-radius: 3px; margin: 18px 0 0; }
 
-.free { display: inline-flex; align-items: center; gap: 14px; margin-top: 30px;
-  border: 2px solid var(--brass); border-radius: 999px; padding: 13px 30px;
-  font-size: 19px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--brass); }
-.free .i { font-size: 21px; }
+.split { display: grid; grid-template-columns: 500px 1fr; gap: 26px; align-items: start; }
+h1 { font-family: var(--display); font-size: 62px; font-weight: 700; line-height: 1.08;
+  text-transform: uppercase; letter-spacing: .005em; margin-top: 22px; }
+h1 em { font-style: normal; color: var(--lime); }
+.sub { font-size: 24px; font-weight: 600; margin-top: 18px; }
+p.lede { font-size: 19.5px; line-height: 1.55; color: var(--dim); margin-top: 15px; }
 
-/* ---- the devices ---- */
-/* Sized to the column, not past it: 1080 − 136 padding − 545 text − 30 gap
-   leaves 369px, and −40 of bleed makes 409. The phone has to land inside it. */
-.devices { position: relative; height: 372px; margin-top: 26px; margin-right: -40px; }
-.laptop { position: absolute; left: 0; top: 0; width: 336px; }
-.laptop .screen { border: 8px solid #1B2A22; border-radius: 12px; overflow: hidden;
-  background: #1B2A22; box-shadow: 0 34px 80px rgba(0,0,0,.62); }
+.free { display: inline-flex; align-items: center; gap: 13px; margin-top: 26px;
+  border: 1.5px solid var(--brass); border-radius: 999px; padding: 13px 28px;
+  font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--brass); }
+.free .i { font-size: 22px; }
+
+.devices { position: relative; height: 366px; margin-top: 22px; margin-right: -40px; }
+.laptop { position: absolute; left: 0; top: 0; width: 386px; }
+.laptop .screen { border: 8px solid #16241C; border-radius: 12px; overflow: hidden;
+  background: #16241C; box-shadow: 0 34px 80px rgba(0,0,0,.66); }
 .laptop .screen img { display: block; width: 100%; }
-.laptop .base { height: 11px; margin: 0 -22px; border-radius: 0 0 10px 10px;
-  background: linear-gradient(180deg, #26382E, #16211B); }
-.phone { position: absolute; left: 252px; top: 108px; width: 152px; }
-.phone .screen { border: 7px solid #1B2A22; border-radius: 26px; overflow: hidden;
-  background: #1B2A22; box-shadow: 0 26px 60px rgba(0,0,0,.72); }
+.laptop .base { height: 11px; margin: 0 -24px; border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #223229, #131C17); }
+.phone { position: absolute; left: 300px; top: 104px; width: 158px; }
+.phone .screen { border: 7px solid #16241C; border-radius: 26px; overflow: hidden;
+  background: #16241C; box-shadow: 0 26px 60px rgba(0,0,0,.74); }
 .phone .screen img { display: block; width: 100%; }
 
-/* ═══════════════ FEATURE GRID ═══════════════ */
-.feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: var(--line); }
-.feats .f { background: var(--bg); padding: 34px 26px; }
-.feats .f .ic { color: var(--lime); font-size: 40px; }
-.feats .f h3 { font-size: 22px; font-weight: 800; letter-spacing: .04em;
-  text-transform: uppercase; margin-top: 18px; }
-.feats .f p { font-size: 19px; line-height: 1.45; color: var(--dim); margin-top: 9px; }
+/* ═══════════════ FEATURE GRID — icon beside the text ═══════════════ */
+.feats { display: grid; grid-template-columns: repeat(3, 1fr); }
+.feats .f { display: flex; gap: 18px; padding: 24px 26px 24px 0; }
+.feats .f + .f { border-left: 1px solid var(--line); padding-left: 26px; }
+.feats .f:nth-child(4) { border-left: 0; padding-left: 0; }
+.feats .f:nth-child(n+4) { border-top: 1px solid var(--line); }
+.feats .ic { flex: 0 0 auto; color: var(--lime); font-size: 34px; margin-top: 1px; }
+.feats h3 { font-family: var(--display); font-size: 22px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase; line-height: 1.2; }
+.feats p { font-size: 18px; line-height: 1.5; color: var(--dim); margin-top: 8px; }
+
+/* ═══════════════ TOOLS PANEL — brass ═══════════════ */
+.tools { border: 1px solid rgba(201,162,39,.42); border-radius: 16px; background: var(--panel);
+  padding: 30px 36px; display: flex; gap: 32px; align-items: center; }
+.tools .mark { flex: 0 0 auto; width: 92px; height: 92px; border-radius: 50%;
+  border: 1.5px solid var(--brass); color: var(--brass);
+  display: flex; align-items: center; justify-content: center; font-size: 44px; }
+.tools .lead { flex: 0 0 250px; }
+.tools .lead h3 { font-family: var(--display); font-size: 25px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--brass); line-height: 1.25; }
+.tools .lead p { font-size: 17px; color: var(--dim); margin-top: 9px; line-height: 1.45; }
+.tools .list { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px 26px; }
+.tools .list div { display: flex; gap: 14px; align-items: center; font-size: 19px; }
+.tools .list .i { color: var(--lime); font-size: 24px; flex: 0 0 auto; }
 
 /* ═══════════════ FLOW ═══════════════ */
 .flow { display: grid; grid-template-columns: repeat(5, 1fr); }
-.flow .s { position: relative; text-align: center; padding: 76px 10px 0; }
-.flow .s::before { content: ""; position: absolute; top: 31px; left: 0; right: 0;
-  border-top: 2px dashed rgba(255,255,255,.18); }
+.flow .s { position: relative; text-align: center; padding: 74px 8px 0; }
+.flow .s::before { content: ""; position: absolute; top: 30px; left: 0; right: 0;
+  border-top: 1.5px dashed rgba(255,255,255,.18); }
 .flow .s:first-child::before { left: 50%; }
 .flow .s:last-child::before  { right: 50%; }
-.flow .dot { position: absolute; top: 0; left: 50%; margin-left: -31px;
-  width: 62px; height: 62px; border-radius: 50%; background: var(--panel);
-  border: 2px solid var(--lime); color: var(--lime);
-  display: flex; align-items: center; justify-content: center; font-size: 27px; }
-.flow .dot.solid { background: var(--lime); color: #08150F; border-color: var(--lime); }
-.flow .s b { display: block; font-size: 20px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.flow .s span { display: block; font-size: 17px; color: var(--dim); margin-top: 8px; line-height: 1.4; }
-.flow .s .who { display: inline-block; margin-top: 10px; font-size: 14px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--dimmer); border: 1px solid var(--line);
-  border-radius: 99px; padding: 4px 12px; }
+.flow .dot { position: absolute; top: 0; left: 50%; margin-left: -30px;
+  width: 60px; height: 60px; border-radius: 50%; background: var(--bg);
+  border: 1.5px solid var(--lime); color: var(--lime);
+  display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.flow .s b { display: block; font-family: var(--display); font-size: 21px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; }
+.flow .s span { display: block; font-size: 17px; color: var(--dim); margin-top: 8px; line-height: 1.42; }
+/* Roles on their own rule, rather than as pills — a row of chips under a row
+   of circles was two competing shapes saying one thing. */
+.roles { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 20px;
+  border-top: 1px solid var(--line); padding-top: 14px; }
+.roles span { text-align: center; font-size: 15px; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--dimmer); }
 
 /* ═══════════════ EVERYTHING IN IT ═══════════════ */
-.all { display: grid; grid-template-columns: 1fr 1fr; gap: 0 46px; }
-.all .row { display: flex; gap: 18px; padding: 15px 0; border-bottom: 1px solid var(--line); }
-.all .row .ic { flex: 0 0 auto; color: var(--lime); font-size: 25px; margin-top: 2px; }
-.all .row b { font-size: 21px; font-weight: 700; display: block; }
-.all .row span { font-size: 17.5px; color: var(--dim); line-height: 1.4; display: block; margin-top: 3px; }
+.all { display: grid; grid-template-columns: 1fr 1fr; gap: 0 44px; }
+.all .row { display: flex; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.all .row .ic { flex: 0 0 auto; color: var(--lime); font-size: 23px; margin-top: 2px; }
+.all .row b { font-family: var(--display); font-size: 20px; font-weight: 700; display: block;
+  letter-spacing: .02em; }
+.all .row span { font-size: 17px; color: var(--dim); line-height: 1.4; display: block; margin-top: 3px; }
 
-/* ═══════════════ TOOLS STRIP ═══════════════ */
-.tools { background: var(--panel); border: 1px solid rgba(134,196,64,.28); border-radius: 18px;
-  padding: 34px 38px; display: flex; gap: 34px; align-items: center; }
-.tools .lead { flex: 0 0 236px; }
-.tools .lead h3 { font-size: 30px; font-weight: 800; line-height: 1.15; }
-.tools .lead h3 em { font-style: normal; color: var(--lime); }
-.tools .lead p { font-size: 17px; color: var(--dim); margin-top: 10px; line-height: 1.4; }
-.tools .list { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 26px; }
-.tools .list div { display: flex; gap: 13px; align-items: center; font-size: 19px; }
-.tools .list .i { color: var(--lime); font-size: 23px; flex: 0 0 auto; }
+/* ═══════════════ PROMISE BAND ═══════════════ */
+.band { background: var(--band); display: grid; grid-template-columns: repeat(4, 1fr);
+  padding: 36px 62px; gap: 30px; }
+.band .p { display: flex; gap: 15px; align-items: flex-start; }
+.band .p .ic { color: var(--lime); font-size: 31px; flex: 0 0 auto; }
+.band .p b { display: block; font-family: var(--display); font-size: 21px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; }
+.band .p span { display: block; font-size: 16.5px; color: var(--dim); margin-top: 6px; line-height: 1.4; }
 
-/* ═══════════════ PROMISE STRIP ═══════════════ */
-.promise { background: var(--panel-2); display: grid; grid-template-columns: repeat(4, 1fr);
-  padding: 40px 68px; gap: 34px; }
-.promise .p { display: flex; gap: 16px; align-items: flex-start; }
-.promise .p .ic { color: var(--lime); font-size: 34px; flex: 0 0 auto; }
-.promise .p b { display: block; font-size: 21px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.promise .p span { display: block; font-size: 17px; color: var(--dim); margin-top: 6px; line-height: 1.4; }
+/* ═══════════════ CTA — brass ═══════════════ */
+.cta { border: 1px solid rgba(201,162,39,.42); border-radius: 16px; background: var(--panel);
+  padding: 32px 36px; display: flex; align-items: center; gap: 30px; }
+.cta .mark { flex: 0 0 auto; width: 84px; height: 84px; border-radius: 50%;
+  border: 1.5px solid var(--brass); color: var(--brass);
+  display: flex; align-items: center; justify-content: center; font-size: 38px; }
+.cta .body { flex: 1; }
+.cta h3 { font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; }
+.cta h3 em { font-style: normal; color: var(--brass); }
+.cta p { font-size: 18px; color: var(--dim); margin-top: 9px; line-height: 1.45; }
+.cta .btn { flex: 0 0 auto; border: 1.5px solid var(--brass); border-radius: 10px;
+  padding: 19px 38px; font-family: var(--display); font-size: 22px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--brass); }
 
-/* ═══════════════ CTA + FOOT ═══════════════ */
-.cta { margin: 0 68px 52px; border: 2px solid var(--lime); border-radius: 20px;
-  padding: 38px 42px; display: flex; align-items: center; gap: 38px; }
-.cta h3 { font-size: 38px; font-weight: 800; line-height: 1.1; }
-.cta h3 em { font-style: normal; color: var(--lime); }
-.cta p { font-size: 20px; color: var(--dim); margin-top: 10px; line-height: 1.45; }
-.cta .btn { flex: 0 0 auto; background: var(--lime); color: #08150F; border-radius: 12px;
-  padding: 22px 44px; font-size: 24px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-
-.foot { background: #050D09; padding: 28px 60px; display: flex; align-items: center;
-  gap: 24px; border-top: 1px solid var(--line); }
-.foot img { width: 52px; height: 52px; object-fit: contain; }
-.foot .who { font-size: 18px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
-.foot .who span { display: block; font-size: 14.5px; font-weight: 400; color: var(--dimmer); }
-.foot .c { display: flex; align-items: center; gap: 9px; font-size: 16px; color: var(--dim);
+/* ═══════════════ FOOT ═══════════════ */
+.foot { background: #050D09; padding: 26px 62px; display: flex; align-items: center; gap: 24px;
+  border-top: 1px solid var(--line); }
+.foot img { width: 54px; height: 54px; object-fit: contain; }
+.foot .who { font-family: var(--display); font-size: 21px; font-weight: 700; line-height: 1.25;
+  white-space: nowrap; }
+.foot .who span { display: block; font-family: "Segoe UI", sans-serif; font-size: 14.5px;
+  font-weight: 400; color: var(--dimmer); margin-top: 3px; }
+.foot .c { display: flex; align-items: center; gap: 9px; font-size: 16.5px; color: var(--dim);
   white-space: nowrap; }
 .foot .c .i { color: var(--lime); font-size: 19px; flex: 0 0 auto; }
 .foot .sp { flex: 1; }
@@ -170,7 +191,6 @@ section { padding: 0 68px; }
 </head>
 <body>
 
-<!-- the icon set, referenced throughout -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <symbol id="i-screen" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M9 21h6M12 17v4"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3.5L10.5 14M21 3.5l-7 17-3.5-7-7-3.5z"/></symbol>
@@ -197,14 +217,14 @@ section { padding: 0 68px; }
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/></symbol>
 </defs></svg>
 
-<div class="sheet tall" id="portal-infographic">
+<div class="sheet" id="portal-infographic">
 
   <div class="wash">
     <img src="../../public/hero.jpg" alt="">
     <div class="fade"></div>
   </div>
 
-  <!-- ═══════════ HERO ═══════════ -->
+  <!-- ═════════ HERO ═════════ -->
   <section class="hero">
     <div class="brandrow">
       <img src="../../public/logo-white.png" alt="CF Building Approvals">
@@ -212,7 +232,7 @@ section { padding: 0 68px; }
     </div>
 
     <div class="eyebrow">For the builders, designers &amp; drafters we work with</div>
-    <div class="rule" style="margin:20px 0 0"></div>
+    <div class="rule"></div>
 
     <div class="split">
       <div>
@@ -225,7 +245,6 @@ section { padding: 0 68px; }
         </p>
         <div class="free"><svg class="i"><use href="#i-check"/></svg> Free for our clients</div>
       </div>
-
       <div class="devices">
         <div class="laptop">
           <div class="screen"><img src="../collateral/img/dashboard.png" alt="The client dashboard"></div>
@@ -238,58 +257,74 @@ section { padding: 0 68px; }
     </div>
   </section>
 
-  <!-- ═══════════ WHAT YOU CAN DO ═══════════ -->
-  <section style="margin-top:44px">
-    <div class="hrule"><h2>What you can do</h2><span class="ln"></span>
-      <span class="tag">one login, whole office</span></div>
-  </section>
-  <div class="feats">
-    <div class="f"><div class="ic"><svg class="i"><use href="#i-screen"/></svg></div>
-      <h3>See every job</h3>
-      <p>Where each one is up to, in plain English, updated every few minutes.</p></div>
-    <div class="f"><div class="ic"><svg class="i"><use href="#i-send"/></svg></div>
-      <h3>Lodge a job</h3>
-      <p>Address, class, description, drawings — straight onto our board.</p></div>
-    <div class="f"><div class="ic"><svg class="i"><use href="#i-chat"/></svg></div>
-      <h3>Answer a request</h3>
-      <p>Reply and attach to the job itself. No email chain to lose it in.</p></div>
-    <div class="f"><div class="ic"><svg class="i"><use href="#i-down"/></svg></div>
-      <h3>Download the moment it&apos;s issued</h3>
-      <p>Certificate and every stamped document, as one file, as often as you like.</p></div>
-    <div class="f"><div class="ic"><svg class="i"><use href="#i-pen"/></svg></div>
-      <h3>Amend a job</h3>
-      <p>Any job we&apos;ve done for you — current, or finished years ago.</p></div>
-    <div class="f"><div class="ic"><svg class="i"><use href="#i-map"/></svg></div>
-      <h3>Answer it yourself</h3>
-      <p>Wind class, soakwells, site plans, bushfire and every council form.</p></div>
-  </div>
-
-  <!-- ═══════════ HOW A JOB FLOWS ═══════════ -->
-  <section style="margin-top:52px">
-    <div class="hrule"><h2>How a job moves</h2><span class="ln"></span>
-      <span class="tag">most certified in 3–4 business days</span></div>
-    <div class="flow">
-      <div class="s"><span class="dot solid"><svg class="i"><use href="#i-send"/></svg></span>
-        <b>Lodged</b><span>Onto our board the moment you press it</span>
-        <span class="who">You</span></div>
-      <div class="s"><span class="dot"><svg class="i"><use href="#i-eye"/></svg></span>
-        <b>Assessed</b><span>Checked against the requirements</span>
-        <span class="who">Us</span></div>
-      <div class="s"><span class="dot"><svg class="i"><use href="#i-chat"/></svg></span>
-        <b>Anything further</b><span>Asked and answered against the job</span>
-        <span class="who">Both</span></div>
-      <div class="s"><span class="dot"><svg class="i"><use href="#i-stamp"/></svg></span>
-        <b>Issued</b><span>Certified, and collected automatically</span>
-        <span class="who">Us</span></div>
-      <div class="s"><span class="dot solid"><svg class="i"><use href="#i-down"/></svg></span>
-        <b>Yours</b><span>Emailed, and ready to download</span>
-        <span class="who">You</span></div>
+  <!-- ═════════ WHAT YOU CAN DO ═════════ -->
+  <section style="margin-top:10px">
+    <div class="lab"><b>What you can do</b><span class="ln"></span>
+      <span class="note">One login, whole office</span></div>
+    <div class="feats">
+      <div class="f"><span class="ic"><svg class="i"><use href="#i-screen"/></svg></span>
+        <div><h3>See every job</h3>
+        <p>Where each one is up to, in plain English, updated every few minutes.</p></div></div>
+      <div class="f"><span class="ic"><svg class="i"><use href="#i-send"/></svg></span>
+        <div><h3>Lodge a job</h3>
+        <p>Address, class, description, drawings — straight onto our board.</p></div></div>
+      <div class="f"><span class="ic"><svg class="i"><use href="#i-chat"/></svg></span>
+        <div><h3>Answer a request</h3>
+        <p>Reply and attach to the job itself. No email chain to lose it in.</p></div></div>
+      <div class="f"><span class="ic"><svg class="i"><use href="#i-down"/></svg></span>
+        <div><h3>Download the moment it&apos;s issued</h3>
+        <p>Certificate and every stamped document, as one file, as often as you like.</p></div></div>
+      <div class="f"><span class="ic"><svg class="i"><use href="#i-pen"/></svg></span>
+        <div><h3>Amend a job</h3>
+        <p>Any job we&apos;ve done for you — current, or finished years ago.</p></div></div>
+      <div class="f"><span class="ic"><svg class="i"><use href="#i-map"/></svg></span>
+        <div><h3>Answer it yourself</h3>
+        <p>Wind class, soakwells, site plans, bushfire and every council form.</p></div></div>
     </div>
   </section>
 
-  <!-- ═══════════ EVERYTHING IN IT ═══════════ -->
-  <section style="margin-top:56px">
-    <div class="hrule"><h2>Everything that&apos;s in it</h2><span class="ln"></span></div>
+  <!-- ═════════ TOOLS ═════════ -->
+  <section style="margin-top:34px">
+    <div class="tools">
+      <div class="mark"><svg class="i"><use href="#i-check"/></svg></div>
+      <div class="lead">
+        <h3>Five tools.<br>No charge.</h3>
+        <p>The questions we&apos;re asked most, answered before you lodge.</p>
+      </div>
+      <div class="list">
+        <div><svg class="i"><use href="#i-zap"/></svg> Wind classification</div>
+        <div><svg class="i"><use href="#i-cloud"/></svg> Soakwell calculator</div>
+        <div><svg class="i"><use href="#i-map"/></svg> Site plan tool</div>
+        <div><svg class="i"><use href="#i-warn"/></svg> Bushfire map check</div>
+        <div><svg class="i"><use href="#i-clip"/></svg> Eight council forms</div>
+        <div><svg class="i"><use href="#i-pin"/></svg> Thirty WA councils</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ HOW A JOB MOVES ═════════ -->
+  <section style="margin-top:40px">
+    <div class="lab"><b>How a job moves</b><span class="ln"></span>
+      <span class="note">Most certified in 3–4 business days</span></div>
+    <div class="flow">
+      <div class="s"><span class="dot"><svg class="i"><use href="#i-send"/></svg></span>
+        <b>Lodged</b><span>Onto our board the moment you press it</span></div>
+      <div class="s"><span class="dot"><svg class="i"><use href="#i-eye"/></svg></span>
+        <b>Assessed</b><span>Checked against the requirements</span></div>
+      <div class="s"><span class="dot"><svg class="i"><use href="#i-chat"/></svg></span>
+        <b>Anything further</b><span>Asked and answered against the job</span></div>
+      <div class="s"><span class="dot"><svg class="i"><use href="#i-stamp"/></svg></span>
+        <b>Issued</b><span>Certified, and collected automatically</span></div>
+      <div class="s"><span class="dot"><svg class="i"><use href="#i-down"/></svg></span>
+        <b>Yours</b><span>Emailed, and ready to download</span></div>
+    </div>
+    <div class="roles"><span>You</span><span>Us</span><span>Both</span><span>Us</span><span>You</span></div>
+  </section>
+
+  <!-- ═════════ EVERYTHING IN IT ═════════ -->
+  <section style="margin-top:40px">
+    <div class="lab"><b>Everything that&apos;s in it</b><span class="ln"></span>
+      <span class="note">And it works on a phone</span></div>
     <div class="all">
       <div>
         <div class="row"><span class="ic"><svg class="i"><use href="#i-screen"/></svg></span>
@@ -322,26 +357,8 @@ section { padding: 0 68px; }
     </div>
   </section>
 
-  <!-- ═══════════ THE TOOLS ═══════════ -->
-  <section style="margin-top:52px">
-    <div class="tools">
-      <div class="lead">
-        <h3>Five tools.<br><em>No charge.</em></h3>
-        <p>The questions we&apos;re asked most, answered before you lodge.</p>
-      </div>
-      <div class="list">
-        <div><svg class="i"><use href="#i-zap"/></svg> Wind classification</div>
-        <div><svg class="i"><use href="#i-cloud"/></svg> Soakwell calculator</div>
-        <div><svg class="i"><use href="#i-map"/></svg> Site plan tool</div>
-        <div><svg class="i"><use href="#i-warn"/></svg> Bushfire map check</div>
-        <div><svg class="i"><use href="#i-clip"/></svg> Eight council forms</div>
-        <div><svg class="i"><use href="#i-pin"/></svg> Thirty WA councils</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════ PROMISE ═══════════ -->
-  <div class="promise" style="margin-top:56px">
+  <!-- ═════════ PROMISE ═════════ -->
+  <div class="band" style="margin-top:44px">
     <div class="p"><span class="ic"><svg class="i"><use href="#i-check"/></svg></span>
       <div><b>Simple</b><span>One login for your whole office. Nothing to install.</span></div></div>
     <div class="p"><span class="ic"><svg class="i"><use href="#i-clock"/></svg></span>
@@ -352,17 +369,20 @@ section { padding: 0 68px; }
       <div><b>Secure</b><span>Your jobs, your logins only. No file has a public link.</span></div></div>
   </div>
 
-  <!-- ═══════════ CTA ═══════════ -->
-  <div class="cta" style="margin-top:52px">
-    <div style="flex:1">
-      <h3>Not on it yet? <em>Ask us.</em></h3>
-      <p>We&apos;ll set your office up and walk you through it — there&apos;s no cost and no
-        commitment, and you can keep working exactly the way you do now.</p>
+  <!-- ═════════ CTA ═════════ -->
+  <section style="margin-top:40px;padding-bottom:40px">
+    <div class="cta">
+      <div class="mark"><svg class="i"><use href="#i-user"/></svg></div>
+      <div class="body">
+        <h3>Not on it yet? <em>Ask us.</em></h3>
+        <p>We&apos;ll set your office up and walk you through it — there&apos;s no cost and no
+          commitment, and you can keep working exactly the way you do now.</p>
+      </div>
+      <div class="btn">Get set up</div>
     </div>
-    <div class="btn">Get set up</div>
-  </div>
+  </section>
 
-  <!-- ═══════════ FOOT ═══════════ -->
+  <!-- ═════════ FOOT ═════════ -->
   <div class="foot">
     <img src="../../public/logo-white.png" alt="">
     <div class="who">CF Building Approvals<span>Building with confidence</span></div>
