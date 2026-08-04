@@ -97,6 +97,7 @@ export function elapsedBusinessDays(
   receivedAt: string, pause?: ClientPause | null, now?: Date, holidays?: Set<string>
 ): number | null;
 
+export function looksLikeEmail(s: string): boolean;
 export function surveyorFor(peopleText: string | null | undefined, status: string | null | undefined): string | null;
 
 // --- Teams notifications (pure parts; transport lives in lib/teams.ts) ------

@@ -199,7 +199,7 @@ async function handle(req: Request) {
   const description = tidyAddress(String(form.get("description") || ""));
   const notes = String(form.get("notes") || "").trim().slice(0, 4000);
   const clientRef = String(form.get("clientRef") || "").trim().slice(0, 60);
-  const contact = String(form.get("contact") || "").trim().toLowerCase();
+  const contact = String(form.get("contact") || "").trim().slice(0, 80);
   const amendmentOf = tidyAddress(String(form.get("amendmentOf") || "")) || null;
   if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
     return NextResponse.json(OFFLINE, { status: 503 });
@@ -293,7 +293,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const description = tidyAddress(String(body.description || ""));
   const notes = String(body.notes || "").trim().slice(0, 4000);
   const clientRef = String(body.clientRef || "").trim().slice(0, 60);
-  const contact = String(body.contact || "").trim().toLowerCase();
+  const contact = String(body.contact || "").trim().slice(0, 80);
   const amendmentOf = tidyAddress(String(body.amendmentOf || "")) || null;
   if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
     return NextResponse.json(OFFLINE, { status: 503 });

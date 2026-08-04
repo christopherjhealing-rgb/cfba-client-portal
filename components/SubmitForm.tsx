@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { AddressField } from "./AddressField";
 import { FileBucket, type Bucket } from "./FileBucket";
-import { PhotoBucket } from "./PhotoBucket";
 import { uploadDirect } from "@/lib/upload-client";
 import type { LibraryDoc } from "@/lib/library";
 
@@ -17,7 +16,7 @@ const BUCKETS: Bucket[] = [
   { key: "engineering", label: "Engineering", required: true,
     hint: "Signed and dated structural certification. Guidance note 02 lists what we look for." },
   { key: "other", label: "Other Supporting Documents",
-    hint: "BAL assessment, soil classification, anything else relevant. Optional." },
+    hint: "BAL report, site photos, soil classification — anything else relevant. Optional." },
 ];
 
 const CLASS_OPTIONS = [
@@ -77,7 +76,9 @@ export function SubmitForm() {
 
     // Files go straight to storage via signed URLs (see lib/upload-client) —
     // a full drawing set doesn't fit through a serverless request body. Site
-    // photos are already one compiled PDF by now (see PhotoBucket).
+    // The photos bucket is gone — site photos ride in Other Supporting
+    // Documents like any other PDF. The key is still read here so a form left
+    // open in a tab across the deploy still submits what it holds.
     const entries = [
       ...BUCKETS.flatMap((b) =>
         (files[b.key] || []).map((f) => ({ file: f, category: b.key }))
@@ -272,8 +273,6 @@ export function SubmitForm() {
               )}
             </div>
           ))}
-          <PhotoBucket files={files.photos || []}
-            onChange={(f) => setFiles((prev) => ({ ...prev, photos: f }))} />
         </div>
         <p className="mt-2 text-[12px] text-ink/50">
           {totalMb > 0
@@ -295,10 +294,16 @@ export function SubmitForm() {
         Added to the job&apos;s conversation for our team — not shown as a public field.
       </p>
 
+      {/* A name, not an address. Whoever is answering for this job is a person
+          we ring or ask for by name; the email we already have from the login,
+          and asking for a second one only invited a typo that nothing checks. */}
       <label className="label mt-4" htmlFor="contact">Contact for This Job (optional)</label>
-      <input id="contact" type="email" value={contact}
+      <input id="contact" value={contact} maxLength={80}
         onChange={(e) => setContact(e.target.value)} className="field"
-        placeholder="site.supervisor@yourcompany.com.au" />
+        placeholder="Who should we speak to about this one?" />
+      <p className="mt-1.5 text-[12px] text-ink/50">
+        A name is enough — we&apos;ll reply to your account either way.
+      </p>
 
       <button className="btn mt-6 w-full" disabled={busy || !ready}>
         {busy ? (progress || "Lodging…") : "Lodge This Job"}

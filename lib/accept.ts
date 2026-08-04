@@ -3,6 +3,7 @@
 // decision route and — while auto-accept is on — by lodgement itself.
 import * as repo from "./repo";
 import * as monday from "./monday";
+import { looksLikeEmail } from "./core.mjs";
 
 export interface AcceptResult {
   mondayItemId: string;
@@ -18,10 +19,17 @@ export async function acceptSubmission(
   // certificate and its history, and the new card carries the link back.
   const parent = sub.amendmentOf ? await repo.getJob(sub.amendmentOf) : null;
 
+  // The lodgement form asks for a contact NAME now. Older submissions hold an
+  // address in the same field, so an address still goes to the email column
+  // and anything else falls back to the company's — a name there would be
+  // corrupt data on a board that nothing downstream re-checks.
+  const jobContact = (sub.email || "").trim();
+  const contactIsEmail = looksLikeEmail(jobContact);
+
   const itemId = await monday.createCard({
     address: sub.address,
     clientName: company?.name || "",
-    email: sub.email || company?.emails?.[0] || "",
+    email: (contactIsEmail ? jobContact : "") || company?.emails?.[0] || "",
     description: sub.amendmentOf
       ? `AMENDMENT to ${sub.amendmentOf} — ${sub.description}`
       : sub.description,
@@ -77,7 +85,7 @@ export async function acceptSubmission(
       await monday.postUpdate(
         itemId,
         `Documents lodged via the client portal` +
-          (sub.email ? ` (job contact: ${sub.email})` : "") + `:\n\n` +
+          (jobContact ? ` (job contact: ${jobContact})` : "") + `:\n\n` +
           sub.files.map((f) => `• ${f.name}${f.category ? ` — ${f.category}` : ""}`).join("\n") +
           `\n\nThe files are in this card's Files column.`
       );

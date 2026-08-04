@@ -10,7 +10,7 @@ import {
   isGeneralRef, GENERAL_REF, HIDDEN_STATUSES, hasCertificate,
   INFO_RECEIVED_STATUS, AWAITING_REPLY_STATUSES,
   checkWebhook, teamsPrefersLegacy, teamsTrim, teamsAdaptiveCard, teamsMessageCard,
-  TEAMS_EVENTS, TEAMS_DEFAULT_EVENTS,
+  TEAMS_EVENTS, TEAMS_DEFAULT_EVENTS, looksLikeEmail,
 } from "../lib/core.mjs";
 
 // The labels the live board's Status column actually carries, read from board
@@ -598,5 +598,30 @@ test("the noisy notification is the only one off by default", () => {
   // read as on and behave as off.
   for (const e of TEAMS_EVENTS) {
     assert.equal(typeof TEAMS_DEFAULT_EVENTS[e.key], "boolean", `no default for ${e.key}`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Job contact: a name, or an address?
+// ---------------------------------------------------------------------------
+
+test("a name is never mistaken for an email address", () => {
+  // The failure this guards: a name reaching Monday's email column, which
+  // accepts it silently and poisons every mail-merge off that board.
+  for (const v of [
+    "Dave Smith", "Dave", "dave smith", "Mr D Smith", "Site supervisor",
+    "Dave (site)", "Dave @ site", "", "   ", null, undefined,
+    "dave@site", "dave@site.", "@site.com.au", "dave smith@site.com.au",
+  ]) {
+    assert.equal(looksLikeEmail(v), false, JSON.stringify(v));
+  }
+});
+
+test("a real address still is one, so old lodgements keep working", () => {
+  for (const v of [
+    "dave@site.com.au", "d.smith@builders.com.au", "DAVE@SITE.COM.AU",
+    "  dave@site.com.au  ", "dave+jobs@site.co",
+  ]) {
+    assert.equal(looksLikeEmail(v), true, v);
   }
 });
