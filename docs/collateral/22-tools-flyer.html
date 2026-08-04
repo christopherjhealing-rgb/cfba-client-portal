@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Free tools for WA builders — CF Building Approvals</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* One A4 sheet: 1119px at 96dpi. Over by a millimetre and it prints as two,
+     the second nearly blank. Measured, not assumed. */
+  .hero { min-height: 48mm; padding: 7mm 14mm; }
+  .hero h1 { font-size: 28pt; line-height: 1.06; }
+  .hero .pill { margin-top: 3mm; padding: 1.5mm 5mm; font-size: 8pt; }
+  .hero h1 em { font-style: normal; color: var(--brass); }
+  .content { padding-top: 5mm; padding-bottom: 5mm; }
+  .sec { margin: 3.6mm 0 1.6mm; }
+  .lede { font-size: 10pt; }
+
+  /* Each tool as a row: the question a builder actually asks on the left,
+     what the tool gives back on the right. */
+  .tool { display: grid; grid-template-columns: 9mm 1fr; gap: 0 4mm;
+    padding: 2.2mm 0; border-bottom: .3mm solid var(--rule); }
+  .tool:last-of-type { border-bottom: 0; }
+  .tool .n {
+    width: 8mm; height: 8mm; border-radius: 50%; border: .5mm solid var(--brass);
+    color: var(--brass-deep); display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-size: 11pt; font-weight: 700; margin-top: .4mm;
+  }
+  .tool .q { font-family: Georgia, serif; font-size: 12.5pt; font-weight: 700; color: var(--green); }
+  .tool .a { font-size: 9pt; color: var(--soft); margin-top: .8mm; line-height: 1.4; max-width: 150mm; }
+  .tool .a strong { color: var(--ink); }
+
+  .band-free {
+    background: var(--green-deep); color: #fff; border-radius: 3mm;
+    padding: 4mm 5mm; margin-top: 4mm; display: flex; align-items: center; gap: 5mm;
+  }
+  .band-free h3 { font-family: Georgia, serif; font-size: 13pt; }
+  .band-free p { font-size: 9pt; color: rgba(255,255,255,.78); margin-top: 1.2mm; line-height: 1.4; }
+  .band-free .tag {
+    flex: 0 0 auto; border: .6mm solid var(--brass); border-radius: 99px;
+    padding: 2.5mm 6mm; color: var(--brass); font-size: 9pt; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase; text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="hero">
+    <img class="bg" src="../../public/heroes/patio.jpg" alt="">
+    <div class="scrim"></div>
+    <img src="../../public/logo-white.png" alt="CF Building Approvals"
+         style="width:20mm;margin-bottom:4mm">
+    <div class="eyebrow" style="font-size:8.5pt;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);font-weight:700">
+      For WA builders, designers and drafters
+    </div>
+    <h1 style="margin-top:2.5mm">Five tools.<br><em>No charge.</em></h1>
+    <div class="pill">Free for our clients</div>
+  </div>
+
+  <div class="content">
+    <p class="lede">
+      Most of what sends a job back to us is something that could have been
+      settled before it was lodged. So we built the answers into the client
+      portal — free, no software, and you don&apos;t have to ring us to use them.
+    </p>
+
+    <div class="sec">The questions, and where they&apos;re answered</div>
+
+    <div class="tool">
+      <div class="n">1</div>
+      <div>
+        <div class="q">&ldquo;What wind class am I?&rdquo;</div>
+        <div class="a">Wind region, terrain category, shielding and topography in — your
+          <strong>AS 4055 classification</strong> out, with the working shown and the gust
+          speed beside it. Not sure of your topographic class? It works that out from the
+          landform too.</div>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="n">2</div>
+      <div>
+        <div class="q">&ldquo;How much soakwell do I need?&rdquo;</div>
+        <div class="a">Roof area in, <strong>the sizes to buy</strong> out — rounded up to a real
+          precast well rather than left as a number. Adding to a lot that already has soakwells?
+          It sizes the whole roof, not just the new part, which is how people find out the house
+          was never covered either.</div>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="n">3</div>
+      <div>
+        <div class="q">&ldquo;My site plan came back again.&rdquo;</div>
+        <div class="a">Draw one properly instead. The site plan tool works from your
+          <strong>actual lot boundary</strong> and prints A4 at a real scale — north point,
+          scale bar, dimensions to every boundary, title block. For a simple job it saves us
+          sending it back for one.</div>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="n">4</div>
+      <div>
+        <div class="q">&ldquo;Do I need a BAL assessment?&rdquo;</div>
+        <div class="a">Type the address and get <strong>the State&apos;s own answer</strong>,
+          straight off Landgate&apos;s bushfire-prone map — before you lodge rather than after.
+          And if you do need one, we prepare them.</div>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="n">5</div>
+      <div>
+        <div class="q">&ldquo;Which council form, and where does it go?&rdquo;</div>
+        <div class="a">BA1, BA2, BA5, BA7, BA9, BA13, BA19 and BA22 — Word or PDF, kept current,
+          with a link to the official source beside each. Plus <strong>thirty councils</strong>,
+          every one linked to its building application page rather than its home page.</div>
+      </div>
+    </div>
+
+    <div class="band-free">
+      <div style="flex:1">
+        <h3>And the portal they live in</h3>
+        <p>Every job you have with us on one screen, in plain English. Lodge, reply, and
+          download your certificate and stamped plans the moment they&apos;re issued. One login
+          for your whole office, and it works on a phone — which is where most of our clients
+          lodge from.</p>
+      </div>
+      <div class="tag">No cost<br>No software</div>
+    </div>
+
+    <p class="small muted" style="margin-top:4mm">
+      The tools are a guide and don&apos;t replace our assessment — the classification on a job
+      is the one on our certificate. Councils vary on soakwell sizing; ask us and we&apos;ll tell
+      you what yours expects.
+    </p>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals</span>
+    <span>1300 029 074 · admin@cfba.com.au · Perth, Western Australia</span>
+  </div>
+</div>
+
+</body>
+</html>
