@@ -1,15 +1,15 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
-import {
-  isClientVisible, READY_STATUS, AMENDMENT_OPEN, AMENDMENT_DONE, REVISED,
-} from "@/lib/core.mjs";
+import { isClientVisible, READY_STATUS } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { getPastJobs } from "@/lib/history";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
 import { AmendForm, type AmendableJob } from "@/components/AmendForm";
+import { amendmentsOf } from "@/components/AmendmentsSent";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +27,8 @@ export default async function Amend({
     getPastJobs(session.companyId).catch(() => []),
   ]);
 
-  // A historical job was never synced, so it has no job page — this list is
-  // the only place its amendment can appear, and the only way the client gets
-  // the revised certificate back.
-  const mine = subs
-    .filter((s) => s.amendmentOf &&
-      (s.status === AMENDMENT_OPEN || s.status === AMENDMENT_DONE))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  // Only the count, to point at My Jobs — the list itself lives there now.
+  const openCount = amendmentsOf(subs).length;
 
   const jobs: AmendableJob[] = all
     .map(repo.toPortalJob)
@@ -104,7 +99,7 @@ export default async function Amend({
             </li>
             <li>
               <span className="font-medium text-ink">3. You get the new certificate.</span>{" "}
-              We email you when it&apos;s ready and it appears below. Until then your
+              We email you when it&apos;s ready, and it appears on My Jobs. Until then your
               original certificate stands and still covers the plans it was issued
               against.
             </li>
@@ -116,42 +111,16 @@ export default async function Amend({
         </div>
       </div>
 
-      {mine.length > 0 && (
-        <section className="mt-8">
-          <div className="mb-2.5 flex items-center gap-3">
-            <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
-              Amendments You&apos;ve Sent
-            </h2>
-            <span className="h-px flex-1 bg-rule" />
-          </div>
-          <div className="card divide-y divide-rule">
-            {mine.map((a) => (
-              <div key={a.id} className="px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[12px] text-seal">{a.amendmentOf}</span>
-                  <span className="text-[14px] font-medium">{a.address}</span>
-                  {a.status === AMENDMENT_DONE
-                    ? <span className="chip chip-seal">Ready</span>
-                    : <span className="chip chip-brass">With your surveyor</span>}
-                </div>
-                <div className="mt-0.5 text-[12.5px] text-ink/55">{a.description}</div>
-                {a.status === AMENDMENT_DONE && a.files.some((f) => f.category === REVISED) && (
-                  <ul className="mt-1.5 flex flex-wrap gap-3">
-                    {a.files.filter((f) => f.category === REVISED).map((f) => (
-                      <li key={f.name}>
-                        <a href={`/api/amendments/${a.id}/${encodeURIComponent(f.name)}`}
-                          target="_blank" rel="noopener noreferrer"
-                          className="text-[13px] font-medium text-seal underline">
-                          {f.name}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* The list of amendments already sent has moved to My Jobs, where a
+          client actually looks. This page is for sending one. */}
+      {openCount > 0 && (
+        <p className="mt-6 text-[13px] leading-relaxed text-ink/60">
+          {openCount === 1
+            ? "You have one amendment with us already — it's on "
+            : `You have ${openCount} amendments with us already — they're on `}
+          <Link href="/jobs" className="font-medium text-seal underline">My Jobs</Link>,
+          along with the revised certificate once it&apos;s issued.
+        </p>
       )}
     </AppShell>
   );

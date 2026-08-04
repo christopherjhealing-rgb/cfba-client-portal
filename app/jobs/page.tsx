@@ -14,6 +14,7 @@ import { DownloadButton } from "@/components/DownloadButton";
 import { Icon } from "@/components/Icon";
 import { JobArt } from "@/components/JobArt";
 import { EmptyState, fmtDate, LodgedLine } from "@/components/JobBits";
+import { AmendmentsSent, amendmentsOf } from "@/components/AmendmentsSent";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,18 @@ export default async function MyJobs({
   // than on the dashboard, so there is one place a client looks for a job.
   const received = subs.filter((x) => x.status === "pending");
   const g = groupJobs(all, new Date(), env.retentionMonths);
+
+  // Amendments in flight, and the revised certificate when it comes back.
+  // They used to sit at the bottom of the Amend a Job form — the one page a
+  // client has no reason to revisit. They're jobs, so they live with the jobs.
+  //
+  // Not filtered by the chips: an amendment isn't in a bucket, and hiding it
+  // behind "Current" would lose a revised certificate the moment the client
+  // clicked "Past". The search box does apply — if you're looking for one
+  // address, everything on the page should be about that address.
+  const liveRefs = new Set(all.map((j) => j.ref as string));
+  const amendments = amendmentsOf(subs).filter((a) => !q ||
+    `${a.amendmentOf} ${a.address} ${a.description}`.toLowerCase().includes(q));
 
   const bucketOf = (ref: string) =>
     g.ready.some((j) => j.ref === ref) ? "ready"
@@ -136,6 +149,8 @@ export default async function MyJobs({
           </Link>
         ))}
       </div>
+
+      <AmendmentsSent items={amendments} known={liveRefs} className="mb-6" />
 
       {rows.length === 0 && !(showReceived && received.length) ? (
         <EmptyState title="Nothing Here"
