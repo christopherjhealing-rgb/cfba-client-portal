@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import {
   groupJobs, clientStatusLabel, isClientVisible, needsClientInfo,
-  elapsedBusinessDays, PAUSED_STATUSES,
+  elapsedBusinessDays, businessDaysSince, PAUSED_STATUSES,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -13,7 +13,7 @@ import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { DownloadButton } from "@/components/DownloadButton";
 import { Icon } from "@/components/Icon";
 import { JobArt } from "@/components/JobArt";
-import { EmptyState, fmtDate } from "@/components/JobBits";
+import { EmptyState, fmtDate, LodgedLine } from "@/components/JobBits";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +93,14 @@ export default async function MyJobs({
       j.mondayStatus === "Cancelled" || !j.receivedAt) return null;
     return elapsedBusinessDays(j.receivedAt as string, pauses[j.ref as string]);
   };
+
+  // Deliberately NOT the same number. "Day 5" beside the status is how long
+  // the job has been with US — client-waiting time removed. "Lodged 28 Jul,
+  // 9 business days ago" is the plain elapsed figure, because that is what
+  // the words say, and a lodgement date that quietly discounted a fortnight
+  // the client held the job would be the portal misleading them in our favour.
+  const sinceLodged = (j: (typeof all)[number]) =>
+    j.receivedAt ? businessDaysSince(j.receivedAt as string) : null;
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
@@ -194,6 +202,8 @@ export default async function MyJobs({
                             {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
                             {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
                           </div>
+                          <LodgedLine className="mt-0.5" receivedAt={j.receivedAt as string}
+                            days={sinceLodged(j)} />
                         </div>
                       </Link>
                     </td>
@@ -285,6 +295,8 @@ function JobCards({
                   {ref}
                   {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
                 </div>
+                <LodgedLine className="mt-1" receivedAt={j.receivedAt as string}
+                  days={j.receivedAt ? businessDaysSince(j.receivedAt as string) : null} />
               </div>
             </Link>
 

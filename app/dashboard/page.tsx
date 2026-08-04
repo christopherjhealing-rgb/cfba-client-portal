@@ -14,7 +14,7 @@ import { DownloadButton } from "@/components/DownloadButton";
 import { JobArt } from "@/components/JobArt";
 import { JobTimeline } from "@/components/JobTimeline";
 import { Icon, type IconName } from "@/components/Icon";
-import { SectionHead, EmptyState, fmtDate } from "@/components/JobBits";
+import { SectionHead, EmptyState, fmtDate, LodgedLine } from "@/components/JobBits";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +55,13 @@ export default async function Dashboard() {
   const jobs = allJobs.map(repo.toPortalJob).filter(isClientVisible);
   const g = groupJobs(jobs, new Date(), env.retentionMonths);
   const { awaiting, running } = splitInProgress(g.in_progress);
+
+  // Plain business days since we received it — not the paused-adjusted "day N"
+  // counter that My Jobs shows beside the status. Two different questions:
+  // this one is "when did I lodge this", and discounting a fortnight the
+  // client held the job would be the portal flattering us.
+  const lodgedDays = (j: { receivedAt: unknown }) =>
+    j.receivedAt ? businessDaysSince(j.receivedAt as string) : null;
   const pending = subs.filter((s) => s.status === "pending");
 
   const nothing =
@@ -159,6 +166,8 @@ export default async function Dashboard() {
                         {j.description}
                         {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
                       </div>
+                        <LodgedLine className="mt-1" receivedAt={j.receivedAt as string}
+                          days={lodgedDays(j)} />
                         {(() => {
                           const at = askedAt(j.ref as string);
                           const d = at ? businessDaysSince(at) : null;
@@ -215,6 +224,8 @@ export default async function Dashboard() {
                         {j.description}
                         {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
                       </div>
+                        <LodgedLine className="mt-1" receivedAt={j.receivedAt as string}
+                          days={lodgedDays(j)} />
                         <span className="chip mt-1.5 inline-block">
                           {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
                         </span>

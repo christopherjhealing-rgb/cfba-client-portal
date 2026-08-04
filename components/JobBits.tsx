@@ -9,6 +9,42 @@ export function fmtDate(d?: string | null) {
   });
 }
 
+/**
+ * When a job was lodged, and how long ago.
+ *
+ * One component so the dashboard and My Jobs can't drift into two different
+ * answers to the same question. Business days rather than calendar days,
+ * because that's the unit everything else in the portal counts in — "3–4
+ * business days" is the promise on the dashboard, and a Friday lodgement
+ * showing "3 days" on the Monday would read as though we'd sat on it over
+ * the weekend.
+ *
+ * Falls back to nothing at all when there's no received date. A job that
+ * arrived before the portal did has no lodgement stamp, and "Lodged —" is
+ * worse than silence.
+ */
+export function LodgedLine({
+  receivedAt, days, className = "",
+}: {
+  receivedAt?: string | null;
+  /** Business days since, already worked out by the page. */
+  days?: number | null;
+  className?: string;
+}) {
+  const when = fmtDate(receivedAt);
+  if (!when) return null;
+  return (
+    <div className={`text-[12px] text-ink/50 ${className}`}>
+      Lodged {when}
+      {typeof days === "number" && days >= 0 && (
+        <> · <span className="text-ink/65">
+          {days === 0 ? "today" : `${days} business day${days === 1 ? "" : "s"} ago`}
+        </span></>
+      )}
+    </div>
+  );
+}
+
 export function SectionHead({
   title,
   count,
