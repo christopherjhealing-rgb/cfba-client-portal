@@ -38,6 +38,12 @@ export default async function SettingsPage() {
           Connections
         </h2>
         <div className="card divide-y divide-rule text-[13px]">
+          {/* Every link the portal emails a client hangs off this one value —
+              the login invitation, the "ready to download" note, the FIR
+              prompt. A wrong address here breaks none of them visibly; it just
+              sends people somewhere that isn't there. So it's on the wall. */}
+          <Row label="Portal Address" value={env.appUrl}
+            warn={/localhost|127\.0\.0\.1/.test(env.appUrl)} />
           <Row label="Data Store" value={DEMO_MODE ? "Demo (no Supabase configured)" : "Supabase"} warn={DEMO_MODE} />
           <Row label="Monday Board" value={MONDAY_READY ? `Connected · ${env.mondayBoardId}` : "No MONDAY_TOKEN set"} warn={!MONDAY_READY} />
           <Row label="SharePoint (Graph)" value={GRAPH_READY ? "Connected" : "No Graph credentials set"} warn={!GRAPH_READY} />

@@ -164,10 +164,17 @@ git push -u origin main
 Plus any Graph mail variables in your v11 `.env.example` that aren't listed here. **Work from the file, not this table.**
 
 ⚠️ **`APP_URL` matters more than it looks.** Every link a client is emailed
-hangs off it. It now falls back to the deployment's own address rather than to
-localhost, so a wrong or missing value can no longer send somebody nowhere —
-but set it the moment the domain is live, or clients get `*.vercel.app` links
-in their inbox for as long as it stays unset.
+hangs off it — the login invitation, "your package is ready", the FIR prompt.
+It falls back to the deployment's own address rather than to localhost, so an
+*unset* value is safe. A **wrong** one is not: pointing it at a domain you
+haven't bought yet breaks nothing visibly and sends every client to an address
+that doesn't answer.
+
+So while the portal lives on Vercel, `APP_URL` is
+`https://cfba-client-portal-theta.vercel.app` — or simply left unset, which
+resolves to the same thing. Change it the day a real domain goes live, and not
+before. **Settings → Portal Address** in the admin area shows the value the
+emails are actually using, so you can check it without opening Vercel.
 
 4. **Deploy.** Takes 2–3 minutes.
 5. Once green: **Settings → Cron Jobs** — confirm all three are registered:
