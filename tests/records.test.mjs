@@ -190,3 +190,46 @@ test("whole is only ever true for the zip", () => {
     assert.equal(r.whole, r.pick === "zip", JSON.stringify(c));
   }
 });
+
+// ---------------------------------------------------------------------------
+// Repointing links in an already-built email
+// ---------------------------------------------------------------------------
+import { tidyUrl, rewriteLinks } from "../lib/url.mjs";
+
+test("a url is tidied to something that can be joined with a path", () => {
+  assert.equal(tidyUrl("https://x.com/"), "https://x.com");
+  assert.equal(tidyUrl("  https://x.com///  "), "https://x.com");
+  assert.equal(tidyUrl("http://x.com"), "http://x.com");
+});
+
+test("anything that isn't a web address is rejected outright", () => {
+  // Better to keep the old value than to point every client at nonsense.
+  for (const bad of ["", "   ", "x.com", "portal.cfba.com.au", "ftp://x.com",
+                     "javascript:alert(1)", "/relative", null, undefined]) {
+    assert.equal(tidyUrl(bad), "", JSON.stringify(bad));
+  }
+});
+
+test("every link in a built email is repointed at once", () => {
+  const html = `<a href="https://old.example.com">a</a>` +
+    `<a href="https://old.example.com/jobs">b</a>` +
+    `<a href="https://old.example.com/messages?ref=T-1">c</a>`;
+  const out = rewriteLinks(html, "https://old.example.com", "https://new.example.com");
+  assert.equal(out.includes("old.example.com"), false);
+  assert.equal((out.match(/new\.example\.com/g) || []).length, 3);
+});
+
+test("rewriting is a no-op when there's nothing to change", () => {
+  const html = `<a href="https://a.example.com">x</a>`;
+  assert.equal(rewriteLinks(html, "https://a.example.com", "https://a.example.com"), html);
+});
+
+test("an empty or tiny `from` can't shred the document", () => {
+  // "".split("") would explode the html into characters and join them back
+  // with the replacement between every one. Guarded, because a misconfigured
+  // APP_URL must never be able to mangle a client's email.
+  const html = "<p>hello</p>";
+  for (const from of ["", " ", "http"]) {
+    assert.equal(rewriteLinks(html, from, "https://new.example.com"), html, from);
+  }
+});

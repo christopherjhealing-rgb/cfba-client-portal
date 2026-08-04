@@ -1,5 +1,7 @@
 import { env } from "./env";
 import { token as graphToken } from "./graph";
+import { resolveAppUrl } from "./appurl";
+import { rewriteLinks } from "./url.mjs";
 
 const MAIL_READY = Boolean(
   env.graphTenantId && env.graphClientId && env.graphClientSecret && env.mailFrom
@@ -50,9 +52,17 @@ export async function sendMail(
   const recipients = to.filter(Boolean);
   if (!MAIL_READY || recipients.length === 0) return false;
 
+  // Last stop before the wire, and the only one every email passes through.
+  // The templates embed env.appUrl; if the portal's real address has been set
+  // from /admin since this deployment was built, every link is repointed here
+  // rather than in a dozen templates, one of which would eventually be missed.
+  // See lib/appurl — this exists because a client was sent a dead button.
+  const live = await resolveAppUrl();
+  const body = rewriteLinks(html, env.appUrl, live);
+
   const message: Record<string, unknown> = {
     subject,
-    body: { contentType: "HTML", content: html },
+    body: { contentType: "HTML", content: body },
     toRecipients: recipients.map((address) => ({ emailAddress: { address } })),
   };
   if (attachments.length) {

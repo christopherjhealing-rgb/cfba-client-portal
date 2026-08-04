@@ -5,6 +5,7 @@ import { StaffShell } from "@/components/StaffShell";
 import * as repo from "@/lib/repo";
 import { ISSUED_STATUSES, CANCELLED_STATUS } from "@/lib/core.mjs";
 import { dateOnly } from "@/lib/records.mjs";
+import { RecordTestSend } from "@/components/RecordTestSend";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export default async function Records({
                   <th className="th w-[190px]">Client</th>
                   <th className="th w-[150px]">Status</th>
                   <th className="th w-[90px] text-right">Messages</th>
-                  <th className="th w-[130px] text-right">Export</th>
+                  <th className="th w-[250px] text-right">Export</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
@@ -155,11 +156,16 @@ export default async function Records({
                         </span>
                       </td>
                       <td className="td text-right font-mono text-[13px] text-ink/70">{c.n}</td>
-                      <td className="td text-right">
-                        <a className="btn-ghost"
-                          href={`/api/admin/records/${encodeURIComponent(j.ref)}`}>
-                          Download
-                        </a>
+                      <td className="td">
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="flex justify-end gap-2">
+                            <a className="btn-ghost whitespace-nowrap"
+                              href={`/api/admin/records/${encodeURIComponent(j.ref)}`}>
+                              Download
+                            </a>
+                            <RecordTestSend refNo={j.ref} />
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   );

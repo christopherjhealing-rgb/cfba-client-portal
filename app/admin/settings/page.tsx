@@ -12,6 +12,8 @@ import { TeamsCard } from "@/components/TeamsCard";
 import { AmendmentRouting } from "@/components/AmendmentRouting";
 import { getAmendmentConfig } from "@/lib/amendments";
 import { getTeamsConfig, getTeamsLast, TEAMS_EVENTS } from "@/lib/teams";
+import { AppUrlCard } from "@/components/AppUrlCard";
+import { resolveAppUrl, storedAppUrl } from "@/lib/appurl";
 
 export const dynamic = "force-dynamic";
 
@@ -20,30 +22,33 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [disabled, loginDesign, lastReport, teams, teamsLast, amendments] = await Promise.all([
-    repo.disabledPages(),
-    repo.getSetting<{ design?: string }>("login_design").catch(() => null),
-    repo.getSetting<{ at?: string; ok?: boolean; error?: string }>("last_report").catch(() => null),
-    getTeamsConfig(),
-    getTeamsLast(),
-    getAmendmentConfig(),
-  ]);
+  const [disabled, loginDesign, lastReport, teams, teamsLast, amendments, liveUrl, storedUrl] =
+    await Promise.all([
+      repo.disabledPages(),
+      repo.getSetting<{ design?: string }>("login_design").catch(() => null),
+      repo.getSetting<{ at?: string; ok?: boolean; error?: string }>("last_report").catch(() => null),
+      getTeamsConfig(),
+      getTeamsLast(),
+      getAmendmentConfig(),
+      resolveAppUrl(),
+      storedAppUrl(),
+    ]);
 
   return (
     <StaffShell title="Settings" sub="How the portal is wired, and what's switched on." active="/admin/settings">
       <Link href="/admin" className="text-[13px] text-seal underline">← Back to Admin</Link>
 
-      <div className="mb-8 mt-4">
+      {/* First on the page. It is the setting most likely to be quietly wrong
+          and the one with the worst consequence when it is. */}
+      <div className="mt-4">
+        <AppUrlCard live={liveUrl} stored={storedUrl} fallback={env.appUrl} />
+      </div>
+
+      <div className="mb-8 mt-8">
         <h2 className="mb-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
           Connections
         </h2>
         <div className="card divide-y divide-rule text-[13px]">
-          {/* Every link the portal emails a client hangs off this one value —
-              the login invitation, the "ready to download" note, the FIR
-              prompt. A wrong address here breaks none of them visibly; it just
-              sends people somewhere that isn't there. So it's on the wall. */}
-          <Row label="Portal Address" value={env.appUrl}
-            warn={/localhost|127\.0\.0\.1/.test(env.appUrl)} />
           <Row label="Data Store" value={DEMO_MODE ? "Demo (no Supabase configured)" : "Supabase"} warn={DEMO_MODE} />
           <Row label="Monday Board" value={MONDAY_READY ? `Connected · ${env.mondayBoardId}` : "No MONDAY_TOKEN set"} warn={!MONDAY_READY} />
           <Row label="SharePoint (Graph)" value={GRAPH_READY ? "Connected" : "No Graph credentials set"} warn={!GRAPH_READY} />

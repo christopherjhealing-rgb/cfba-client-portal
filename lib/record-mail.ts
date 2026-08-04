@@ -25,10 +25,15 @@ import * as repo from "./repo";
  *   not fit. Rather than fail, it falls back to the transcript alone and says
  *   the attachments are in Records. Nothing is dropped silently.
  */
-export async function mailJobRecord(ref: string): Promise<
-  "sent" | "no-messages" | "off" | "no-mailbox" | "failed"
-> {
-  if (!env.recordEmailEnabled) return "off";
+export async function mailJobRecord(
+  ref: string,
+  opts: { force?: boolean } = {}
+): Promise<"sent" | "no-messages" | "off" | "no-mailbox" | "failed"> {
+  // `force` is the test-send from /admin/records. It ignores the on/off switch
+  // so the thing can be tried before it is switched on, and nothing else — a
+  // test that skipped the size fallback or the empty-thread rule would only
+  // prove that the test works.
+  if (!opts.force && !env.recordEmailEnabled) return "off";
   if (!env.officeEmail) return "no-mailbox";
 
   const built = await buildRecord(ref);
