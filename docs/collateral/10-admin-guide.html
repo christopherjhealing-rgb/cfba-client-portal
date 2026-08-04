@@ -72,7 +72,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 1 of 2 — the admin page</span><span>CF Building Approvals</span>
+    <span>Page 1 of 3 — the admin page</span><span>CF Building Approvals</span>
   </div>
 </div>
 
@@ -95,12 +95,51 @@
       <li>An update starting <span class="mono">FIR:</span> or <span class="mono">CLIENT:</span>
         goes to the client — portal thread <em>and</em> email. <strong>Anything else stays
         internal.</strong> Never start an internal note with either prefix.</li>
+      <li><span class="mono">FIR:</span> then a <strong>shortcut</strong> writes the whole request
+        for you — <span class="mono">FIR: Soil Class</span>. Several at once
+        (<span class="mono">FIR: Soil Class, Elevations</span>) come out as one message with
+        numbered items. The card gets a note back saying what went.
+        <strong>Admin → FIR Library</strong> has all of them, and you can reword any of them.</li>
+      <li>A shortcut with a letter wrong — <span class="mono">Sol Class</span> — sends
+        <em>nothing</em> and puts a "did you mean" note on the card. Same for a shortcut you've
+        switched off, and for a lone word that isn't one. Nothing reaches a client unless a
+        shortcut matched exactly, or you wrote a real sentence.</li>
+      <li><span class="mono">CLIENT:</span> never expands. It is always literal.</li>
       <li>Works on a card in any active status; completed/cancelled cards aren't scanned.</li>
       <li>When a client replies, the office gets an email — you never need to watch the board
         for replies.</li>
       <li>Files you attach to a Monday update do <em>not</em> reach the client — put requests in
         words. (Sending documents to clients is a future feature.)</li>
     </ul>
+
+  </div>
+
+  <div class="foot-light">
+    <span>Page 2 of 3 — reports, and the messages rules</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="content">
+    <div class="sec" style="margin-top:0">Amendments — never on the board</div>
+    <ul class="check">
+      <li>An amendment <strong>does not open a Monday card</strong>. It emails whoever is in the
+        card's <strong>Certified By</strong> column, with the office copied — or Rebecca when
+        that column is empty. Chris or Rebecca replies "yes" by email, exactly as before.</li>
+      <li>The one new step is Kacie's: watermark and re-issue as usual, then upload the revised
+        certificate on <strong>Admin → Amendments</strong>. With no card there's no SharePoint
+        sync to collect it.</li>
+      <li>The original card gets <em>one</em> note. No new item, no status, no invoice.</li>
+      <li>Set the routing first — <strong>Settings → Amendments</strong>, then
+        <strong>Rebuild Now</strong> on the Amendments page. Until both are done a lodged
+        amendment sits there silently and the client thinks it's with us.</li>
+      <li>Because they're off the board, the board can't notice one going quiet. The 5pm report
+        does. If you get an amendment email that isn't yours, say so rather than leaving it.</li>
+    </ul>
+
+    <div class="sec">Teams</div>
+    <p class="small">Settings → Teams. The same items as the 5pm report, as they happen, into a
+    channel. Off by default and safe to mute — nothing depends on it, and the report still runs.</p>
 
     <div class="sec">Switches that live in Vercel (not /admin)</div>
     <table class="small">
@@ -128,6 +167,9 @@
       <li>Reports: median turnaround still inside the published 3–4 days?</li>
       <li>Any new Monday status labels created this week? Tell Chris so the portal's wording map
         stays complete.</li>
+      <li>Amendments page: anything sitting in Waiting more than a couple of days?</li>
+      <li>Any "did you mean" notes on cards this week — someone reaching for a shortcut we
+        don't have? Worth adding it.</li>
     </ul>
 
     <div class="callout" style="margin-top:4mm">
@@ -138,7 +180,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 2 of 2 — reports, rules, switches</span><span>CF Building Approvals</span>
+    <span>Page 3 of 3 — amendments, Teams, switches</span><span>CF Building Approvals</span>
   </div>
 </div>
 
