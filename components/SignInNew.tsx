@@ -7,7 +7,7 @@ import { SignIn } from "@/components/SignIn";
  *  The form itself is the shared <SignIn/> — this file styles the room the
  *  form sits in, never the auth. Staff can switch back to the classic layout
  *  from /admin (login_design setting); no deploy needed. */
-export function SignInNew() {
+export function SignInNew(entry: { start?: "signin" | "setup"; presetUsername?: string } = {}) {
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-seal-deep">
       {/* Full-bleed photo. Decorative — everything readable sits on the scrim.
@@ -49,7 +49,7 @@ export function SignInNew() {
           </div>
 
           <div className="w-full max-w-[430px]">
-            <SignIn demo={DEMO_MODE} />
+            <SignIn demo={DEMO_MODE} {...entry} />
             <p className="mt-5 text-center text-[13px] text-white/75">
               Need a new account?{" "}
               <a className="font-medium text-white underline underline-offset-2"

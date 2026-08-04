@@ -11,7 +11,7 @@ const POINTS = [
 /** The original split-panel sign-in. Kept as the "classic" layout behind the
  *  login_design setting so staff can switch back instantly from /admin —
  *  no deploy, no code change. */
-export function SignInClassic() {
+export function SignInClassic(entry: { start?: "signin" | "setup"; presetUsername?: string } = {}) {
   return (
     <main className="min-h-screen lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
       {/* Hero. The photograph is decorative and sits behind a scrim so the type
@@ -60,7 +60,7 @@ export function SignInClassic() {
             <p className="mt-1 text-[14px] text-ink/60">Sign in to your account</p>
           </div>
 
-          <SignIn demo={DEMO_MODE} />
+          <SignIn demo={DEMO_MODE} {...entry} />
 
           <p className="mt-5 text-center text-[13px] text-ink/55">
             Need a new account?{" "}

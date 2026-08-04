@@ -11,7 +11,9 @@ export const dynamic = "force-dynamic";
  *  server-side on every request so flipping the setting takes effect on the
  *  next load — no deploy. Unset means "new". Both layouts wrap the same
  *  <SignIn/> component, so the auth flows are identical either way. */
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: { searchParams: Promise<{ first?: string; u?: string }> }) {
   const session = await getClientSession();
   if (session) redirect("/dashboard");
 
@@ -20,5 +22,19 @@ export default async function Home() {
     .catch(() => null);
   const design = setting?.design === "classic" ? "classic" : "new";
 
-  return design === "classic" ? <SignInClassic /> : <SignInNew />;
+  // ?first=1&u=… is what the credentials email links to. That email hands a
+  // client a username and a one-time setup code, so landing them on Sign In —
+  // where neither of those works — was a phone call waiting to happen.
+  //
+  // The username is not a secret: it is printed in the same email, in larger
+  // type. The setup code is never put in a link, because a URL travels through
+  // browser history, referrers and forwarded messages in a way an email body
+  // does not.
+  const sp = await searchParams;
+  const entry = {
+    start: sp.first ? ("setup" as const) : ("signin" as const),
+    presetUsername: (sp.u || "").trim().slice(0, 60),
+  };
+
+  return design === "classic" ? <SignInClassic {...entry} /> : <SignInNew {...entry} />;
 }

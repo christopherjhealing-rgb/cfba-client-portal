@@ -376,9 +376,14 @@ export function loginEmail(opts: {
   </div>
 
   <p style="margin:0 0 18px">
-    <a href="${env.appUrl}"
+    <!-- Straight to First time with the username filled in. Everything this
+         email gives them only works on that tab, so landing on Sign In made
+         them find it themselves — usually on a phone. The setup code is
+         deliberately NOT in the link: a URL is shared, forwarded and kept in
+         history in a way the body of an addressed email isn't. -->
+    <a href="${env.appUrl}/?first=1&amp;u=${encodeURIComponent(username)}"
        style="background:#1E5B3C;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;display:inline-block;font-weight:600">
-      Open the portal
+      Set up my login
     </a>
   </p>
 

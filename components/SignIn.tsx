@@ -4,9 +4,28 @@ import { Icon } from "./Icon";
 
 type Mode = "signin" | "setup";
 
-export function SignIn({ demo }: { demo?: boolean }) {
-  const [mode, setMode] = useState<Mode>("signin");
-  const [username, setUsername] = useState("");
+/**
+ * `start` and `presetUsername` come off the link in the credentials email.
+ *
+ * That email hands somebody a username and a one-time setup code, so the only
+ * thing they can do with it is set a password — and its button used to land
+ * them on Sign In, where neither of the two things they had just been given
+ * works. Opening on the right tab, with the username already in it, is the
+ * difference between one tap and a phone call.
+ *
+ * A starting position only. Anyone can still switch tabs, which matters for
+ * the client who has long since set a password and clicks that old email
+ * again: they land on First Time and move across.
+ */
+export function SignIn({
+  demo, start = "signin", presetUsername = "",
+}: {
+  demo?: boolean;
+  start?: Mode;
+  presetUsername?: string;
+}) {
+  const [mode, setMode] = useState<Mode>(start);
+  const [username, setUsername] = useState(presetUsername);
   const [password, setPassword] = useState("");
   const [setupCode, setSetupCode] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -113,11 +132,13 @@ export function SignIn({ demo }: { demo?: boolean }) {
             Enter them here and choose your own password.
           </p>
           <label className="label" htmlFor="su">Username</label>
-          <input id="su" required autoFocus autoCapitalize="none" autoCorrect="off"
+          <input id="su" required autoFocus={!presetUsername} autoCapitalize="none" autoCorrect="off"
             value={username} onChange={(e) => setUsername(e.target.value)}
             className="field" placeholder="yourcompany" />
           <label className="label mt-4" htmlFor="sc">Setup Code</label>
-          <input id="sc" required value={setupCode}
+          {/* When the link carried the username, the cursor belongs on the one
+              field the client still has to type. */}
+          <input id="sc" required autoFocus={!!presetUsername} value={setupCode}
             onChange={(e) => setSetupCode(e.target.value.toUpperCase())}
             className="field font-mono tracking-[0.12em]" placeholder="XXX-XXX-XXX" />
           <label className="label mt-4" htmlFor="np">Choose a Password</label>
