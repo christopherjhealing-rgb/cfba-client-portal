@@ -50,6 +50,13 @@ export default async function SettingsPage() {
           <Row label="Sending Mailbox" value={env.mailFrom || "No MAIL_FROM set"} warn={!env.mailFrom} />
           <Row label="Office Inbox" value={env.officeEmail || "No OFFICE_EMAIL set"} warn={!env.officeEmail} />
           <Row label="Retention" value={`${env.retentionMonths} months from first download`} />
+          <Row
+            label="Correspondence Record"
+            value={env.recordEmailEnabled
+              ? `Emailed to ${env.officeEmail || "— no OFFICE_EMAIL set"} when a client downloads their package. Jobs with no messages send nothing.`
+              : "Off — nothing is filed automatically. Export by hand from Records."}
+            warn={env.recordEmailEnabled && !env.officeEmail}
+          />
           <Row label="Issue Hold" value={`${env.issueHoldMinutes} minutes before a client is told`} />
           <Row
             label="Certificate Check"

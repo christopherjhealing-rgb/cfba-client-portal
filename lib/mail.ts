@@ -550,3 +550,56 @@ export function amendmentReadyEmail(opts: {
 </div>`.trim();
   return { subject, html };
 }
+
+/**
+ * The correspondence record, sent to the office when a client collects their
+ * package. The point is filing, not news — so the attachment is the deliverable
+ * and the body exists to say what it is, what it isn't, and where the live
+ * version lives.
+ *
+ * The snapshot warning is the important line. A client can message after
+ * downloading, and if they do, this copy is no longer the whole thread.
+ */
+export function recordEmail(opts: {
+  companyName: string; ref: string; address: string;
+  messages: number; attached: string; whole: boolean; missing: number;
+}): { subject: string; html: string } {
+  const { companyName, ref, address, messages, attached, whole, missing } = opts;
+  const subject = `Correspondence record — ${ref}${address ? `, ${address}` : ""}`;
+  const html = `
+<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
+  <p style="margin:0 0 4px;font-size:13px;color:#5B6660;text-transform:uppercase;letter-spacing:.08em">For the file</p>
+  <p style="margin:0 0 14px;font-size:19px;font-weight:600">${esc(ref)}${address ? ` — ${esc(address)}` : ""}</p>
+
+  <p style="margin:0 0 14px"><strong>${esc(companyName)}</strong> has downloaded their CDC Package, so the
+    correspondence on this job is attached for filing — ${messages} message${messages === 1 ? "" : "s"}
+    through the portal, both directions.</p>
+
+  <div style="border-left:3px solid #1E5B3C;background:#F1F5F1;padding:14px 18px;margin:0 0 14px">
+    <p style="margin:0;font-size:14px">Attached: <strong>${esc(attached)}</strong></p>
+    ${whole
+      ? `<p style="margin:6px 0 0;font-size:13px;color:#5B6660">The transcript, a plain-text copy, and every document the client attached.</p>`
+      : `<p style="margin:6px 0 0;font-size:13px;color:#5B6660">The full record with the client's attachments was too large to email. This is the transcript only — download the complete zip from Records.</p>`}
+    ${missing > 0
+      ? `<p style="margin:6px 0 0;font-size:13px;color:#8A5E10">${missing} attachment${missing === 1 ? "" : "s"} named in the transcript could not be read back from storage. The zip in Records says which.</p>`
+      : ""}
+  </div>
+
+  <div style="border-left:3px solid #C9A227;background:#FBF4E6;padding:14px 18px;margin:0 0 16px">
+    <p style="margin:0;font-size:14px"><strong>This is a snapshot, taken today.</strong></p>
+    <p style="margin:6px 0 0;font-size:13px;color:#5B6660">If anything further is said on this job after
+      today, it won't be in the copy attached here. Records always holds the current version — re-export
+      it if the conversation carries on.</p>
+  </div>
+
+  <p style="margin:0 0 18px">
+    <a href="${env.appUrl}/admin/records?q=${encodeURIComponent(ref)}"
+       style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
+      Open this job in Records
+    </a>
+  </p>
+  <p style="margin:0;color:#5B6660;font-size:13px">The transcript can only carry what came through the
+    portal. Anything settled by email or over the phone still has to be filed from wherever it lives.</p>
+</div>`.trim();
+  return { subject, html };
+}

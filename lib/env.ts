@@ -83,6 +83,12 @@ export const env = {
   // has to stay well under that. Bigger files are named in the email and
   // fetched from the portal instead.
   mailAttachMaxMb: Number(process.env.MAIL_ATTACH_MAX_MB || "2.5"),
+  // Email the office a job's correspondence record when the client downloads
+  // their package — the seven-year file copy, filed without anyone having to
+  // remember. ON by default: a record nobody has to remember to take is the
+  // whole point, and a job with no correspondence sends nothing anyway. Set
+  // RECORD_EMAIL=0 to stop it.
+  recordEmailEnabled: process.env.RECORD_EMAIL !== "0",
   turnaroundDays: process.env.TURNAROUND_DAYS || "3-4",
   retentionMonths: Number(process.env.RETENTION_MONTHS || "3"),
   // Minutes a card must sit at Issued before the portal pulls files and

@@ -59,4 +59,7 @@ export function transcript(input: {
   tz?: string;
 }): Transcript;
 export function asText(t: Transcript): string;
+export function chooseAttachment(input: {
+  zipBytes: number; pdfBytes: number; budget: number;
+}): { pick: "zip" | "pdf" | "none"; whole: boolean };
 export function zipName(job: RecordJob): string;

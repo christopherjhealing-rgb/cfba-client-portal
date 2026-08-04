@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   PROVENANCE, stamp, dateOnly, senderName, safeName, attachmentPath,
-  transcript, asText, zipName,
+  transcript, asText, zipName, chooseAttachment,
 } from "../lib/records.mjs";
 
 const JOB = {
@@ -154,4 +154,39 @@ test("the text copy underlines its headings and never triple-spaces", () => {
   assert.match(s, /Correspondence record — T-1002\n={10,}/);
   assert.ok(!/\n{3}/.test(s), "found a triple blank line");
   assert.ok(s.endsWith("\n"));
+});
+
+// ---------------------------------------------------------------------------
+// What one email can carry
+// ---------------------------------------------------------------------------
+
+test("the whole record goes when it fits", () => {
+  assert.deepEqual(chooseAttachment({ zipBytes: 100, pdfBytes: 50, budget: 1000 }),
+    { pick: "zip", whole: true });
+  // Exactly on the budget is still a fit.
+  assert.deepEqual(chooseAttachment({ zipBytes: 1000, pdfBytes: 50, budget: 1000 }),
+    { pick: "zip", whole: true });
+});
+
+test("a zip full of drawings falls back to the transcript", () => {
+  // The realistic case: 2.5 MB budget, an 8 MB zip, a 9 KB transcript.
+  const r = chooseAttachment({ zipBytes: 8e6, pdfBytes: 9000, budget: 2.5 * 1024 * 1024 });
+  assert.deepEqual(r, { pick: "pdf", whole: false });
+});
+
+test("nothing at all beats half a record", () => {
+  // A truncated file in an archive is worse than a pointer to the whole one.
+  assert.deepEqual(chooseAttachment({ zipBytes: 9e6, pdfBytes: 5e6, budget: 1e6 }),
+    { pick: "none", whole: false });
+});
+
+test("whole is only ever true for the zip", () => {
+  for (const c of [
+    { zipBytes: 1, pdfBytes: 1, budget: 10 },
+    { zipBytes: 100, pdfBytes: 1, budget: 10 },
+    { zipBytes: 100, pdfBytes: 100, budget: 10 },
+  ]) {
+    const r = chooseAttachment(c);
+    assert.equal(r.whole, r.pick === "zip", JSON.stringify(c));
+  }
 });

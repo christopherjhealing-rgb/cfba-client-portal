@@ -3,6 +3,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
 import { notifyTeams } from "@/lib/teams";
+import { mailJobRecord } from "@/lib/record-mail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,6 +97,21 @@ export async function GET(
     if (!r.ok && r.reason === "failed") {
       console.warn(`download ${ref}: PORTAL not moved to DOWNLOADED — ${r.detail}`);
       await repo.noteBoardWriteFail(ref, r.detail || "unknown").catch(() => {});
+    }
+
+    // The file copy. A client collecting their package is the moment a job is
+    // finished in every sense that matters, so the seven-year record of the
+    // correspondence goes to the office now rather than waiting for somebody
+    // to remember. A job with nothing said on it sends nothing.
+    //
+    // Wrapped, like everything else below: the zip is already built and the
+    // client is mid-download. A mailbox that's down is the office's problem to
+    // read in the log, never the client's to meet at the Download button.
+    try {
+      const r = await mailJobRecord(ref);
+      if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
+    } catch (e) {
+      console.warn(`download ${ref}: correspondence record not emailed —`, (e as Error).message);
     }
 
     // First download only. Off by default: it's the one notification here that
