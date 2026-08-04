@@ -3,6 +3,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
 import { tidyAddress, matchCompany } from "@/lib/core.mjs";
+import { describeJob } from "@/lib/jobdesc.mjs";
 import { acceptSubmission } from "@/lib/accept";
 import { env } from "@/lib/env";
 import { pageDisabled } from "@/lib/pages";
@@ -122,6 +123,37 @@ const PDF_ONLY = (name: string, type: string) =>
 
 const MAX_TOTAL = 40 * 1024 * 1024; // 40 MB per submission
 
+/** The multipart path carries the rows as JSON in one field. Unparseable is
+ *  an empty list, which describeJob turns into a 400 — never a 500. */
+function parseItems(s: string): unknown {
+  try { return JSON.parse(s); } catch { return []; }
+}
+
+/**
+ * The class and the description, from the rows the client filled in.
+ *
+ * Both are derived here rather than taken as strings: the browser's preview is
+ * a courtesy, and a request that hand-wrote its own description could put
+ * anything on the board's Description column and mint any label it liked in
+ * the Class column, which is a status column with create_labels_if_missing on.
+ *
+ * The old shape is still accepted. A form left open in a tab across a deploy
+ * still posts jobClass and description, and refusing it would lose a
+ * lodgement someone had already spent ten minutes on. An amendment posts them
+ * too — its description is the change being asked for, not a structure list.
+ */
+function classAndDescription(
+  raw: unknown, legacyClass: string, legacyDescription: string
+): { jobClass: string; description: string } | { error: string } {
+  if (raw === undefined || raw === null) {
+    return { jobClass: legacyClass, description: legacyDescription };
+  }
+  const said = describeJob(raw);
+  return said.ok
+    ? { jobClass: said.jobClass, description: said.description }
+    : { error: said.error };
+}
+
 /** Ticked "My documents" entries, resolved against the caller's OWN library —
  *  an id that isn't in their index simply doesn't exist here, whatever the
  *  request claims. Bytes come back in memory so the documents lodge exactly
@@ -195,8 +227,14 @@ async function handle(req: Request) {
 
   const form = await req.formData();
   const address = tidyAddress(String(form.get("address") || ""));
-  const jobClass = tidyAddress(String(form.get("jobClass") || ""));
-  const description = tidyAddress(String(form.get("description") || ""));
+  const rawItems = form.get("items");
+  const said = classAndDescription(
+    rawItems === null ? null : parseItems(String(rawItems)),
+    tidyAddress(String(form.get("jobClass") || "")),
+    tidyAddress(String(form.get("description") || ""))
+  );
+  if ("error" in said) return NextResponse.json(said, { status: 400 });
+  const { jobClass, description } = said;
   const notes = String(form.get("notes") || "").trim().slice(0, 4000);
   const clientRef = String(form.get("clientRef") || "").trim().slice(0, 60);
   const contact = String(form.get("contact") || "").trim().slice(0, 80);
@@ -289,8 +327,13 @@ async function handle(req: Request) {
  *  the files move to their permanent home. */
 async function handleDirect(session: Session, body: Record<string, unknown>) {
   const address = tidyAddress(String(body.address || ""));
-  const jobClass = tidyAddress(String(body.jobClass || ""));
-  const description = tidyAddress(String(body.description || ""));
+  const said = classAndDescription(
+    body.items,
+    tidyAddress(String(body.jobClass || "")),
+    tidyAddress(String(body.description || ""))
+  );
+  if ("error" in said) return NextResponse.json(said, { status: 400 });
+  const { jobClass, description } = said;
   const notes = String(body.notes || "").trim().slice(0, 4000);
   const clientRef = String(body.clientRef || "").trim().slice(0, 60);
   const contact = String(body.contact || "").trim().slice(0, 80);

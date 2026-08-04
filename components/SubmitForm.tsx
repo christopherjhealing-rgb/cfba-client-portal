@@ -4,6 +4,8 @@ import { AddressField } from "./AddressField";
 import { FileBucket, type Bucket } from "./FileBucket";
 import { uploadDirect } from "@/lib/upload-client";
 import type { LibraryDoc } from "@/lib/library";
+import { JobItems, blankItem, type Item } from "./JobItems";
+import { describeJob } from "@/lib/jobdesc.mjs";
 
 // Drawings and engineering are both required: an assessment cannot start
 // without them, and a job lodged short of them only comes straight back.
@@ -19,17 +21,11 @@ const BUCKETS: Bucket[] = [
     hint: "BAL report, site photos, soil classification — anything else relevant. Optional." },
 ];
 
-const CLASS_OPTIONS = [
-  "Class 10a",
-  "Class 10b",
-  "CBC",
-  "Class 10 associated with a Commercial Building",
-];
-
 export function SubmitForm() {
   const [address, setAddress] = useState("");
-  const [jobClass, setJobClass] = useState("");
-  const [description, setDescription] = useState("");
+  // Class and description are no longer typed — they're derived from the rows
+  // below. See lib/jobdesc.
+  const [items, setItems] = useState<Item[]>([blankItem()]);
   const [notes, setNotes] = useState("");
   const [clientRef, setClientRef] = useState("");
   const [contact, setContact] = useState("");
@@ -65,6 +61,11 @@ export function SubmitForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Class and description are compulsory, so a row that says nothing stops
+    // the lodgement rather than being quietly dropped on the way past.
+    const said = describeJob(items);
+    if (!said.ok) { setMsg(said.error); return; }
+
     // A ticked saved document counts as engineering — that's the point of it.
     const short = BUCKETS.filter((b) => b.required && !(files[b.key] || []).length
       && !(b.key === "engineering" && tickedDocs.length));
@@ -100,7 +101,7 @@ export function SubmitForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          address, jobClass, description, notes, contact, clientRef,
+          address, items, notes, contact, clientRef,
           draftId: up.draftId,
           files: entries.map((x, i) => ({ name: up.names[i], category: x.category })),
           libraryIds: tickedDocs.map((d) => d.id),
@@ -110,8 +111,7 @@ export function SubmitForm() {
       // Demo/local fallback: the original inline path.
       const fd = new FormData();
       fd.set("address", address);
-      fd.set("jobClass", jobClass);
-      fd.set("description", description);
+      fd.set("items", JSON.stringify(items));
       fd.set("notes", notes);
       fd.set("clientRef", clientRef);
       fd.set("contact", contact);
@@ -176,7 +176,10 @@ export function SubmitForm() {
   const count = all.length + tickedDocs.length;
   const totalMb = (all.reduce((n, f) => n + f.size, 0)
     + tickedDocs.reduce((n, d) => n + d.size, 0)) / 1_048_576;
-  const ready = BUCKETS.every((b) => !b.required || (files[b.key] || []).length > 0
+  // Compulsory now means compulsory: no readable row, no lodgement. A row
+  // whose "Other" has nothing typed in it doesn't count as one.
+  const described = describeJob(items).ok;
+  const ready = described && BUCKETS.every((b) => !b.required || (files[b.key] || []).length > 0
     || (b.key === "engineering" && tickedDocs.length > 0));
 
   return (
@@ -185,24 +188,8 @@ export function SubmitForm() {
       <AddressField id="address" required autoFocus value={address}
         onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="label" htmlFor="class">Class</label>
-          <select id="class" required value={jobClass}
-            onChange={(e) => setJobClass(e.target.value)}
-            className={`field ${jobClass ? "" : "text-ink/40"}`}>
-            <option value="" disabled>Select a class…</option>
-            {CLASS_OPTIONS.map((c) => (
-              <option key={c} value={c} className="text-ink">{c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label" htmlFor="description">Description</label>
-          <input id="description" required value={description}
-            onChange={(e) => setDescription(e.target.value)} className="field"
-            placeholder="Steel patio, steel shed…" />
-        </div>
+      <div className="mt-5">
+        <JobItems items={items} onChange={setItems} />
       </div>
 
       <div className="mt-6">
@@ -310,7 +297,9 @@ export function SubmitForm() {
       </button>
       {!ready && (
         <p className="mt-2 text-center text-[12px] text-ink/50">
-          Attach drawings and engineering to continue.
+          {described
+            ? "Attach drawings and engineering to continue."
+            : "Tell us what's being built to continue."}
         </p>
       )}
 
