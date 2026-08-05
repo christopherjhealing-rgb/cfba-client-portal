@@ -135,6 +135,14 @@ export default async function JobDetail({
                 Amend This Job
               </Link>
             )}
+            {/* Same work, new site — carries the class and description across so
+                a repeat builder doesn't retype it. */}
+            {!hidden.has("submit") && (
+              <Link href={`/submit?from=${encodeURIComponent(ref)}`}
+                className="btn-ghost w-full lg:w-auto">
+                Lodge Similar
+              </Link>
+            )}
             {downloadable && (
               <DownloadButton block
                 href={`/api/jobs/${encodeURIComponent(ref)}/download`}

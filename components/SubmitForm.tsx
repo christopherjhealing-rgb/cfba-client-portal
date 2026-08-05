@@ -21,11 +21,14 @@ const BUCKETS: Bucket[] = [
     hint: "BAL report, site photos, soil classification — anything else relevant. Optional." },
 ];
 
-export function SubmitForm() {
+export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   const [address, setAddress] = useState("");
   // Class and description are no longer typed — they're derived from the rows
-  // below. See lib/jobdesc.
-  const [items, setItems] = useState<Item[]>([blankItem()]);
+  // below. See lib/jobdesc. seedItems is a "lodge similar" duplicate carrying
+  // the previous job's work forward — the address is deliberately NOT carried,
+  // so a duplicate can never lodge at the wrong site by leaving it unchanged.
+  const [items, setItems] = useState<Item[]>(
+    seedItems && seedItems.length ? seedItems : [blankItem()]);
   const [notes, setNotes] = useState("");
   const [clientRef, setClientRef] = useState("");
   const [contact, setContact] = useState("");

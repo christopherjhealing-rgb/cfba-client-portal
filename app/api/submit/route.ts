@@ -144,14 +144,26 @@ function parseItems(s: string): unknown {
  */
 function classAndDescription(
   raw: unknown, legacyClass: string, legacyDescription: string
-): { jobClass: string; description: string } | { error: string } {
+): { jobClass: string; description: string; items?: unknown } | { error: string } {
   if (raw === undefined || raw === null) {
     return { jobClass: legacyClass, description: legacyDescription };
   }
   const said = describeJob(raw);
+  // items travel back too so lodgement can stash them for "lodge similar" —
+  // the normalised rows, not the raw request, so a duplicate restores exactly
+  // what was recorded.
   return said.ok
-    ? { jobClass: said.jobClass, description: said.description }
+    ? { jobClass: said.jobClass, description: said.description, items: said.items }
     : { error: said.error };
+}
+
+/** Stash the structured rows against the submission so a later "lodge similar"
+ *  can restore them exactly. Portal_settings k/v, migration-free, and never
+ *  fatal — a duplicate that can't find them falls back to the description. */
+async function stashItems(id: string, items: unknown): Promise<void> {
+  if (!Array.isArray(items) || !items.length) return;
+  try { await repo.setSetting(`subitems:${id}`, { items }); }
+  catch { /* a lost convenience must never fail a lodgement */ }
 }
 
 /** Ticked "My documents" entries, resolved against the caller's OWN library —
@@ -316,6 +328,7 @@ async function handle(req: Request) {
     createdAt: new Date().toISOString(),
     amendmentOf,
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
+  if (!amendmentOf) await stashItems(id, said.items);
 
   const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
   return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });
@@ -431,6 +444,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     createdAt: new Date().toISOString(),
     amendmentOf,
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
+  if (!amendmentOf) await stashItems(id, said.items);
 
   const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
   return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });
