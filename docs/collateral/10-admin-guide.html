@@ -15,6 +15,22 @@ td, th { padding-top: 1.35mm; padding-bottom: 1.35mm; }
 .callout { padding-top: 2.6mm; padding-bottom: 2.6mm; }
 p + p { margin-top: 1.7mm; }
 .band { padding: 9mm 14mm 7mm; }
+
+/* ---- messages decision tree ---- */
+.droot {
+  border: .35mm solid var(--rule); background: var(--wash); border-radius: 2mm;
+  padding: 2mm 3mm; font-size: 9pt; font-weight: 700; text-align: center;
+}
+.dsep { text-align: center; color: #9AA69E; font-size: 9pt; line-height: 1.1; padding: 0.6mm 0; }
+.dbranches { display: grid; grid-template-columns: 1fr 1.9fr; gap: 3mm; }
+.dbox { border: .35mm solid var(--rule); border-radius: 2mm; padding: 2.2mm 3mm; font-size: 8.6pt; }
+.dbox.internal { background: #ECEEEC; color: #3E4842; }
+.dbox.client { border-left: 1.3mm solid var(--green); }
+.dbox h4 { font-size: 8.8pt; margin-bottom: 0.8mm; }
+.dout { margin-top: 1mm; padding-left: 4.5mm; position: relative; line-height: 1.35; }
+.dout::before { position: absolute; left: 0; font-weight: 700; }
+.dout.ok::before { content: "✓"; color: var(--green); }
+.dout.no::before { content: "✗"; color: #B3372F; }
 </style>
 </head>
 <body>
@@ -125,23 +141,30 @@ p + p { margin-top: 1.7mm; }
     </ul>
 
     <div class="sec">The messages rules — worth knowing cold</div>
-    <ul class="check">
-      <li>An update starting <span class="mono">FIR:</span> or <span class="mono">CLIENT:</span>
-        goes to the client — portal thread <em>and</em> email. <strong>Anything else stays
-        internal.</strong> Never start an internal note with either prefix.</li>
-      <li><span class="mono">FIR:</span> then a <strong>shortcut</strong> writes the whole request
-        for you — <span class="mono">FIR: Soil Class</span>. Several at once
-        (<span class="mono">FIR: Soil Class, Elevations</span>) come out as one message with
-        numbered items. The card gets a note back saying what went.
-        <strong>Admin → FIR Library</strong> has all of them, and you can reword any of them.</li>
-      <li>A shortcut with a letter wrong — <span class="mono">Sol Class</span> — sends
-        <em>nothing</em> and puts a "did you mean" note on the card. Same for a shortcut you've
-        switched off, and for a lone word that isn't one. Nothing reaches a client unless a
-        shortcut matched exactly, or you wrote a real sentence.</li>
-      <li><span class="mono">CLIENT:</span> never expands. It is always literal.</li>
-      <li>Works on a card in any active status; completed/cancelled cards aren't scanned.</li>
-      <li>When a client replies, the office gets an email — you never need to watch the board
-        for replies.</li>
+    <div class="droot">You post an update on a Monday card (any active status)</div>
+    <div class="dsep">▼</div>
+    <div class="dbranches">
+      <div class="dbox internal">
+        <h4>No prefix</h4>
+        Stays <strong>internal</strong>. Never reaches the client — so never start an internal
+        note with <span class="mono">FIR:</span> or <span class="mono">CLIENT:</span>.
+      </div>
+      <div class="dbox client">
+        <h4>Starts <span class="mono">FIR:</span> or <span class="mono">CLIENT:</span> → goes to the client (portal thread + email)</h4>
+        <div class="dout ok"><span class="mono">CLIENT: …</span> — sent word for word. Never expands.</div>
+        <div class="dout ok"><span class="mono">FIR:</span> + a known <strong>shortcut</strong>
+          (<span class="mono">FIR: Soil Class, Elevations</span>) — the whole request is written
+          for you, one message, numbered; the card notes what went. Reword them in
+          <strong>Admin → FIR Library</strong>.</div>
+        <div class="dout ok"><span class="mono">FIR:</span> + a real sentence — sent as written.</div>
+        <div class="dout no"><span class="mono">FIR:</span> + a typo'd or unknown lone word
+          (<span class="mono">Sol Class</span>) — <strong>nothing sent</strong>; a "did you
+          mean" note lands on the card instead.</div>
+      </div>
+    </div>
+    <ul class="check" style="margin-top:2mm">
+      <li>Completed/cancelled cards aren't scanned.</li>
+      <li>When a client replies, the office gets an email — you never need to watch the board.</li>
       <li>Files you attach to a Monday update do <em>not</em> reach the client — put requests in
         words. (Sending documents to clients is a future feature.)</li>
     </ul>

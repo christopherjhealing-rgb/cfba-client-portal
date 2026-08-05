@@ -19,6 +19,23 @@ ul.boxes li { padding-top: 0.99mm; padding-bottom: 0.99mm; }
 .callout { padding-top: 3.14mm; padding-bottom: 3.14mm; }
 p + p { margin-top: 2.24mm; }
 .grid { gap: 3.59mm; }
+
+/* ---- horizontal step strip ---- */
+.hflow { display: flex; align-items: stretch; margin: 2.5mm 0 1mm; }
+.hstep {
+  flex: 1; min-width: 0; border: .35mm solid var(--rule); border-top: 1.3mm solid var(--green);
+  border-radius: 2mm; padding: 3mm 3.2mm; background: #fff;
+}
+.hstep.gold { border-top-color: var(--brass); }
+.hstep .hn {
+  width: 6.5mm; height: 6.5mm; border-radius: 50%; background: var(--green-deep); color: #fff;
+  font-weight: 700; font-size: 9pt; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.6mm;
+}
+.hstep.gold .hn { background: var(--brass); }
+.hstep h3 { font-size: 9.8pt; line-height: 1.2; }
+.hstep p { font-size: 8.5pt; color: var(--soft); margin-top: 1mm; line-height: 1.35; }
+.hsep { align-self: center; color: #9AA69E; padding: 0 1.4mm; font-size: 11pt; flex: 0 0 auto; }
 </style>
 </head>
 <body>
@@ -38,24 +55,28 @@ p + p { margin-top: 2.24mm; }
     and the fastest way to restart it is through the portal.</p>
 
     <div class="sec">What happens, step by step</div>
-    <ol class="steps">
-      <li><span class="step-n">1</span><div>
-        <h3>You get an email — the request is in it</h3>
-        <p>The moment we raise a request, the portal emails you with exactly what we need,
-        written out in the message. Your job also shows <strong>Awaiting information</strong>
-        with a "with you" flag.</p>
-      </div></li>
-      <li><span class="step-n">2</span><div>
-        <h3>Click through to the job and reply</h3>
-        <p>The email links straight to the job's messages. Type your reply and attach the
-        documents — PDFs, up to 25&nbsp;MB per message.</p>
-      </div></li>
-      <li><span class="step-n">3</span><div>
-        <h3>That's it — it files itself</h3>
-        <p>Your reply and documents land directly on the job in front of the surveyor, the
-        status moves on its own, and assessment resumes. No follow-up email needed.</p>
-      </div></li>
-    </ol>
+    <div class="hflow">
+      <div class="hstep gold"><span class="hn">1</span>
+        <h3>An email arrives</h3>
+        <p>What we need is written out in it. The job shows <strong>Awaiting information</strong>
+        — "with you".</p>
+      </div>
+      <div class="hsep">▶</div>
+      <div class="hstep"><span class="hn">2</span>
+        <h3>Click through</h3>
+        <p>The link opens that job's messages — no hunting.</p>
+      </div>
+      <div class="hsep">▶</div>
+      <div class="hstep"><span class="hn">3</span>
+        <h3>Reply + attach</h3>
+        <p>Type a reply, attach the documents. PDFs, up to 25&nbsp;MB a message.</p>
+      </div>
+      <div class="hsep">▶</div>
+      <div class="hstep"><span class="hn">4</span>
+        <h3>It files itself</h3>
+        <p>Lands in front of the surveyor, the flag clears, assessment resumes. Done.</p>
+      </div>
+    </div>
 
     <div class="sec">Why reply in the portal rather than by email?</div>
     <ul class="check">

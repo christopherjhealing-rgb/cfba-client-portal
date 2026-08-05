@@ -23,6 +23,21 @@ p + p { margin-top: 1.7mm; }
 .band { padding: 8mm 14mm 6mm; }
 .cta { padding: 3.5mm 5mm; margin-top: 3.5mm; }
 .cta img.qr { width: 19mm; height: 19mm; }
+
+/* ---- horizontal step strip ---- */
+.hflow { display: flex; align-items: stretch; margin: 2mm 0 0; }
+.hstep {
+  flex: 1; min-width: 0; border: .35mm solid var(--rule); border-top: 1.3mm solid var(--green);
+  border-radius: 2mm; padding: 2.6mm 3mm; background: #fff;
+}
+.hstep .hn {
+  width: 6mm; height: 6mm; border-radius: 50%; background: var(--green-deep); color: #fff;
+  font-weight: 700; font-size: 8.5pt; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.4mm;
+}
+.hstep h3 { font-size: 9.6pt; line-height: 1.2; }
+.hstep p { font-size: 8.5pt; color: var(--soft); margin-top: 1mm; line-height: 1.35; }
+.hsep { align-self: center; color: #9AA69E; padding: 0 1.3mm; font-size: 10.5pt; flex: 0 0 auto; }
 </style>
 </head>
 <body>
@@ -86,22 +101,26 @@ p + p { margin-top: 1.7mm; }
     </div>
 
     <div class="sec">Getting in for the first time</div>
-    <ol class="steps">
-      <li><span class="step-n">1</span><div>
-        <h3>We'll send you a username and a setup code</h3>
-        <p>One login per company — everyone on your team uses the same one and sees the same
-        jobs. Prefer a login each, with your names on messages? Just ask.</p>
-      </div></li>
-      <li><span class="step-n">2</span><div>
-        <h3>Open the portal and choose <em>First time</em></h3>
-        <p>Enter the username and the setup code, then pick your own password. We never see it.</p>
-      </div></li>
-      <li><span class="step-n">3</span><div>
+    <div class="hflow">
+      <div class="hstep"><span class="hn">1</span>
+        <h3>We email your login</h3>
+        <p>A username and a one-time setup code, with a getting-started sheet attached.</p>
+      </div>
+      <div class="hsep">▶</div>
+      <div class="hstep"><span class="hn">2</span>
+        <h3>Choose <em>First time</em></h3>
+        <p>Enter both, then pick your own password. We never see it.</p>
+      </div>
+      <div class="hsep">▶</div>
+      <div class="hstep"><span class="hn">3</span>
         <h3>That's it</h3>
-        <p>After that it's just your username and password. Setup codes expire, so use yours when
-        it arrives — if it lapses, use <em>Forgot password?</em> or ask us for another.</p>
-      </div></li>
-    </ol>
+        <p>From then on it's just username + password. Code lapsed? <em>Forgot password?</em>
+        sends a fresh one.</p>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:1.8mm">One login per company — everyone on your
+    team uses the same one and sees the same jobs. Prefer a login each, with your names on
+    messages? Just ask.</p>
   </div>
 
   <div class="foot">

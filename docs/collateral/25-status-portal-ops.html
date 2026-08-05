@@ -6,10 +6,10 @@
 <link rel="stylesheet" href="style.css">
 <style>
 /* ---- fitted to A4 ---- */
-.content { padding-top: 5.5mm; padding-bottom: 5.5mm; }
-.sec { margin-top: 4mm; margin-bottom: 1.8mm; }
-td, th { padding-top: 1.3mm; padding-bottom: 1.3mm; }
-.check li { padding-top: 0.8mm; padding-bottom: 0.8mm; }
+.content { padding-top: 3.8mm; padding-bottom: 3.8mm; }
+.sec { margin-top: 3.2mm; margin-bottom: 1.6mm; }
+td, th { padding-top: 1.1mm; padding-bottom: 1.1mm; }
+.check li { padding-top: 0.6mm; padding-bottom: 0.6mm; }
 .callout { padding-top: 2.4mm; padding-bottom: 2.4mm; }
 p + p { margin-top: 1.6mm; }
 .band { padding: 8mm 14mm 6mm; }
@@ -30,24 +30,22 @@ p + p { margin-top: 1.6mm; }
     <p class="lede" style="font-size:10pt">A single public page: reference + site address in,
     a five-stage timeline out. Unlike the client portal it needs no login, is for anyone
     holding the paperwork, and <strong>writes nothing</strong> — it reads the board live.
-    Both fields must match before anything shows, answers are limited to stage + dates +
-    address, and lookups are rate-limited — the site address is what actually protects a
-    job.</p>
+    Both fields must match before anything shows, answers stop at stage + dates + address,
+    and lookups are rate-limited.</p>
 
     <div class="sec">What it reads from the board</div>
     <table class="small">
       <tr><td style="width:34mm"><span class="mono">Ref #</span></td>
         <td>The lookup key. <strong>A card with a blank Ref # can never be looked up</strong> —
-        the client is told "we couldn't match those details" no matter what they type.</td></tr>
+        the client just gets "we couldn't match those details".</td></tr>
       <tr><td><span class="mono">Status</span></td>
         <td>Decides the stage. Every label maps to one of the five client stages (or to the
         Cancelled / On&nbsp;Hold card). A label the page doesn't know shows a safe, vague
         "In progress" — never a guess.</td></tr>
       <tr><td><span class="mono">PORTAL</span></td>
         <td>Written by the <strong>client portal's sync</strong> as it delivers — ISSUED →
-        READY → DOWNLOADED, or STUCK. On an issued job this refines the wording ("ready to
-        download in the client portal…"), and STUCK suppresses the Sent date rather than
-        arguing with it. The status page only ever reads it.</td></tr>
+        READY → DOWNLOADED, or STUCK. On an issued job it refines the wording, and STUCK
+        suppresses the Sent date. The status page only ever reads it.</td></tr>
       <tr><td><span class="mono">Received / Job Sent</span></td>
         <td>The dates on the card. A Job Sent cell holding a note instead of a date is never
         echoed to the client.</td></tr>
@@ -61,12 +59,12 @@ p + p { margin-top: 1.6mm; }
         <span class="mono">statusMap</span> in <span class="mono">lib/config.js</span>, then
         <span class="mono">npm test</span> — a deliberate test fails until every live label is
         mapped.</li>
-      <li><strong>New PORTAL label?</strong> Same ritual, in <span class="mono">CONFIG.delivery</span>.
-        Unmapped there means an issued job says nothing about where its certificate got to.</li>
-      <li><strong>"Wait" is currently an assumption</strong> — it appeared on the board Aug 2026
-        with no jobs carrying it, so the page shows a neutral "Waiting" card. When its real
-        meaning is settled, update the mapping (marked <span class="mono">CONFIRM</span> in
-        config).</li>
+      <li><strong>New PORTAL label?</strong> Same ritual, in
+        <span class="mono">CONFIG.delivery</span> — unmapped means an issued job says nothing
+        about delivery.</li>
+      <li><strong>"Wait" is currently an assumption</strong> — new on the board Aug 2026, no
+        jobs carry it, shown as a neutral "Waiting" card. Settle its meaning, then update the
+        mapping (marked <span class="mono">CONFIRM</span>).</li>
     </ul>
 
     <div class="sec">Board hygiene that shows up here</div>
@@ -74,19 +72,69 @@ p + p { margin-top: 1.6mm; }
       <li><strong>Blank Ref #</strong> — the job is invisible to the page. Older cards have
         these; fill them as they surface.</li>
       <li><strong>Same ref on two cards</strong> (revision, copy) — the page shows the most
-        recently updated one rather than failing the lookup.</li>
-      <li><strong>Item name is the address</strong> — a card whose name isn't the site address
-        can't be matched by the client. Keep names as
-        <span class="mono">&lt;address&gt;</span> like everywhere else.</li>
+        recently updated one.</li>
+      <li><strong>Item name is the address</strong> — a card named anything else can't be
+        matched by the client.</li>
     </ul>
 
+    <div class="sec">The landscape — what talks to what</div>
+    <svg viewBox="0 0 740 218" style="width:70%;display:block;margin:0 auto" role="img"
+         aria-label="Systems map: client, client portal, Monday board, SharePoint and autogen, status page">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5B6660"/>
+        </marker>
+      </defs>
+      <style>
+        .bx { fill:#F4F8F4; stroke:#1E5B3C; stroke-width:1.4; rx:8; }
+        .bt { font:700 13px "Segoe UI",Arial,sans-serif; fill:#12332A; }
+        .bs { font:11px "Segoe UI",Arial,sans-serif; fill:#5B6660; }
+        .al { font:10.5px "Segoe UI",Arial,sans-serif; fill:#5B6660; }
+        .ar { stroke:#5B6660; stroke-width:1.3; fill:none; marker-end:url(#ah); }
+      </style>
+      <!-- row 1 -->
+      <rect class="bx" x="10" y="18" width="150" height="52" rx="8"/>
+      <text class="bt" x="85" y="40" text-anchor="middle">Client</text>
+      <text class="bs" x="85" y="56" text-anchor="middle">logs in</text>
+      <rect class="bx" x="280" y="18" width="180" height="52" rx="8"/>
+      <text class="bt" x="370" y="40" text-anchor="middle">Client portal</text>
+      <text class="bs" x="370" y="56" text-anchor="middle">lodge · messages · downloads</text>
+      <rect x="580" y="18" width="150" height="52" rx="8" fill="#FBF4E6" stroke="#8A6D1E" stroke-width="1.4"/>
+      <text class="bt" x="655" y="40" text-anchor="middle">Monday board</text>
+      <text class="bs" x="655" y="56" text-anchor="middle">the system of record</text>
+      <!-- row 2 -->
+      <rect class="bx" x="280" y="148" width="180" height="52" rx="8"/>
+      <text class="bt" x="370" y="170" text-anchor="middle">SharePoint</text>
+      <text class="bs" x="370" y="186" text-anchor="middle">autogen writes the CDC pack here</text>
+      <rect x="580" y="148" width="150" height="52" rx="8" fill="#fff" stroke="#5B6660" stroke-width="1.4"/>
+      <text class="bt" x="655" y="170" text-anchor="middle">Status page</text>
+      <text class="bs" x="655" y="186" text-anchor="middle">anyone: ref + address in</text>
+      <rect x="10" y="148" width="150" height="52" rx="8" fill="#fff" stroke="#5B6660" stroke-width="1.4"/>
+      <text class="bt" x="85" y="170" text-anchor="middle">Office inbox</text>
+      <text class="bs" x="85" y="186" text-anchor="middle">replies · records · 5pm report</text>
+      <!-- arrows -->
+      <line class="ar" x1="160" y1="38" x2="276" y2="38"/>
+      <line class="ar" x1="276" y1="54" x2="160" y2="54"/>
+      <text class="al" x="218" y="30" text-anchor="middle">lodge · reply</text>
+      <text class="al" x="218" y="68" text-anchor="middle">status · files</text>
+      <line class="ar" x1="460" y1="38" x2="576" y2="38"/>
+      <line class="ar" x1="576" y1="54" x2="460" y2="54"/>
+      <text class="al" x="518" y="13" text-anchor="middle">cards · updates · PORTAL</text>
+      <text class="al" x="518" y="82" text-anchor="middle">statuses · messages</text>
+      <line class="ar" x1="370" y1="146" x2="370" y2="74"/>
+      <text class="al" x="378" y="100">issued files, once marked Issued</text>
+      <line class="ar" x1="655" y1="74" x2="655" y2="144"/>
+      <text class="al" x="647" y="128" text-anchor="end">reads live — writes nothing</text>
+      <path class="ar" d="M300,70 L300,104 L85,104 L85,144"/>
+      <text class="al" x="192" y="98" text-anchor="middle">emails, automatically</text>
+    </svg>
+
     <div class="callout" style="margin-top:3.5mm">
-      <strong>Keeping this current:</strong> the page's code, config and README live in the
-      <strong>Monday-Portal</strong> repository; this sheet's master is
-      <span class="mono">docs/collateral/25-status-portal-ops.html</span> in the client-portal
-      repository — edit, re-render (<span class="mono">node render-pdfs.mjs</span>), commit.
-      Re-check this sheet whenever a board column moves, a label is added, or the delivery
-      states change.
+      <strong>Keeping this current:</strong> the page's code and README live in the
+      <strong>Monday-Portal</strong> repo; this sheet's master is
+      <span class="mono">docs/collateral/25-status-portal-ops.html</span> — edit,
+      <span class="mono">node render-pdfs.mjs</span>, commit. Re-check when a column moves, a
+      label is added, or the delivery states change.
     </div>
   </div>
 

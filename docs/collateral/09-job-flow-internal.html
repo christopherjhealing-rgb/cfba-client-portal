@@ -10,10 +10,32 @@
    the most rows, so the row rhythm is what gives. Spacing only — no copy cut. */
 .content { padding-top: 6mm; padding-bottom: 6mm; }
 .sec { margin-top: 4mm; margin-bottom: 1.8mm; }
-td, th { padding-top: 1.1mm; padding-bottom: 1.1mm; }
+td, th { padding-top: 0.9mm; padding-bottom: 0.9mm; }
 .check li { padding-top: 0.7mm; padding-bottom: 0.7mm; }
 .steps li { padding-top: 1.1mm; padding-bottom: 1.1mm; }
 p + p { margin-top: 1.2mm; }
+
+/* ---- at-a-glance flowchart (page 1) ---- */
+.flow2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8mm; margin-top: 2mm; }
+.fnode {
+  display: flex; align-items: center; gap: 3mm;
+  border: .35mm solid var(--rule); border-left: 1.4mm solid var(--fb, var(--rule));
+  border-radius: 2mm; background: #fff; padding: 1.8mm 3mm; min-height: 11mm;
+}
+.fnode .fnum {
+  flex: 0 0 auto; width: 6mm; height: 6mm; border-radius: 50%;
+  background: var(--fb, var(--green-deep)); color: #fff; font-weight: 700; font-size: 8.5pt;
+  display: flex; align-items: center; justify-content: center;
+}
+.fnode b { display: block; font-size: 9.5pt; line-height: 1.25; }
+.fnode small { display: block; font-size: 8pt; color: var(--soft); line-height: 1.3; }
+.fnode .pill-role { margin-left: auto; flex: 0 0 auto; font-size: 7pt; }
+.farrow { text-align: center; color: #9AA69E; font-size: 8pt; line-height: 1; padding: 0.4mm 0; }
+.floop {
+  border: .35mm dashed var(--brass); border-radius: 2mm; background: var(--wash-warm);
+  font-size: 8pt; color: var(--brass-deep); padding: 1.6mm 3mm; margin-top: 0.8mm;
+}
+.fjump { text-align: center; font-size: 8pt; color: var(--soft); padding-top: 1mm; }
 </style>
 </head>
 <body>
@@ -45,10 +67,62 @@ p + p { margin-top: 1.2mm; }
         <td>Card creation, autogen, portal sync (every 5 minutes), emails, filing, receipts, purge</td></tr>
     </table>
 
+    <div class="sec">The whole flow at a glance</div>
+    <div class="flow2">
+      <div>
+        <div class="fnode" style="--fb:#1E5B3C"><span class="fnum">1</span>
+          <div><b>Job lodged</b><small>Portal lodgement → card on the board instantly. Email jobs keyed by hand.</small></div>
+          <span class="pill-role r-client">Client</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#2B5C9A"><span class="fnum">2</span>
+          <div><b>Ref # + folder</b><small>Reference on the card; SharePoint folder <span style="font-family:Consolas,monospace">&lt;address&gt; - &lt;ref&gt;</span></small></div>
+          <span class="pill-role r-kacie">Kacie</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#2B5C9A"><span class="fnum">3</span>
+          <div><b>Assigned</b><small>Into the assessing surveyor's queue</small></div>
+          <span class="pill-role r-kacie">Kacie</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#1E5B3C"><span class="fnum">4</span>
+          <div><b>Assessment</b><small>NCC 2022 Vol&nbsp;Two + Housing Provisions; checklist completed</small></div>
+          <span class="pill-role r-chris">Chris</span><span class="pill-role r-rebecca">Rebecca</span></div>
+        <div class="floop"><b>↺ Need something from the client?</b> Status → FIR, request as a
+          <span style="font-family:Consolas,monospace">FIR:</span> note → portal emails them →
+          their reply lands on the card → back to <b>4</b>. (FIR&nbsp;-&nbsp;ENG: we chase the
+          engineer, client only watches.)</div>
+        <div class="fjump">continues top right ▶</div>
+      </div>
+      <div>
+        <div class="fnode" style="--fb:#1E5B3C"><span class="fnum">5</span>
+          <div><b>Hand-off to the autogen</b><small><strong>Chris CDC</strong> / <strong>To CDC</strong> once satisfied — Rebecca's part ends here</small></div>
+          <span class="pill-role r-chris">Chris</span><span class="pill-role r-rebecca">Rebecca</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#5B6660"><span class="fnum">6</span>
+          <div><b>CDC written</b><small>Autogen writes certificate + stamped PDFs into <strong>Issued</strong>; card → To&nbsp;Issue</small></div>
+          <span class="pill-role r-auto">Auto</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#2B5C9A"><span class="fnum">7</span>
+          <div><b>Review &amp; finalise</b><small>Every document checked — edits here are what the client receives</small></div>
+          <span class="pill-role r-kacie">Kacie</span><span class="pill-role r-chris">Chris</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#5B6660"><span class="fnum">8</span>
+          <div><b>Issued → portal</b><small>Sync copies the files, emails the client, PORTAL → READY. Status page follows along.</small></div>
+          <span class="pill-role r-auto">Auto</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#1E5B3C"><span class="fnum">9</span>
+          <div><b>Downloaded</b><small>Receipt on the card; correspondence record emailed to the office; PORTAL → DOWNLOADED</small></div>
+          <span class="pill-role r-client">Client</span></div>
+        <div class="farrow">▼</div>
+        <div class="fnode" style="--fb:#A43E71"><span class="fnum">10</span>
+          <div><b>Invoiced &amp; closed</b><small>Files purge three months after first download</small></div>
+          <span class="pill-role r-fiona">Fiona</span></div>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:2mm">Colour = who acts. The detail for every step is over the page.</p>
+
   </div>
 
   <div class="foot-light">
-    <span>Page 1 of 4 — who does what</span><span>CF Building Approvals</span>
+    <span>Page 1 of 4 — who does what, and the flow at a glance</span><span>CF Building Approvals</span>
   </div>
 </div>
 
