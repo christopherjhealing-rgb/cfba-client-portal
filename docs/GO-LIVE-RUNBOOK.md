@@ -151,7 +151,7 @@ git push -u origin main
 | `GRAPH_CLIENT_SECRET` | from Phase 4 |
 | `GRAPH_DRIVE_ID` | already in the template — copy as-is |
 | `GRAPH_CLIENT_FILES_ROOT` | already in the template — copy as-is |
-| `RETENTION_MONTHS` | `6` |
+| `RETENTION_MONTHS` | `3` |
 | `FROM_EMAIL` | `no-reply@cfba.com.au` |
 | `CRON_SECRET` | run `openssl rand -base64 32` again — different value |
 | `MAIL_FROM` | the real tenant mailbox notifications send as, e.g. `admin@cfba.com.au` |
@@ -238,7 +238,7 @@ Brief Kacie and Rebecca before the wider rollout — Kacie will field the "I can
 None are blockers, but know them now so they're not surprises:
 
 - **Sync is additive.** It never deletes a job. Cards deleted on Monday linger in the portal until removed manually.
-- **Retention isn't self-purging.** Expired jobs are hidden from clients at 6 months, but the stored files aren't deleted. Fine at pilot volume; add a scheduled purge before storage costs bite.
+- **Retention isn't self-purging.** Expired jobs are hidden from clients at 3 months, but the stored files aren't deleted. Fine at pilot volume; add a scheduled purge before storage costs bite.
 - **Lodgements capped at 40 MB**, messages at 25 MB per attachment.
 - **Client secret expires in 24 months.** Reminder set? Set it now.
 

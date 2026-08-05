@@ -94,7 +94,7 @@ ownership check — never publicly addressable.
 ### Retention
 
 A job is counted as downloaded on the **first** download. It then stays visible
-in the **Downloaded** section for six months (`RETENTION_MONTHS`), with a
+in the **Downloaded** section for three months (`RETENTION_MONTHS`, default 3), with a
 day-count shown, and can be downloaded again as many times as needed. After that
 it drops out of the portal. Downloaded jobs are never removed by a later Monday
 status change.
