@@ -32,6 +32,13 @@ export async function uploadDirect(
   if (d.mode === "inline") return { mode: "inline" };
 
   const signed: { name: string; url: string }[] = d.files || [];
+  // One signed URL per file, or the response is malformed. Bailing here returns
+  // a clean error the caller can show; without it the loop below dereferences
+  // signed[i].url on undefined and throws, and because the callers don't wrap
+  // this in try/catch that leaves the form stuck on "Sending…" forever.
+  if (signed.length !== files.length || signed.some((s) => !s?.url)) {
+    return { error: "We couldn't start the upload — please try again, or ring the office." };
+  }
   for (let i = 0; i < files.length; i++) {
     onProgress?.(i, files.length);
     const put = await fetch(signed[i].url, {

@@ -82,14 +82,22 @@ export default async function MyJobs({
     return bucketOf(j.ref as string) === show;
   });
 
+  // The chip counts must honour the active search too — otherwise a search
+  // that narrows the table to one row still reads "Current 12" above it, which
+  // looks broken. When there's no search, matchesQ is always true and these
+  // are the same numbers as before.
+  const receivedQ = (r: (typeof received)[number]) => !q ||
+    `${r.address} ${r.description}`.toLowerCase().includes(q);
+  const nQ = <T,>(xs: T[], f: (x: T) => boolean) => xs.filter(f).length;
+
   const showReceived = show === "all" || show === "progress";
   const count = (k: FilterKey) =>
-    k === "all" ? all.length + received.length
-      : k === "progress" ? g.in_progress.length + received.length
-      : k === "action" ? all.filter(needsClientInfo).length
-      : k === "ready" ? g.ready.length
-      : k === "past" ? g.downloaded.length
-      : all.filter(needsClientInfo).length;
+    k === "all" ? nQ(all, matchesQ) + nQ(received, receivedQ)
+      : k === "progress" ? nQ(g.in_progress, matchesQ) + nQ(received, receivedQ)
+      : k === "action" ? nQ(all, (j) => needsClientInfo(j) && matchesQ(j))
+      : k === "ready" ? nQ(g.ready, matchesQ)
+      : k === "past" ? nQ(g.downloaded, matchesQ)
+      : nQ(all, (j) => needsClientInfo(j) && matchesQ(j));
 
   const hidden = await disabledPages();
 
@@ -202,12 +210,12 @@ export default async function MyJobs({
                 return (
                   <tr key={j.ref as string} className={needsClientInfo(j) ? "bg-[#FCF7EC]" : undefined}>
                     <td className="td font-mono text-[12px] text-ink/50">
-                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} className="hover:text-seal hover:underline">
+                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} prefetch={false} className="hover:text-seal hover:underline">
                         {j.ref as string}
                       </Link>
                     </td>
                     <td className="td">
-                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} className="group flex items-center gap-3">
+                      <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} prefetch={false} className="group flex items-center gap-3">
                         <JobArt description={j.description as string} size="sm"
                           tone={needsClientInfo(j) ? "amber" : "seal"} />
                         <div className="min-w-0">
@@ -297,7 +305,7 @@ function JobCards({
         return (
           <div key={ref}
             className={`card p-4 ${needs ? "border-[#E4C98A] bg-[#FCF7EC]" : ""}`}>
-            <Link href={`/jobs/${encodeURIComponent(ref)}`} className="flex items-start gap-3">
+            <Link href={`/jobs/${encodeURIComponent(ref)}`} prefetch={false} className="flex items-start gap-3">
               <JobArt description={j.description as string} size="sm"
                 tone={needs ? "amber" : "seal"} />
               <div className="min-w-0 flex-1">

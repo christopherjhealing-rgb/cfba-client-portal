@@ -12,11 +12,7 @@ import { Icon } from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
 
-function when(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-AU", { day: "numeric", month: "short" }) +
-    " · " + d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
-}
+import { fmtWhen, fmtMB } from "@/lib/when.mjs";
 
 export default async function Messages({
   searchParams,
@@ -133,7 +129,7 @@ export default async function Messages({
                         order looks arbitrary. */}
                     {lastAt.get(ref) && (
                       <span className="ml-auto shrink-0 text-[11px] text-ink/40">
-                        {when(lastAt.get(ref)!).split(" · ")[0]}
+                        {fmtWhen(lastAt.get(ref)!).split(" · ")[0]}
                       </span>
                     )}
                   </div>
@@ -196,7 +192,7 @@ export default async function Messages({
                     <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                       {m.from === "cfba" ? "CF Building Approvals" : session.companyName}
                     </span>
-                    <span className="text-[11px] text-ink/50">{when(m.createdAt)}</span>
+                    <span className="text-[11px] text-ink/50">{fmtWhen(m.createdAt)}</span>
                   </div>
                   {m.body && (
                     <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">
@@ -212,7 +208,7 @@ export default async function Messages({
                             <span className="shrink-0 text-seal"><Icon name="download" size={13} /></span>
                             <span className="min-w-0 truncate">{f.name}</span>
                             <span className="shrink-0 font-mono text-[11px] text-ink/40">
-                              {(f.size / 1_048_576).toFixed(1)} MB
+                              {fmtMB(f.size)}
                             </span>
                           </a>
                         </li>

@@ -16,6 +16,12 @@ function cronAuthorised(req: Request): boolean {
   return (req.headers.get("authorization") || "") === `Bearer ${secret}`;
 }
 
+/** A request that presented a bearer token — i.e. something trying to be the
+ *  cron, whether or not it got the secret right. A bare anonymous GET has no
+ *  such header, and must not be able to drive the diagnostic write below. */
+const looksLikeCron = (req: Request) =>
+  (req.headers.get("authorization") || "").startsWith("Bearer ");
+
 /**
  * The evening report — everything that should have reached a client today and
  * didn't. Runs on a cron at 5pm Perth on weekdays; staff can also open it to
@@ -36,15 +42,19 @@ async function build() {
 export async function GET(req: Request) {
   const cron = cronAuthorised(req);
   if (!cron && !(await isStaff())) {
-    // A cron that arrives unauthorised is the failure this whole feature is
-    // meant to prevent, so it gets recorded rather than just 401'd into the
-    // void. Almost always CRON_SECRET missing from the environment.
-    await repo.setSetting("last_report", {
-      at: new Date().toISOString(), ok: false,
-      error: process.env.CRON_SECRET
-        ? "a request arrived without a valid CRON_SECRET"
-        : "CRON_SECRET is not set, so no scheduled report can ever authorise",
-    }).catch(() => {});
+    // A cron that arrives unauthorised is the failure this feature is meant to
+    // prevent, so it gets recorded rather than 401'd into the void — but ONLY
+    // when the caller actually presented a bearer token. Otherwise any
+    // anonymous GET could drive unbounded writes to portal_settings just by
+    // hammering this URL.
+    if (looksLikeCron(req)) {
+      await repo.setSetting("last_report", {
+        at: new Date().toISOString(), ok: false,
+        error: process.env.CRON_SECRET
+          ? "a request arrived without a valid CRON_SECRET"
+          : "CRON_SECRET is not set, so no scheduled report can ever authorise",
+      }).catch(() => {});
+    }
     return NextResponse.json({ error: "Not authorised." }, { status: 401 });
   }
   if (!cron) {

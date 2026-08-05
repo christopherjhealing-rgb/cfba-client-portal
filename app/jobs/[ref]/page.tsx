@@ -20,11 +20,7 @@ import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-function when(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-AU", { day: "numeric", month: "short" }) +
-    " · " + d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
-}
+import { fmtWhen } from "@/lib/when.mjs";
 
 export default async function JobDetail({
   params,
@@ -269,7 +265,7 @@ export default async function JobDetail({
                 <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                   {m.from === "cfba" ? "CF Building Approvals" : session.companyName}
                 </span>
-                <span className="text-[11px] text-ink/50">{when(m.createdAt)}</span>
+                <span className="text-[11px] text-ink/50">{fmtWhen(m.createdAt)}</span>
               </div>
               {m.body && (
                 <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">{m.body}</p>

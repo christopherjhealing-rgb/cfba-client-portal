@@ -13,13 +13,17 @@ export const dynamic = "force-dynamic";
 export default async function Details() {
   const session = await getClientSession();
   if (!session) redirect("/");
-  const unread = await unreadCount(session.companyId);
-
-  const company = await repo.companyById(session.companyId);
-  const jobCount = (await repo.listJobsForCompany(session.companyId)).length;
-  const docs = await listLibrary(session.companyId);
-
-  const hidden = await disabledPages();
+  // In parallel, and each caught: a hiccup reading the document library — a
+  // portal_settings read — should not 500 the whole My Details page. The other
+  // client pages that touch these already catch; this one was the exception.
+  const [unread, company, jobs, docs, hidden] = await Promise.all([
+    unreadCount(session.companyId).catch(() => 0),
+    repo.companyById(session.companyId).catch(() => null),
+    repo.listJobsForCompany(session.companyId).catch(() => []),
+    listLibrary(session.companyId).catch(() => []),
+    disabledPages(),
+  ]);
+  const jobCount = jobs.length;
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>

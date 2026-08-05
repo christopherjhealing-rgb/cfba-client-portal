@@ -77,15 +77,11 @@ export function SubmitForm() {
 
     // Files go straight to storage via signed URLs (see lib/upload-client) —
     // a full drawing set doesn't fit through a serverless request body. Site
-    // The photos bucket is gone — site photos ride in Other Supporting
-    // Documents like any other PDF. The key is still read here so a form left
-    // open in a tab across the deploy still submits what it holds.
-    const entries = [
-      ...BUCKETS.flatMap((b) =>
-        (files[b.key] || []).map((f) => ({ file: f, category: b.key }))
-      ),
-      ...(files.photos || []).map((f) => ({ file: f, category: "photos" })),
-    ];
+    // photos aren't a bucket of their own; they ride in Other Supporting
+    // Documents like any other PDF.
+    const entries = BUCKETS.flatMap((b) =>
+      (files[b.key] || []).map((f) => ({ file: f, category: b.key }))
+    );
     const up = await uploadDirect(
       "submission",
       entries.map((x) => x.file),
@@ -172,7 +168,7 @@ export function SubmitForm() {
     );
   }
 
-  const all = [...BUCKETS.flatMap((b) => files[b.key] || []), ...(files.photos || [])];
+  const all = BUCKETS.flatMap((b) => files[b.key] || []);
   const count = all.length + tickedDocs.length;
   const totalMb = (all.reduce((n, f) => n + f.size, 0)
     + tickedDocs.reduce((n, d) => n + d.size, 0)) / 1_048_576;

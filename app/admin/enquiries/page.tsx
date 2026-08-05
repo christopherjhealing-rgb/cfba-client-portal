@@ -8,11 +8,7 @@ import { GENERAL_REF } from "@/lib/core.mjs";
 
 export const dynamic = "force-dynamic";
 
-function when(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-AU", { day: "numeric", month: "short" }) +
-    " · " + d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
-}
+import { fmtWhen as when } from "@/lib/when.mjs";
 
 /** General enquiries — questions that aren't about a job, so they never reach
  *  the board. This page is the safety net: an enquiry appears here whether or

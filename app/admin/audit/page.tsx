@@ -19,11 +19,7 @@ const LABELS: Record<string, string> = {
   "client.delete": "Deleted Client",
 };
 
-function when(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) +
-    " · " + d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
-}
+import { fmtStamp as when } from "@/lib/when.mjs";
 
 export default async function AuditPage() {
   if (!(await isStaff())) redirect("/admin/login");

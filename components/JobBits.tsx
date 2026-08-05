@@ -1,13 +1,9 @@
 import { Icon } from "./Icon";
+import { fmtDate } from "@/lib/when.mjs";
 
-export function fmtDate(d?: string | null) {
-  if (!d) return null;
-  return new Date(d).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+// Perth-zoned and Invalid-Date-safe — see lib/when. Re-exported here because
+// this is where the rest of the app already imports fmtDate from.
+export { fmtDate };
 
 /**
  * When a job was lodged, and how long ago.

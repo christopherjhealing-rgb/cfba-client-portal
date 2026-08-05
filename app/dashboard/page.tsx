@@ -303,7 +303,10 @@ function JobLink({ refNo, address, tone = "plain", muted = false }: {
   refNo: string; address: string; tone?: "plain" | "amber"; muted?: boolean;
 }) {
   return (
-    <Link href={`/jobs/${encodeURIComponent(refNo)}`}
+    // prefetch off: opening the job page runs markThreadRead as a render side
+    // effect, so a hover-prefetch would silently clear a thread's unread badge
+    // the client never opened. The same guard is on /messages and /help.
+    <Link href={`/jobs/${encodeURIComponent(refNo)}`} prefetch={false}
       className="group flex min-w-0 flex-wrap items-baseline gap-2">
       <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/55"}`}>
         {refNo}
