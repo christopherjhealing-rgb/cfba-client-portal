@@ -81,13 +81,15 @@ documents as tick-to-attach, and anything uploaded fresh can be ticked
 no separate admin surface. Same rules as every upload: PDF-only, size caps,
 private storage, streamed through an ownership check.
 
-## 3. Site photos at lodgement — status: shipped
+## 3. Site photos at lodgement — status: WITHDRAWN 4 Aug 2026
 
-An optional photos bucket on the lodgement form. Builders have the site on
-their phone camera roll; certifiers want to see it. Phone JPEG/PNG photos are
-accepted client-side and compiled in the browser into a single PDF, one photo
-per A4 page, which then rides the normal lodgement path — so the PDF-only
-pipeline, both its checks and its plumbing, is untouched.
+Was a separate photos bucket that compiled phone JPEGs into a PDF in the
+browser. Withdrawn in favour of the simpler path: site photos ride in "Other
+Supporting Documents" like any other PDF, and the hint on that bucket says so.
+The bucket and its browser-side PDF builder (PhotoBucket) have been removed —
+one less thing to explain, and one less place for an upload to behave
+differently. If per-photo-page compilation is ever wanted back, it's a
+client-side helper over the existing Other bucket, not a new pipeline.
 
 ## 4. Address autocomplete — status: shipped on lodgement 2 Aug 2026
 
