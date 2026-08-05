@@ -48,6 +48,37 @@ export async function clearFailures(username: string): Promise<void> {
   await write(username, null);
 }
 
+// ---------------------------------------------------------------------------
+// A global ceiling on staff sign-in failures, independent of IP.
+//
+// The staff login is throttled per IP, but the IP comes from X-Forwarded-For,
+// which the caller can rotate to get a fresh counter every request — so the
+// per-IP lock alone leaves the single shared passcode open to unlimited online
+// guessing. This backstops it: whatever the source, only so many wrong guesses
+// are allowed in a window before everyone waits.
+//
+// Deliberately generous. There are about two people who know this passcode and
+// it's a strong one (the login refuses to run on the default), so this is a
+// brute-force ceiling, not a fat-finger guard. The cost is that an attacker can
+// force a short staff lockout — but it's 15 minutes and self-clears, which is a
+// far better failure than an unbounded guessing endpoint.
+const GLOBAL_KEY = "staff:all";
+const GLOBAL_LIMIT = 20;
+const GLOBAL_COOLDOWN_MIN = 15;
+
+/** Minutes until staff sign-in is allowed again globally, or 0. */
+export async function checkGlobalStaffLock(): Promise<number> {
+  const rec = await read(GLOBAL_KEY);
+  if (!rec || rec.count < GLOBAL_LIMIT) return 0;
+  const left = Math.ceil(
+    (new Date(rec.last).getTime() + GLOBAL_COOLDOWN_MIN * 60_000 - Date.now()) / 60_000
+  );
+  return left > 0 ? left : 0;
+}
+
+export const recordGlobalStaffFailure = () => recordFailure(GLOBAL_KEY);
+export const clearGlobalStaffFailures = () => clearFailures(GLOBAL_KEY);
+
 interface Rec { count: number; last: string }
 
 async function read(username: string): Promise<Rec | null> {

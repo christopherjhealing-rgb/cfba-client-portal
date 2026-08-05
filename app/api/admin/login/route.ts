@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { env, DEMO_MODE } from "@/lib/env";
 import { setStaffSession } from "@/lib/session";
-import { checkLock, recordFailure, clearFailures } from "@/lib/throttle";
+import {
+  checkLock, recordFailure, clearFailures,
+  checkGlobalStaffLock, recordGlobalStaffFailure, clearGlobalStaffFailures,
+} from "@/lib/throttle";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,8 +30,12 @@ export async function POST(req: Request) {
   // passcode has no username, so an unthrottled endpoint is a shared secret
   // open to unlimited online guessing. Keyed on IP so one attacker can't lock
   // out staff signing in from elsewhere.
+  // Two locks. The per-IP one stops a single source and gives the honest
+  // fat-finger a fast, specific message. The global one can't be escaped by
+  // rotating X-Forwarded-For, so it's what actually protects the shared
+  // passcode from an online guessing run.
   const key = `staff:${clientIp(req)}`;
-  const locked = await checkLock(key);
+  const locked = (await checkLock(key)) || (await checkGlobalStaffLock());
   if (locked) {
     return NextResponse.json(
       { error: `Too many attempts. Try again in ${locked} minute${locked === 1 ? "" : "s"}.` },
@@ -42,11 +49,13 @@ export async function POST(req: Request) {
   const ok = given.length === want.length && crypto.timingSafeEqual(given, want);
   if (!ok) {
     await recordFailure(key);
+    await recordGlobalStaffFailure();
     console.warn(`admin login: failed passcode attempt from ${clientIp(req)}`);
     return NextResponse.json({ error: "That passcode isn't right." }, { status: 401 });
   }
 
   await clearFailures(key);
+  await clearGlobalStaffFailures();
   await setStaffSession();
   return NextResponse.json({ ok: true });
 }
