@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <title>Running the portal — office admin guide</title>
 <link rel="stylesheet" href="style.css">
+<style>
+/* ---- fitted to A4 ---- */
+/* Every .page has to BE one sheet: 1119px at 96dpi. Rhythm only, no copy cut. */
+.content { padding-top: 6.5mm; padding-bottom: 6.5mm; }
+.sec { margin-top: 4.6mm; margin-bottom: 2mm; }
+td, th { padding-top: 1.35mm; padding-bottom: 1.35mm; }
+.check li { padding-top: 0.8mm; padding-bottom: 0.8mm; }
+.steps li { padding-top: 1.4mm; padding-bottom: 1.4mm; }
+.callout { padding-top: 2.6mm; padding-bottom: 2.6mm; }
+p + p { margin-top: 1.7mm; }
+.band { padding: 9mm 14mm 7mm; }
+</style>
 </head>
 <body>
 
@@ -30,25 +42,32 @@
         <em>New client</em> — one click, done on the next sync.</p>
       </div></li>
       <li><span class="step-n">2</span><div style="flex:1">
+        <h3>Queue snapshots — Ready to Download, and In for FIR</h3>
+        <p>Two live lists. <strong>Ready to Download</strong>: issued jobs the client hasn't
+        collected yet, oldest first with how long they've sat — a job sitting a week is a job
+        worth a phone call. <strong>In for FIR</strong>: who we're waiting on and since when.
+        Both are read-only; they're the "who do we chase today" view.</p>
+      </div></li>
+      <li><span class="step-n">3</span><div style="flex:1">
         <h3>Portal pages (the on/off switches)</h3>
         <p>Turn a client section off while you update it — the link vanishes, the page shows
         "temporarily unavailable", and the matching actions pause. Flip it back when done. No
         deploy needed; takes effect on next page load.</p>
       </div></li>
-      <li><span class="step-n">3</span><div style="flex:1">
+      <li><span class="step-n">4</span><div style="flex:1">
         <h3>Info sheets &amp; Council forms</h3>
         <p>Upload a PDF to <strong>supersede a guidance note</strong> (clients get the new
         version instantly; Revert restores the original), or to host the current
         <strong>BA1/BA2/BA5/BA13/BA19/BA22</strong> under Resources. When the Building Commission
         revises a form, replacing it here takes ten seconds.</p>
       </div></li>
-      <li><span class="step-n">4</span><div style="flex:1">
+      <li><span class="step-n">5</span><div style="flex:1">
         <h3>Submission queue (usually empty)</h3>
         <p>Lodgements go straight onto the board. A lodgement only waits here if Monday couldn't
         be reached when it was submitted — Accept sends it on. If the queue keeps filling,
         Monday or its token is the problem.</p>
       </div></li>
-      <li><span class="step-n">5</span><div style="flex:1">
+      <li><span class="step-n">6</span><div style="flex:1">
         <h3>Run sync</h3>
         <p>Forces the 5-minute cycle to run now — useful when a client's on the phone. The
         result line shows jobs, files, messages and anything unmatched.</p>
@@ -90,6 +109,21 @@
         insurer or Building Services Board query asks for — it fills itself.</li>
     </ul>
 
+    <div class="sec">Correspondence records — the 7-year file</div>
+    <ul class="check">
+      <li><strong>Admin → Records</strong> builds a job's full portal correspondence — every
+        message and file, both directions — as one attachment (zip, with a PDF transcript).
+        The transcript says plainly what it does <em>not</em> contain: email and phone traffic
+        outside the portal, and internal notes.</li>
+      <li><strong>It emails itself.</strong> When a client first downloads their certificate,
+        the office is emailed that job's record automatically
+        (<span class="mono">RECORD_EMAIL</span> switch) — file it and the 7-year record
+        obligation is met without anyone remembering to. The record page also has a
+        <strong>test send</strong> so you can see exactly what arrives.</li>
+      <li>The email is a snapshot at download time — if correspondence continues afterwards,
+        rebuild from Admin → Records before filing.</li>
+    </ul>
+
     <div class="sec">The messages rules — worth knowing cold</div>
     <ul class="check">
       <li>An update starting <span class="mono">FIR:</span> or <span class="mono">CLIENT:</span>
@@ -115,7 +149,7 @@
   </div>
 
   <div class="foot-light">
-    <span>Page 2 of 3 — reports, and the messages rules</span><span>CF Building Approvals</span>
+    <span>Page 2 of 3 — reports, records, and the messages rules</span><span>CF Building Approvals</span>
   </div>
 </div>
 
@@ -133,13 +167,15 @@
       <li>Set the routing first — <strong>Settings → Amendments</strong>, then
         <strong>Rebuild Now</strong> on the Amendments page. Until both are done a lodged
         amendment sits there silently and the client thinks it's with us.</li>
-      <li>Because they're off the board, the board can't notice one going quiet. The 5pm report
-        does. If you get an amendment email that isn't yours, say so rather than leaving it.</li>
+      <li>Off the board, the board can't notice one going quiet — the 5pm report does. An
+        amendment email that isn't yours: say so rather than leaving it.</li>
     </ul>
 
-    <div class="sec">Teams</div>
-    <p class="small">Settings → Teams. The same items as the 5pm report, as they happen, into a
-    channel. Off by default and safe to mute — nothing depends on it, and the report still runs.</p>
+    <div class="sec">Teams, and the portal address</div>
+    <p class="small"><strong>Settings → Teams:</strong> the 5pm report's items as they happen,
+    into a channel. Off by default; safe to mute. <strong>Settings → Portal address:</strong>
+    the address client emails link to. If the portal ever moves, set it here and every email
+    follows immediately — no redeploy.</p>
 
     <div class="sec">Switches that live in Vercel (not /admin)</div>
     <table class="small">
@@ -154,7 +190,11 @@
         <td>How long downloaded packages stay before the files purge. Currently
         <strong>3</strong>.</td></tr>
       <tr><td><span class="mono">OFFICE_EMAIL</span></td>
-        <td>Where client-reply notifications land. Keep it a watched inbox.</td></tr>
+        <td>Where client-reply notifications and correspondence records land. Keep it a
+        watched inbox.</td></tr>
+      <tr><td><span class="mono">RECORD_EMAIL</span></td>
+        <td>Default off. Set <span class="mono">1</span> to email the office each job's
+        correspondence record on first download — the 7-year file that files itself.</td></tr>
     </table>
     <p class="small muted" style="margin-top:2mm">Changing a Vercel variable does nothing until
     the project is <strong>redeployed</strong> — Deployments → ⋯ → Redeploy.</p>
@@ -164,6 +204,7 @@
       <li>Sync banner green?</li>
       <li>Unmatched list empty — or matched with one click?</li>
       <li>Submission queue empty?</li>
+      <li>Ready-to-Download snapshot: anything sitting more than a week? Ring them.</li>
       <li>Reports: median turnaround still inside the published 3–4 days?</li>
       <li>Any new Monday status labels created this week? Tell Chris so the portal's wording map
         stays complete.</li>
@@ -177,10 +218,16 @@
       (expires ~July 2028 — six weeks' warning is set; an expired secret silently stops files,
       folders and email) and the Monday API token if its owner's account ever changes.
     </div>
+
+    <div class="callout warn" style="margin-top:3mm">
+      <strong>Coming soon:</strong> a send log (every email the portal sent, failures
+      surfaced), a client-side Team screen (clients disable their own departed logins), and an
+      automatic bushfire-prone flag at lodgement.
+    </div>
   </div>
 
   <div class="foot-light">
-    <span>Page 3 of 3 — amendments, Teams, switches</span><span>CF Building Approvals</span>
+    <span>Page 3 of 3 — amendments, records, switches</span><span>CF Building Approvals</span>
   </div>
 </div>
 

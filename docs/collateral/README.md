@@ -20,22 +20,26 @@ and is laid out as an A4 page; the rendered PDFs live in `pdf/`.
 | 18 | First-job email (.html + .txt) | Certificate ready + first login in one — the wave-one onboarding send |
 | 07 | Services one-pager | Cross-sell: CDC, amendments, BAL, energy, engineering |
 | 08 | Certificate — next steps | Goes out with an issued certificate: lodging BA1 to council |
+| 22 | Tools flyer | The Tools page in one page |
+| 23 | First sign-in sheet | **The attachment on every login email** — masters `public/guides/getting-started.pdf`; re-render and copy over when the portal changes |
 
 **Internal**
 
 | # | Document | Use |
 |---|----------|-----|
-| 09 | Job flow (2pp) | How a job moves end-to-end, who does what, what stalls one |
-| 10 | Admin guide (2pp) | Running /admin: clients, logins, toggles, sheets, switches |
+| 09 | Job flow (4pp) | How a job moves end-to-end, who does what, what stalls one — incl. PORTAL delivery states, records, amendments, worked example |
+| 10 | Admin guide (3pp) | Running /admin: snapshots, clients, logins, records, toggles, switches |
 | 11 | Incident card | One page by the desk: symptom → fix, rollback, never-do list |
 | 19 | Go-live audit (2pp) | Tick-box pre-launch checklist — plumbing, then the client journey |
 | 20 | Development report (3pp) | What the portal does now, for a boss or a client who asks — refreshed 2 Aug 2026 |
+| 25 | Status page ops | The public status checker: what it reads, the label ritual, board hygiene |
 
 **Drafts — NOT for release until Chris signs off**
 
 | # | Document | Status |
 |---|----------|--------|
 | 12 | Privacy notice | Wording review, then link from the portal sign-in page |
+| 24 | Status checker sheet | Client one-pager for the public status page — **waiting on the page being deployed**: swap in the real address, delete the draft box |
 
 Print drafts 13–16 have graduated: their content now lives (brackets resolved,
 figures to verify) as portal guidance notes 14 / 09 / 08 / 10 — see below.

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>The public status page — how it works, internal</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ---- fitted to A4 ---- */
+.content { padding-top: 5.5mm; padding-bottom: 5.5mm; }
+.sec { margin-top: 4mm; margin-bottom: 1.8mm; }
+td, th { padding-top: 1.3mm; padding-bottom: 1.3mm; }
+.check li { padding-top: 0.8mm; padding-bottom: 0.8mm; }
+.callout { padding-top: 2.4mm; padding-bottom: 2.4mm; }
+p + p { margin-top: 1.6mm; }
+.band { padding: 8mm 14mm 6mm; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <h1>The public status page</h1>
+    <div class="goldrule"></div>
+    <div class="sub">CF Building Approvals — internal reference (Monday-Portal repository)</div>
+    <div class="meta">Reads the board, shows a timeline, needs no login · Updated August 2026</div>
+  </div>
+
+  <div class="content">
+    <p class="lede" style="font-size:10pt">A single public page: reference + site address in,
+    a five-stage timeline out. Unlike the client portal it needs no login, is for anyone
+    holding the paperwork, and <strong>writes nothing</strong> — it reads the board live.
+    Both fields must match before anything shows, answers are limited to stage + dates +
+    address, and lookups are rate-limited — the site address is what actually protects a
+    job.</p>
+
+    <div class="sec">What it reads from the board</div>
+    <table class="small">
+      <tr><td style="width:34mm"><span class="mono">Ref #</span></td>
+        <td>The lookup key. <strong>A card with a blank Ref # can never be looked up</strong> —
+        the client is told "we couldn't match those details" no matter what they type.</td></tr>
+      <tr><td><span class="mono">Status</span></td>
+        <td>Decides the stage. Every label maps to one of the five client stages (or to the
+        Cancelled / On&nbsp;Hold card). A label the page doesn't know shows a safe, vague
+        "In progress" — never a guess.</td></tr>
+      <tr><td><span class="mono">PORTAL</span></td>
+        <td>Written by the <strong>client portal's sync</strong> as it delivers — ISSUED →
+        READY → DOWNLOADED, or STUCK. On an issued job this refines the wording ("ready to
+        download in the client portal…"), and STUCK suppresses the Sent date rather than
+        arguing with it. The status page only ever reads it.</td></tr>
+      <tr><td><span class="mono">Received / Job Sent</span></td>
+        <td>The dates on the card. A Job Sent cell holding a note instead of a date is never
+        echoed to the client.</td></tr>
+    </table>
+
+    <div class="sec">When the board changes — the two-minute ritual</div>
+    <ul class="check">
+      <li><strong>New or renamed Status label?</strong> The page keeps working (the safe
+        "In progress" card) but is vague until the label is mapped. Run
+        <span class="mono">npm run inspect</span>, add the label to
+        <span class="mono">statusMap</span> in <span class="mono">lib/config.js</span>, then
+        <span class="mono">npm test</span> — a deliberate test fails until every live label is
+        mapped.</li>
+      <li><strong>New PORTAL label?</strong> Same ritual, in <span class="mono">CONFIG.delivery</span>.
+        Unmapped there means an issued job says nothing about where its certificate got to.</li>
+      <li><strong>"Wait" is currently an assumption</strong> — it appeared on the board Aug 2026
+        with no jobs carrying it, so the page shows a neutral "Waiting" card. When its real
+        meaning is settled, update the mapping (marked <span class="mono">CONFIRM</span> in
+        config).</li>
+    </ul>
+
+    <div class="sec">Board hygiene that shows up here</div>
+    <ul class="check dots">
+      <li><strong>Blank Ref #</strong> — the job is invisible to the page. Older cards have
+        these; fill them as they surface.</li>
+      <li><strong>Same ref on two cards</strong> (revision, copy) — the page shows the most
+        recently updated one rather than failing the lookup.</li>
+      <li><strong>Item name is the address</strong> — a card whose name isn't the site address
+        can't be matched by the client. Keep names as
+        <span class="mono">&lt;address&gt;</span> like everywhere else.</li>
+    </ul>
+
+    <div class="callout" style="margin-top:3.5mm">
+      <strong>Keeping this current:</strong> the page's code, config and README live in the
+      <strong>Monday-Portal</strong> repository; this sheet's master is
+      <span class="mono">docs/collateral/25-status-portal-ops.html</span> in the client-portal
+      repository — edit, re-render (<span class="mono">node render-pdfs.mjs</span>), commit.
+      Re-check this sheet whenever a board column moves, a label is added, or the delivery
+      states change.
+    </div>
+  </div>
+
+  <div class="foot-light">
+    <span>Internal — keep with the admin guide</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+</body>
+</html>

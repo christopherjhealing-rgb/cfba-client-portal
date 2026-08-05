@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Check your application without a login — status page</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ---- fitted to A4 ---- */
+.content { padding-top: 6mm; padding-bottom: 6mm; }
+.sec { margin-top: 4.5mm; margin-bottom: 2mm; }
+td, th { padding-top: 1.6mm; padding-bottom: 1.6mm; }
+.steps li { padding-top: 1.5mm; padding-bottom: 1.5mm; }
+.callout { padding-top: 2.6mm; padding-bottom: 2.6mm; }
+p + p { margin-top: 1.8mm; }
+.band { padding: 9mm 14mm 7mm; }
+.timeline { margin: 3mm 0; }
+</style>
+</head>
+<body>
+
+<!-- DRAFT until the status page is deployed: replace [STATUS PAGE ADDRESS]
+     with the live address everywhere, delete the draft callout, and this is
+     ready to send. The page itself lives in the Monday-Portal repository. -->
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">For anyone on the job</div>
+    <h1>Check your application</h1>
+    <div class="goldrule"></div>
+    <div class="sub">No login, no account — where your application is up to, on one page, any time.</div>
+  </div>
+
+  <div class="content">
+    <div class="callout draft">DRAFT — not for release. The status page isn't live yet:
+    replace [STATUS PAGE ADDRESS] with the real address and delete this box first.</div>
+
+    <p class="lede" style="margin-top:3mm">The client portal is for lodging, replying and
+    downloading — and it needs a login. The <strong>status page</strong> is different: anyone
+    with the paperwork can look up where an application is at. Handy for the owner, the crew on
+    site, or a shire on the phone.</p>
+
+    <div class="sec">How it works</div>
+    <ol class="steps">
+      <li><span class="step-n">1</span><div>
+        <h3>Go to <span class="mono">[STATUS PAGE ADDRESS]</span></h3>
+        <p>Works on any phone or computer. Nothing to install, nothing to sign into.</p>
+      </div></li>
+      <li><span class="step-n">2</span><div>
+        <h3>Enter the reference number and the site address</h3>
+        <p>Both are on your CFBA acknowledgment email or paperwork — e.g. reference
+        <span class="mono">12345</span> and <span class="mono">12 Example Street,
+        Wanneroo</span>. Spaces and dashes in the reference don't matter, and the postcode is
+        optional.</p>
+      </div></li>
+      <li><span class="step-n">3</span><div>
+        <h3>Read the timeline</h3>
+        <p>The stage the job is at, what it means, when we received it and when it last
+        moved.</p>
+      </div></li>
+    </ol>
+
+    <div class="sec">The five stages</div>
+    <div class="timeline">
+      <div class="tl-node"><div class="tl-dot">1</div><h4>RECEIVED</h4>
+        <p>Loaded and queued for assessment.</p></div>
+      <div class="tl-node"><div class="tl-dot">2</div><h4>UNDER ASSESSMENT</h4>
+        <p>A building surveyor is assessing it.</p></div>
+      <div class="tl-node"><div class="tl-dot gold">3</div><h4>AWAITING INFO</h4>
+        <p>We've emailed you a request — assessment resumes when it's answered.</p></div>
+      <div class="tl-node"><div class="tl-dot">4</div><h4>IN PREPARATION</h4>
+        <p>Assessment done; the certificate is being prepared and signed.</p></div>
+      <div class="tl-node"><div class="tl-dot">5</div><h4>ISSUED</h4>
+        <p>Signed off — and the page tells you when it's ready to download.</p></div>
+    </div>
+
+    <div class="callout" style="margin-top:2mm">
+      <strong>"Issued" and "in your hands" are two different moments</strong> — signing happens
+      before delivery, so the final stage says honestly where it's got to: being prepared,
+      ready to download, or downloaded. A hold-up getting it to you? The page says that too,
+      and our office is already onto it.
+    </div>
+
+    <div class="sec">Example</div>
+    <p class="small">Reference <span class="mono">12345</span> + <span class="mono">12 Example
+    Street, Wanneroo</span> → <em>"Awaiting further information — we need something extra
+    before assessment can continue. Check your email for our request. Received 22 Jun · Last
+    activity 9 Jul."</em> One glance, and the next move is obvious: answer the request.</p>
+
+    <div class="sec">Privacy, briefly</div>
+    <p class="small">A job shows only when the reference <strong>and</strong> the site address
+    both match — so nobody can browse other people's applications. It shows the stage, address
+    and dates; never names, invoices or documents, which live in the client portal behind your
+    login.</p>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals</span>
+    <span>1300 029 074 · admin@cfba.com.au · Perth, Western Australia</span>
+  </div>
+</div>
+
+</body>
+</html>

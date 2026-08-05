@@ -12,8 +12,8 @@
 .sec { margin-top: 4mm; margin-bottom: 1.8mm; }
 td, th { padding-top: 1.1mm; padding-bottom: 1.1mm; }
 .check li { padding-top: 0.7mm; padding-bottom: 0.7mm; }
-.steps li { padding-top: 1.6mm; padding-bottom: 1.6mm; }
-p + p { margin-top: 1.5mm; }
+.steps li { padding-top: 1.1mm; padding-bottom: 1.1mm; }
+p + p { margin-top: 1.2mm; }
 </style>
 </head>
 <body>
@@ -25,7 +25,7 @@ p + p { margin-top: 1.5mm; }
     <h1>How a job flows, start to finish</h1>
     <div class="goldrule"></div>
     <div class="sub">CF Building Approvals — internal reference</div>
-    <div class="meta">Updated August 2026 · Inspections not covered · Monday board · SharePoint · CDC autogen · client portal</div>
+    <div class="meta">Updated August 2026 · Inspections not covered · Monday board · SharePoint · CDC autogen · client portal · public status page</div>
   </div>
 
   <div class="content">
@@ -60,12 +60,13 @@ p + p { margin-top: 1.5mm; }
         <h3>Job comes in — straight onto the board
           <span class="pill-role r-client" style="float:right">Client</span>
           <span class="pill-role r-auto" style="float:right;margin-right:2mm">Automatic</span></h3>
-        <p>Client lodges through the portal with address, class, description and plans. The Monday
-        card is created <strong>instantly</strong> in New Jobs — client name, email, class and
-        description filled, the PDFs in the card's <strong>Files column</strong>, and the client's
-        note posted to Updates. The review queue only holds a lodgement if Monday couldn't be
-        reached at that moment (the portal admin page shows a count). Jobs still arriving by email
-        are entered by hand as they are now.</p>
+        <p>Client lodges through the portal — address, structures picked from a list (class and
+        description write themselves), plans and engineering. The Monday card is created
+        <strong>instantly</strong> in New Jobs — client name, email, class and description
+        filled, the PDFs in the card's <strong>Files column</strong>, the client's note posted
+        to Updates. <strong>Lodge Similar</strong> pre-fills a repeat job (never the address).
+        The review queue only holds a lodgement if Monday was unreachable at that moment. Jobs
+        still arriving by email are entered by hand as they are now.</p>
       </div></li>
       <li><span class="step-n">2</span><div style="flex:1">
         <h3>Reference number &amp; folder
@@ -134,8 +135,11 @@ p + p { margin-top: 1.5mm; }
           <span class="pill-role r-kacie" style="float:right;margin-right:2mm">Kacie</span>
           <span class="pill-role r-chris" style="float:right;margin-right:2mm">Chris</span></h3>
         <p>Sync copies the Issued folder into the portal, the job moves to <strong>Ready to
-        download</strong>, and <strong>the portal emails the client that it's ready</strong>.
-        When they download it, the card gets a receipt note automatically.</p>
+        download</strong>, and <strong>the portal emails the client</strong>. As it delivers it
+        keeps the card's <strong>PORTAL column</strong> honest — ISSUED → READY → DOWNLOADED,
+        or STUCK — which the public status page reads out. First download: receipt note on the
+        card, and the office is emailed the job's <strong>correspondence record</strong> for
+        the 7-year file.</p>
       </div></li>
       <li><span class="step-n">10</span><div style="flex:1">
         <h3>Invoiced
@@ -212,7 +216,9 @@ p + p { margin-top: 1.5mm; }
             <li>Further-information email to the client</li>
             <li>Office email when a client replies</li>
             <li>Download receipt noted on the card</li>
-            <li>Sync health + unmatched list on /admin</li>
+            <li>PORTAL column kept honest as delivery happens — the public status page reads it</li>
+            <li>Correspondence record emailed to the office on first download (7-year file)</li>
+            <li>Sync health + unmatched list on /admin; the 5pm report</li>
             <li>Files purged three months after first download</li>
           </ul>
         </div>
@@ -243,7 +249,18 @@ p + p { margin-top: 1.5mm; }
 
 <div class="page">
   <div class="content">
-    <div class="sec" style="margin-top:0">A job from start to finish — worked example</div>
+    <div class="sec" style="margin-top:0">Changed after issue — the amendment loop</div>
+    <p class="small">An amendment <strong>never opens a Monday card</strong>. The client lodges
+    it from the job's own page (or <strong>Amend a Job</strong>); the portal emails whoever is
+    in the card's <strong>Certified By</strong> column with the office copied — Rebecca when
+    the column is empty — and the reply happens by email exactly as before. Kacie watermarks
+    and re-issues as usual, then uploads the revised certificate on
+    <strong>Admin → Amendments</strong> (no card means no SharePoint sync to collect it). The
+    original card gets one note; the client sees progress on the job itself and both
+    certificates side by side in Downloads. The 5pm report is what notices a quiet one —
+    admin guide (sheet 10) has the full rules and the routing setup.</p>
+
+    <div class="sec">A job from start to finish — worked example</div>
     <table class="small">
       <tr><td style="width:20mm"><strong>Mon 6 Jul</strong></td>
         <td>Complete Approvals lodge <strong>89 Bannister-Marradong Road</strong> — Class 10a
@@ -267,16 +284,34 @@ p + p { margin-top: 1.5mm; }
         <td style="text-align:right"><span class="pill-role r-auto">Automatic</span></td></tr>
       <tr><td><strong>Tue 14 Jul</strong></td>
         <td>Pack reviewed and finalised; marked <strong>Issued</strong>. Portal syncs the files,
-        emails the client it's ready; they download the same afternoon and the card notes it.</td>
+        sets PORTAL to READY, emails the client it's ready; they download the same afternoon —
+        the card notes it, PORTAL flips to DOWNLOADED, and the office receives the job's
+        correspondence record for the 7-year file.</td>
         <td style="text-align:right"><span class="pill-role r-chris">Chris</span></td></tr>
       <tr><td><strong>Wed 15 Jul</strong></td>
-        <td>Invoiced and closed.</td>
+        <td>Invoiced and closed. Anyone with the paperwork — the owner, the shire — can watch
+        all of this on the public status page with just the reference and address.</td>
         <td style="text-align:right"><span class="pill-role r-fiona">Fiona</span></td></tr>
     </table>
+
+    <div class="callout warn" style="margin-top:4mm">
+      <strong>Coming soon:</strong> a send log on /admin (every email the portal sent, and any
+      that failed — the answer to "did they actually get it?"), a client-side Team screen
+      (clients disable their own departed logins), and an automatic bushfire-prone flag at
+      lodgement.
+    </div>
+
+    <div class="callout" style="margin-top:3mm">
+      <strong>Keeping this sheet current:</strong> the master is
+      <span class="mono">docs/collateral/09-job-flow-internal.html</span> — edit it, run
+      <span class="mono">node render-pdfs.mjs</span>, commit both. Re-check it whenever a
+      Monday status label is added or renamed (the status page's map needs the same update —
+      sheet 25), a step changes hands, or a new automatic step ships.
+    </div>
   </div>
 
   <div class="foot-light">
-    <span>Page 4 of 4 — a worked example</span><span>CF Building Approvals</span>
+    <span>Page 4 of 4 — amendments, worked example</span><span>CF Building Approvals</span>
   </div>
 </div>
 

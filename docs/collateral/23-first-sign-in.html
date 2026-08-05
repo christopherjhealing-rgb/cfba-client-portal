@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Getting started — your first sign-in</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ---- fitted to A4 ---- */
+/* Every .page has to BE one A4 sheet: 1119px at 96dpi. Over by a millimetre
+   and it prints as two, the second nearly blank. Rhythm only — no copy cut. */
+.content { padding-top: 6mm; padding-bottom: 6mm; }
+.sec { margin-top: 4.5mm; margin-bottom: 2mm; }
+.steps li { padding-top: 2mm; padding-bottom: 2mm; }
+.card { padding: 3.4mm; }
+.callout { padding-top: 2.6mm; padding-bottom: 2.6mm; }
+p + p { margin-top: 1.8mm; }
+.grid { gap: 3mm; }
+.band { padding: 9mm 14mm 7mm; }
+</style>
+</head>
+<body>
+
+<!-- This master renders to the PDF attached to every login email
+     (public/guides/getting-started.pdf, name "CFBA Client Portal — Getting
+     Started.pdf"). It must always match the email's own three steps —
+     lib/mail.ts loginEmail() — because the client reads them side by side. -->
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <div class="eyebrow">Getting started</div>
+    <h1>Your first sign-in</h1>
+    <div class="goldrule"></div>
+    <div class="sub">Five minutes, once — then it's just a username and password.</div>
+  </div>
+
+  <div class="content">
+    <p class="lede">The email this came with holds your <strong>username</strong> and a one-time
+    <strong>setup code</strong>. Here's what to do with them, and what you'll find once
+    you're in.</p>
+
+    <div class="sec">Three steps, once only</div>
+    <ol class="steps">
+      <li><span class="step-n">1</span><div>
+        <h3>Press <em>Set up my login</em> in the email</h3>
+        <p>It opens the portal on the <strong>First time</strong> screen with your username
+        already filled in. (Typing the address yourself instead? Choose <em>First time</em> on
+        the sign-in page.)</p>
+      </div></li>
+      <li><span class="step-n">2</span><div>
+        <h3>Enter the setup code from the email</h3>
+        <p>It works once and then dies — that's what makes it safe to send. If it's expired by
+        the time you use it, press <em>Forgot password?</em> and a fresh one comes to this same
+        address.</p>
+      </div></li>
+      <li><span class="step-n">3</span><div>
+        <h3>Choose your own password</h3>
+        <p>We never see it and can't read it back. From now on you sign in with just your
+        username and that password.</p>
+      </div></li>
+    </ol>
+
+    <div class="sec">What you'll see when you're in</div>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="card">
+        <h3>Dashboard &amp; My Jobs</h3>
+        <p>Every job your company has with us — what's ready to download, what's with us, and
+        anything waiting on you, each showing when it was lodged. One login covers your whole
+        team.</p>
+      </div>
+      <div class="card">
+        <h3>Lodge a Job</h3>
+        <p>Address, the structures (pick them from a list — the description writes itself),
+        drawings and engineering. It lands straight on our board — and doing the same job at a
+        new address later is one press of <em>Lodge Similar</em>.</p>
+      </div>
+      <div class="card">
+        <h3>My Messages</h3>
+        <p>If we need something further you'll get an email, and the request sits on the job
+        itself. Reply and attach documents there — it files itself in front of the surveyor.</p>
+      </div>
+      <div class="card">
+        <h3>Downloads &amp; Tools</h3>
+        <p>Issued certificates as one package, re-downloadable for three months. Plus free
+        checks under <em>Tools</em> — wind class, soakwells, bushfire, a site-plan drawer —
+        that answer most questions before you'd have to ask us.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:4mm">
+      <strong>Stuck at any step?</strong> Ring 1300&nbsp;029&nbsp;074 and we'll do the first
+      sign-in with you on the phone — it genuinely takes two minutes. There's also a full guide
+      under <strong>Info Sheets</strong> once you're in.
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="brand"><img src="../../public/logo-white.png" alt=""> CF Building Approvals — client portal</span>
+    <span>1300 029 074 · admin@cfba.com.au · Perth, Western Australia</span>
+  </div>
+</div>
+
+</body>
+</html>
