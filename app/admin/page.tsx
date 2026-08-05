@@ -7,18 +7,32 @@ import { StaffShell } from "@/components/StaffShell";
 import { SyncButton } from "@/components/SyncButton";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { SyncHealth } from "@/components/SyncHealth";
-import { GENERAL_REF } from "@/lib/core.mjs";
+import { AdminSnapshot } from "@/components/AdminSnapshot";
+import {
+  GENERAL_REF, groupJobs, needsClientInfo, isClientVisible,
+} from "@/lib/core.mjs";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [pending, companies, lastSync] = await Promise.all([
+  const [pending, companies, lastSync, allJobsRaw] = await Promise.all([
     repo.listSubmissions("pending"),
     repo.listCompanies(),
     repo.getSetting<Record<string, unknown>>("last_sync").catch(() => null),
+    repo.listAllJobs().catch(() => []),
   ]);
+
+  // The two things the office wants to see first thing: packages sitting
+  // uncollected, and jobs stuck waiting on a client's answer. Both are read
+  // from the last sync's cached board, filtered to what a client can see.
+  const allJobs = allJobsRaw.map(repo.toPortalJob).filter(isClientVisible);
+  const g = groupJobs(allJobs, new Date(), env.retentionMonths);
+  const readyJobs = [...g.ready].sort((a, b) =>
+    String(a.issuedAt || "").localeCompare(String(b.issuedAt || "")));
+  const firJobs = allJobs.filter(needsClientInfo).sort((a, b) =>
+    String(a.receivedAt || "").localeCompare(String(b.receivedAt || "")));
   // Enquiries have no card and no sync — the notification email is the only
   // thing that tells anyone one arrived. This count is the backstop for the
   // day that email doesn't send.
@@ -79,6 +93,19 @@ export default async function AdminHome() {
         <SyncHealth
           last={lastSync as never}
           companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+        />
+
+        {/* Ready above FIR, as asked: what a client could collect right now,
+            then what a client still owes us. Both from the last sync. */}
+        <AdminSnapshot
+          title="Ready to Download" tone="seal" mode="ready"
+          blurb="Nothing waiting to be collected — every issued package has been downloaded."
+          jobs={readyJobs} names={names}
+        />
+        <AdminSnapshot
+          title="In for FIR" tone="brass" mode="fir"
+          blurb="No jobs are waiting on a client's answer."
+          jobs={firJobs} names={names}
         />
 
         <section>

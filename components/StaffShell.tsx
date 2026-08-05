@@ -33,7 +33,10 @@ export function StaffShell({
               Staff
             </div>
           </div>
-          <nav className="flex gap-1">
+          {/* flex-wrap so the eight links flow onto a second line on a phone
+              instead of pushing the header wider than the screen. On desktop
+              they fit on one line and nothing changes. */}
+          <nav className="flex flex-wrap gap-1">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href}
                 className={`rounded-md px-3 py-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.08em] transition ${
