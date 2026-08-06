@@ -64,6 +64,10 @@ export interface PatioParams {
   downpipes: number;
   /** The chosen soakwell size and count, or null for none. */
   soak: { key: string; count: number } | null;
+  /** Roof sheeting (material), e.g. "Custom Orb". */
+  sheeting: string;
+  /** Patio floor height above natural ground level, in metres. */
+  floorAbove: number;
 }
 
 export function setbacks(
@@ -109,6 +113,7 @@ export const PATIO_ROOFS: PatioParams["roof"][];
 export const PATIO_MAX_PITCH: number;
 export const PATIO_MAX_COLS: number;
 export const GUTTER_M_PER_DOWNPIPE: number;
+export const PATIO_SHEETING: string[];
 
 export function sanitisePatio(raw: unknown): PatioParams;
 
@@ -152,6 +157,12 @@ export interface PatioElevation {
   attachAtStart: boolean;
   /** Post positions across the face, in metres from x = 0. */
   postXs: number[];
+  /** Roof sheeting (material) named on the sheet. */
+  sheeting: string;
+  /** Patio floor height above natural ground level, in metres. */
+  floorAbove: number;
+  /** This face carries a gutter (its eave is a draining side). */
+  gutterHere: boolean;
 }
 export function patioElevationProfile(
   s: StructureShape, span: "w" | "d",
