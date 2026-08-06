@@ -256,6 +256,16 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         <JobItems items={items} onChange={setItems} />
       </div>
 
+      {/* Before Supporting Documents on purpose: the verdict can ask for BAL
+          evidence, and the place to attach it is the section directly below. */}
+      {balRequired && (
+        <BushfireAssessment
+          patio={kinds.patio}
+          shed={kinds.shed}
+          onResult={(r) => { setBushfireSummary(r?.summary ?? null); setBushfireBal(r?.bal ?? null); }}
+        />
+      )}
+
       <div className="mt-6">
         <p className="label">Supporting Documents</p>
         <p className="mb-3 text-[13px] leading-relaxed text-ink/60">
@@ -355,14 +365,6 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <p className="mt-1.5 text-[12px] text-ink/50">
         A name is enough — we&apos;ll reply to your account either way.
       </p>
-
-      {balRequired && (
-        <BushfireAssessment
-          patio={kinds.patio}
-          shed={kinds.shed}
-          onResult={(r) => { setBushfireSummary(r?.summary ?? null); setBushfireBal(r?.bal ?? null); }}
-        />
-      )}
 
       <button className="btn mt-6 w-full" disabled={busy || !ready}>
         {busy ? (progress || "Lodging…") : "Lodge This Job"}

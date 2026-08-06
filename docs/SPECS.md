@@ -291,8 +291,10 @@ address decides.
   (`geocodeAddress`, Google Maps), so the flag needs `NEXT_PUBLIC_GOOGLE_MAPS_KEY`
   — the same key the address autocomplete and the studio already use. No key, no
   geocode, the feature off, or any error: no questions, and the form is unchanged.
-- **The questions** sit just above the Lodge button and appear only when the lot
-  is prone AND the job's own item rows include a Class 10a building — derived by
+- **The questions** sit between "what's being built" and Supporting Documents —
+  the verdict can ask for BAL evidence, and the place to attach it is directly
+  below. They appear only when the lot is prone AND the job's rows include a
+  Class 10a building — derived by
   `balKinds`, never asked (the "what's being built" rows already say). Patios/
   carports and sheds trigger; 10b (walls, pools, tanks), CBC and commercial rows
   never do. When triggered, answering is compulsory: the Lodge button stays
