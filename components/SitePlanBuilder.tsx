@@ -26,7 +26,8 @@ import {
   underlayAnchor, underlayCentre, underlayMapSize,
   underlayScale, underlayZoom,
   GUTTER_M_PER_DOWNPIPE, PATIO_MAX_COLS, PATIO_MAX_PITCH,
-  downpipesNeeded, patioColumns, patioGutter, patioRoofHeights, sanitisePatio,
+  downpipesNeeded, patioColumns, patioElevationProfile, patioGutter,
+  patioRoofHeights, sanitisePatio,
   type Lot, type LotOrigin, type PatioParams, type Pin, type StructureState, type Underlay,
 } from "@/lib/site-plan.mjs";
 import { findSize, sizeKey, sizeLabel, sizeNew, SOAKWELLS, SOAKWELL_CAVEAT } from "@/lib/soakwell.mjs";
@@ -2366,6 +2367,140 @@ export function SitePlanBuilder(
     );
   }
 
+  /** One patio elevation — the view of the `span` face ("w" width, "d" depth),
+   *  drawn to a scale of its own chosen to fit. Posts to their heights, the
+   *  roof as a rake where the slope shows and a flat eave with a dashed
+   *  ridge/high line where it runs into the page, the dwelling wall where the
+   *  patio attaches, and the figures that carry it all. Studio only. */
+  function elevationView(s: Structure, span: "w" | "d", title: string) {
+    const e = patioElevationProfile(s, span);
+    const W = Math.max(e.width, 0.5);
+    const dwellTop = e.attachHere ? Math.max(e.high, e.eave) + 0.9 : 0;
+    const maxH = Math.max(e.high, e.ridge ?? 0, e.eave, dwellTop, 0.5);
+    // Pick the largest standard scale that still fits the drawing in the box.
+    let dn = 500;
+    for (const c of [20, 50, 100, 200, 500]) {
+      if ((W * 1000) / c <= 150 && (maxH * 1000) / c <= 70) { dn = c; break; }
+    }
+    const M = 0.7;
+    // Room below the ground line for the width dimension and its label, and a
+    // little above for the ridge; the viewBox top sits at -M.
+    const vbW = W + M * 2.4, vbH = maxH + M * 3.4;
+    const wmm = (vbW * 1000) / dn, hmm = (vbH * 1000) / dn;
+    const gy = maxH;
+    const Y = (h: number) => gy - h;
+    const em = (v: number) => (v * dn) / 1000;  // paper mm → metres at this scale
+
+    const postHeightAt = (x: number) => {
+      if (!e.slopeInPlane) return e.eave;
+      const t = W > 0 ? x / W : 0;
+      if (e.roof === "gable") return e.eave + ((e.ridge ?? e.high) - e.eave) * (1 - Math.abs(2 * t - 1));
+      const f = e.lowAtStart ? t : 1 - t;
+      return e.eave + (e.high - e.eave) * f;
+    };
+    const roofPts: [number, number][] = e.slopeInPlane
+      ? (e.roof === "gable"
+          ? [[0, e.eave], [W / 2, e.ridge ?? e.high], [W, e.eave]]
+          : e.lowAtStart ? [[0, e.eave], [W, e.high]] : [[0, e.high], [W, e.eave]])
+      : [[0, e.eave], [W, e.eave]];
+    const topRef = e.ridge ?? e.high;   // the high/ridge line, for the into-page view
+    const wallX = e.attachAtStart ? -0.55 : W;
+
+    return (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "2.6mm", fontWeight: 600, color: INK, fontFamily: FONT_LAB }}>
+          {title}
+          <span style={{ marginLeft: "2mm", opacity: 0.5, fontSize: "2.2mm", fontFamily: FONT_NUM }}>
+            1:{dn}
+          </span>
+        </div>
+        <svg viewBox={`${-M} ${-M} ${vbW} ${vbH}`} aria-hidden="true"
+          style={{ width: `${wmm.toFixed(1)}mm`, height: `${hmm.toFixed(1)}mm`, display: "block", marginTop: "1mm" }}>
+          {/* the dwelling the patio attaches to */}
+          {e.attachHere && (
+            <g>
+              <rect x={wallX} y={Y(dwellTop)} width={0.55} height={dwellTop}
+                fill="#ECE8DD" stroke={INK} strokeWidth={em(0.3)} strokeOpacity={0.8} />
+              <text x={wallX + 0.275} y={Y(dwellTop) + em(3)} textAnchor="middle"
+                fontFamily={FONT_LAB} fontSize={em(2)} fill={INK} fillOpacity={0.6}>Dwelling</text>
+            </g>
+          )}
+          {/* ground */}
+          <line x1={-M * 0.6} y1={gy} x2={W + M * 0.6} y2={gy} stroke={INK} strokeWidth={em(0.45)} />
+          {/* the high/ridge line, when it sits behind the view rather than in it */}
+          {!e.slopeInPlane && topRef > e.eave + 0.001 && (
+            <line x1={0} y1={Y(topRef)} x2={W} y2={Y(topRef)} stroke={ROOF_INK}
+              strokeWidth={em(0.3)} strokeDasharray={`${em(1.6)} ${em(1)}`} />
+          )}
+          {/* posts */}
+          {e.postXs.map((x, i) => (
+            <line key={i} x1={x} y1={gy} x2={x} y2={Y(postHeightAt(x))}
+              stroke={SEAL} strokeWidth={em(0.5)} strokeLinecap="round" />
+          ))}
+          {/* roof */}
+          <polyline points={roofPts.map(([x, h]) => `${x},${Y(h)}`).join(" ")}
+            fill="none" stroke={SEAL} strokeWidth={em(0.6)} strokeLinejoin="round" strokeLinecap="round" />
+          {/* width dimension, under the ground line */}
+          <g fontFamily={FONT_NUM} fontSize={em(2.4)} fill={INK} fillOpacity={0.75}>
+            <line x1={0} y1={gy + M * 0.75} x2={W} y2={gy + M * 0.75} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.2)} />
+            {[0, W].map((x) => (
+              <line key={x} x1={x} y1={gy + M * 0.55} x2={x} y2={gy + M * 0.95} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.2)} />
+            ))}
+            <text x={W / 2} y={gy + M * 1.45} textAnchor="middle">{fmtM(e.width)} m</text>
+          </g>
+          {/* eave and high/ridge heights, either side */}
+          <g fontFamily={FONT_NUM} fontSize={em(2.3)} fill={INK} fillOpacity={0.7}>
+            <line x1={-M * 0.5} y1={gy} x2={-M * 0.5} y2={Y(e.eave)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
+            <text transform={`translate(${-M * 0.7} ${Y(e.eave / 2)}) rotate(-90)`} textAnchor="middle">{fmtM(e.eave)} m</text>
+            {topRef > e.eave + 0.001 && (
+              <>
+                <line x1={W + M * 0.5} y1={gy} x2={W + M * 0.5} y2={Y(topRef)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
+                <text transform={`translate(${W + M * 0.72} ${Y(topRef / 2)}) rotate(-90)`} textAnchor="middle">{fmtM(topRef)} m</text>
+              </>
+            )}
+          </g>
+        </svg>
+      </div>
+    );
+  }
+
+  /** A patio's own A4 sheet: its two elevations, front and side, with a header
+   *  that names it and its roof. Printed after the site plan. Studio only, and
+   *  — like every studio sheet — carrying no CFBA name. */
+  function patioElevationSheet(s: Structure) {
+    const p = sanitisePatio(s.patio);
+    const heights = patioRoofHeights(s);
+    const roofWord = p.roof === "skillion" ? "Skillion" : p.roof === "gable" ? "Gable" : "Flat";
+    const summary =
+      `${roofWord} roof at ${fmtM(p.pitch)}°, ` +
+      `${fmtM(heights.eave)} m to the eave` +
+      (heights.ridge !== null ? `, ${fmtM(heights.ridge)} m to the ridge`
+        : heights.high > heights.eave ? `, ${fmtM(heights.high)} m at the high side` : "") +
+      `. Posts ${fmtM(p.colHeight)} m` +
+      (p.mount === "attached" ? ", attached to the dwelling." : ", freestanding.");
+    return (
+      <div key={s.id} className="cfba-sheet">
+        <div style={{ border: "0.5mm solid #2B3A31", color: INK, fontFamily: FONT_LAB }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4mm", padding: "1.2mm 3mm", borderBottom: "0.3mm solid #2B3A31" }}>
+            <span style={{ fontSize: "2.8mm", fontWeight: 700, letterSpacing: "0.5mm", textTransform: "uppercase", color: SEAL }}>Patio elevations</span>
+            <strong style={{ fontSize: "3.2mm", fontWeight: 600 }}>{s.label || "Patio"}</strong>
+          </div>
+          <div style={{ padding: "1.2mm 3mm", fontSize: "2.6mm", fontFamily: FONT_NUM }}>{summary}</div>
+        </div>
+        <div style={{ display: "flex", gap: "6mm", marginTop: "4mm", alignItems: "flex-start" }}>
+          {elevationView(s, "w", "Front elevation")}
+          {elevationView(s, "d", "Side elevation")}
+        </div>
+        <p style={{ marginTop: "3mm", fontSize: "2.15mm", lineHeight: 1.3, color: INK, opacity: 0.7, fontFamily: FONT_LAB }}>
+          Indicative elevations drawn from the dimensions entered — the tool
+          sets them out and dimensions them; it does not detail the build.
+          Bracing, footings, tie-downs and the roof structure itself are the
+          engineer&apos;s and the builder&apos;s.
+        </p>
+      </div>
+    );
+  }
+
   /** The legend: one row per structure type actually on the plan, then — under
    *  a hairline — the two states, drawn exactly as the plan draws them. The
    *  colours say what a thing is; the weight and the hatch say whether it is
@@ -3117,6 +3252,12 @@ export function SitePlanBuilder(
               {fits
                 ? <>Prints on A4 at <span className="font-mono">1:{denom}</span>. In the print dialog choose &ldquo;Save as PDF&rdquo; and keep the size at 100%.</>
                 : <>This lot is larger than A4 fits at 1:500 — the print is reduced to fit and says so. The scale bar stays true.</>}
+              {patioTools && (() => {
+                const n = design.structures.filter((s) => s.kind === "patio" && s.patio).length;
+                return n > 0
+                  ? ` A front and side elevation prints for each patio you've set up — ${n} extra ${n === 1 ? "sheet" : "sheets"} after the plan.`
+                  : "";
+              })()}
             </p>
           </div>
         </div>
@@ -3261,10 +3402,12 @@ export function SitePlanBuilder(
         </div>
       </div>
 
-      {/* The A4 sheet. Hidden on screen; the print stylesheet below shows this
-          and nothing else. Sized in real millimetres so the stated scale is
-          true on paper (print at 100%). */}
-      <div id="site-plan-sheet" className="hidden">
+      {/* The print set. Hidden on screen; the print stylesheet below shows this
+          and nothing else. The site plan first, then a patio elevation sheet
+          per configured patio (studio only). Each sheet is sized in real
+          millimetres so the stated scale is true on paper (print at 100%). */}
+      <div id="site-plan-print" className="hidden">
+      <div id="site-plan-sheet" className="cfba-sheet">
         <svg viewBox={viewBox} aria-hidden="true"
           style={{ width: `${sheetWmm.toFixed(2)}mm`, height: `${sheetHmm.toFixed(2)}mm`, display: "block", margin: "0 auto" }}>
           {plan(false)}
@@ -3316,6 +3459,10 @@ export function SitePlanBuilder(
           {boundaryFooter(boundary)}
         </p>
       </div>
+        {patioTools && design.structures
+          .filter((s) => s.kind === "patio" && s.patio)
+          .map((s) => patioElevationSheet(s))}
+      </div>
 
       <style>{`
         @media print {
@@ -3328,10 +3475,10 @@ export function SitePlanBuilder(
              which silently became the containing block for the previous
              position:absolute approach and pushed the sheet down the page —
              blank first page, plan on page two.) */
-          body *:not(:has(#site-plan-sheet)):not(#site-plan-sheet):not(#site-plan-sheet *) {
+          body *:not(:has(#site-plan-print)):not(#site-plan-print):not(#site-plan-print *) {
             display: none !important;
           }
-          body *:has(#site-plan-sheet) {
+          body *:has(#site-plan-print) {
             display: block !important;
             position: static !important;
             margin: 0 !important;
@@ -3345,7 +3492,12 @@ export function SitePlanBuilder(
             transform: none !important;
             opacity: 1 !important;
           }
-          #site-plan-sheet { display: block !important; }
+          #site-plan-print { display: block !important; }
+          /* One sheet per page: each patio's elevations start on a fresh page,
+             after the site plan. A single-sheet print (every certifier-portal
+             plan, and a studio plan with no configured patio) is unchanged. */
+          .cfba-sheet { break-inside: avoid; }
+          .cfba-sheet + .cfba-sheet { break-before: page; }
           html, body { background: #fff !important; }
           /* Said twice on purpose. The aerial is a tracing guide on screen and
              nothing more: licensed imagery has no place inside a lodged

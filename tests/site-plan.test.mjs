@@ -25,6 +25,7 @@ import {
   clampUnderlayOpacity, clampUnderlayRot, sanitiseUnderlay,
   PATIO_ROOFS, PATIO_MAX_PITCH, GUTTER_M_PER_DOWNPIPE,
   sanitisePatio, patioColumns, patioGutter, downpipesNeeded, patioRoofHeights,
+  patioElevationProfile,
 } from "../lib/site-plan.mjs";
 
 const close = (a, b, eps = 1e-9) =>
@@ -1582,6 +1583,33 @@ test("downpipes: one per 12 m of gutter, and never none for a real roof", () => 
   assert.equal(downpipesNeeded(12.5), 2);
   assert.equal(downpipesNeeded(24), 2);
   assert.equal(downpipesNeeded(25), 3);
+});
+
+test("an elevation shows the slope as a rake in one view, into the page in the other", () => {
+  // Skillion falling to side 2 (the bottom, horizontal): the slope runs the
+  // depth, so it's a true rake in the depth view and flat in the width view.
+  const s = P({ roof: "skillion", pitch: 10, fall: 2, cols: [3, 2, 3, 2] });
+  const front = patioElevationProfile(s, "w");
+  const side = patioElevationProfile(s, "d");
+  assert.equal(front.width, 6);
+  assert.equal(side.width, 4);
+  assert.equal(front.slopeInPlane, false);   // width view: slope into the page
+  assert.equal(side.slopeInPlane, true);     // depth view: the rake
+  assert.equal(side.lowAtStart, false);      // fall side 2 sits at x = width
+  // The width face reads the busier of sides 0 and 2 (both 3) → 3 posts.
+  assert.equal(front.postXs.length, 3);
+  assert.deepEqual(front.postXs, [0, 3, 6]);
+});
+
+test("an attached elevation knows the dwelling meets it, and drops that side's posts", () => {
+  const s = P({ mount: "attached", attach: 0, roof: "skillion", fall: 2, cols: [4, 2, 4, 2] });
+  const front = patioElevationProfile(s, "w");   // sides 0 & 2; 0 is the wall
+  assert.equal(front.attachHere, true);
+  assert.equal(front.attachAtStart, true);
+  // Side 0 is the wall (no posts); side 2 still has 4 → 4 across the face.
+  assert.equal(front.postXs.length, 4);
+  const side = patioElevationProfile(s, "d");     // sides 1 & 3; neither is 0
+  assert.equal(side.attachHere, false);
 });
 
 test("roof heights: skillion rises over the full run, gable over half", () => {

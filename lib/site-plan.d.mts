@@ -132,6 +132,31 @@ export function patioRoofHeights(s: StructureShape): {
   rise: number;
 };
 
+/** One patio elevation, reduced to what a view needs. `span` is "w" (width
+ *  face) or "d" (depth face). */
+export interface PatioElevation {
+  span: "w" | "d";
+  width: number;
+  roof: PatioParams["roof"];
+  pitch: number;
+  eave: number;
+  high: number;
+  ridge: number | null;
+  rise: number;
+  /** The roof's slope shows as a true rake in this view (not into the page). */
+  slopeInPlane: boolean;
+  /** The low (eave) end is at x = 0 rather than x = width. */
+  lowAtStart: boolean;
+  /** The dwelling wall meets the patio in this view (attached only). */
+  attachHere: boolean;
+  attachAtStart: boolean;
+  /** Post positions across the face, in metres from x = 0. */
+  postXs: number[];
+}
+export function patioElevationProfile(
+  s: StructureShape, span: "w" | "d",
+): PatioElevation;
+
 // --- the lot, rectangle or polygon -----------------------------------------
 
 export function rectLotPts(lotW: number, lotD: number): Pt[];
