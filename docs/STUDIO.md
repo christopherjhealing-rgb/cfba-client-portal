@@ -51,20 +51,40 @@ surface** — both use it.
 - Full CoI separation (portal-login door removed, all CFBA branding stripped).
 - Own-domain support via `STUDIO_HOST` + `proxy.ts` (serves the studio at
   clean paths on its own host).
+- **Stage C — parametric patio.** A patio takes a roof (flat / skillion /
+  gable) with a pitch and a fall direction, posts per side at a set height,
+  downpipes (with a one-per-12 m-of-gutter guide), and a soakwell sized off
+  its roof area (`lib/soakwell.mjs`, City of Bayswater figures). All drawn on
+  the plan and the sheet. Geometry is pure and tested in `lib/site-plan.mjs`
+  (`sanitisePatio`, `patioColumns`, `patioGutter`, `downpipesNeeded`,
+  `patioRoofHeights`).
+- **Stage D — generated elevations.** Each configured patio prints an extra
+  A4 sheet after the plan: front + side elevations, dimensioned, the slope
+  shown as a rake in the view it runs across and the dwelling wall drawn where
+  it attaches (`patioElevationProfile`, tested). The print set is now a
+  `#site-plan-print` wrapper of `.cfba-sheet` pages.
 
-## Next (stages B–D, agreed with Chris)
+### The CoI gate on C/D (important)
+
+The patio tooling and its elevations are **studio only**, behind a new
+`patioTools` prop on `SitePlanBuilder` that **only `StudioEditor` passes**. The
+certifier's client portal (`app/site-plan/page.tsx`) must never turn it on —
+that page's own rule is "no compliance wording in the builder", and soakwell
+sizing / a downpipe rule is design help a surveyor must not be seen to give for
+what they certify. The tool still only measures and offers; it never judges.
+
+## Next (stage B, agreed with Chris)
 
 - **B — house-plan trace underlay.** Let the user upload a PDF or image of
   their house plans and place/scale/rotate/pin it as a second trace-over
   underlay beside the aerial. Render PDFs with `pdfjs-dist`. The aerial
   underlay plumbing in `SitePlanBuilder` (`Underlay`, `underlay*` helpers) is
-  the pattern to extend.
-- **C — parametric patio.** Type the patio dimensions and the footprint
-  resizes; a **flat vs attached** switch; **columns per side** and **column
-  height** captured on the plan.
-- **D — generated elevations.** Produce patio elevation views (columns at
-  their spacing and height, flat roof profile, the attached side drawn as a
-  dwelling outline, dimensioned) as extra A4 sheets.
+  the pattern to extend. Two decisions still open: the render approach (draw
+  the PDF page to a bitmap client-side so no PDF is stored), and where the
+  bitmap lives — a design is capped at 512 KB (`MAX_DESIGN_BYTES`), so either a
+  downscaled bitmap in a separate k/v key (`studio_underlay:<owner>:<id>`) or a
+  private Supabase bucket + streamed upload API. A house plan has no inherent
+  scale, so it also needs a "set scale" gesture (draw a line, type its length).
 
 ## Open follow-ups
 
