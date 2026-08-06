@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 interface LastSync {
   at?: string; ok?: boolean; error?: string;
   issuedSeen?: number; filesCopied?: number; jobsUpserted?: number;
@@ -26,10 +24,9 @@ export function SyncHealth({ last }: { last: LastSync | null }) {
     : true;
   const failed = last && last.ok === false;
 
-  // Distinct unmatched spellings — the list and its controls now live on
-  // /admin/unmatched; here it's just a one-line alert so a card reaching
-  // nobody is never invisible on the home queue.
-  const unmatchedCount = new Set((last?.unmatched || []).map((u) => u.client)).size;
+  // Unmatched clients are no longer surfaced here — not every client uses the
+  // portal, so cards that match no portal client are expected, not an alert.
+  // The list still lives on /admin/unmatched, reachable from the Clients page.
 
   const bannerClass = failed
     ? "border-flag/40 bg-[#FBECEC] text-flag"
@@ -129,18 +126,6 @@ export function SyncHealth({ last }: { last: LastSync | null }) {
         </div>
       )}
 
-      {unmatchedCount > 0 && (
-        <Link
-          href="/admin/unmatched"
-          className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-flag/40 bg-[#FBECEC] px-4 py-3 text-[13px] text-flag transition hover:bg-[#f7dede]"
-        >
-          <span>
-            <strong>{unmatchedCount} unmatched Monday client{unmatchedCount === 1 ? "" : "s"}</strong>
-            {" "}— their jobs and messages are reaching nobody until matched.
-          </span>
-          <span className="shrink-0 font-semibold underline">Match them →</span>
-        </Link>
-      )}
     </div>
   );
 }

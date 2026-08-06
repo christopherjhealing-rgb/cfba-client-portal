@@ -13,10 +13,14 @@ function kb(n: number) {
   return n >= 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`;
 }
 
-export default async function ClientCheckPage({ params }: { params: { id: string } }) {
+export default async function ClientCheckPage({ params }: { params: Promise<{ id: string }> }) {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const company = await repo.companyById(params.id);
+  // Next 16 hands params as a Promise — reading .id without awaiting gave
+  // undefined, so companyById missed and the page 404'd (the "Check Folders"
+  // button looked broken). Every other route here already awaits it.
+  const { id } = await params;
+  const company = await repo.companyById(id);
   if (!company) notFound();
 
   const jobs = await repo.listJobsForCompany(company.id);

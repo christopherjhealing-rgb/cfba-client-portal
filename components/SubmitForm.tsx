@@ -11,10 +11,7 @@ import { describeJob } from "@/lib/jobdesc.mjs";
 // without them, and a job lodged short of them only comes straight back.
 const BUCKETS: Bucket[] = [
   { key: "drawings", label: "Drawings", required: true,
-    hint: <>Site plan and elevations. Guidance notes 01 and 05 list what they
-      need to show. Need a site plan?{" "}
-      <a href="/site-plan" className="font-medium text-seal underline underline-offset-2">
-        Draw one here</a>.</> },
+    hint: "Site plan and elevations. Guidance notes 01 and 05 list what they need to show." },
   { key: "engineering", label: "Engineering", required: true,
     hint: "Signed and dated structural certification. Guidance note 02 lists what we look for." },
   { key: "other", label: "Other Supporting Documents",
