@@ -2783,15 +2783,13 @@ export function SitePlanBuilder(
       const f = e.lowAtStart ? t : 1 - t;
       return e.eave + (e.high - e.eave) * f;
     };
-    // The dwelling is drawn as a gabled house whose eave oversails the patio,
-    // since an attached patio hangs off the fascia / rafter brackets. The eave
-    // sits just above where the patio meets the wall; the gable is a shallow,
-    // house-like pitch on top.
-    const faceX = e.attachAtStart ? 0 : W;          // where the patio meets the wall
+    // An attached patio hangs off the existing building, so that building is
+    // drawn as a plain hatched block the patio roof meets — rising a little
+    // above the roof, cut off by the frame like a larger structure carrying on.
+    const faceX = e.attachAtStart ? 0 : W;          // where the patio meets it
     const patioTopAtFace = base + (e.slopeInPlane ? postHeightAt(faceX) : e.eave);
-    const houseEaveH = e.attachHere ? patioTopAtFace + 0.25 : 0;
-    const houseRidgeH = houseEaveH + 0.55;
-    const maxH = Math.max(base + top, houseRidgeH, 0.6);
+    const existTop = e.attachHere ? base + top + 0.6 : 0;
+    const maxH = Math.max(base + top, existTop, 0.6);
     // Pick the largest standard scale that still fits the drawing in the box.
     let dn = 500;
     for (const c of [20, 50, 100, 200, 500]) {
@@ -2831,17 +2829,32 @@ export function SitePlanBuilder(
       : [[0, e.eave], [W, e.eave]];
     const topRef = e.ridge ?? e.high;   // the high/ridge line, for the into-page view
 
+    // The roof oversails the posts by an eave overhang — beyond the outer end
+    // of an attached patio, or both ends of a freestanding one. Extend the end
+    // segments along their own slope so a raked roof keeps its pitch.
+    const OH = Math.min(0.5, W * 0.3);
+    const extend = (a: [number, number], b: [number, number], d: number): [number, number] => {
+      const dx = b[0] - a[0], dh = b[1] - a[1], len = Math.hypot(dx, dh) || 1;
+      return [b[0] + (dx / len) * d, b[1] + (dh / len) * d];
+    };
+    let rPts: [number, number][] = [...roofPts];
+    const overStart = !hasHouse || faceX !== 0;   // don't overhang into the building
+    const overEnd = !hasHouse || faceX !== W;
+    if (overStart) rPts = [extend(rPts[1], rPts[0], OH), ...rPts];
+    if (overEnd) rPts = [...rPts, extend(rPts[rPts.length - 2], rPts[rPts.length - 1], OH)];
+
     // Roof drawn with a little thickness so it reads as sheeting, not a wire.
     const roofT = em(0.55);
     const roofPoly = [
-      ...roofPts.map(([x, h]) => `${x},${Y(base + h)}`),
-      ...roofPts.map(([x, h]) => `${x},${Y(base + h) + roofT}`).reverse(),
+      ...rPts.map(([x, h]) => `${x},${Y(base + h)}`),
+      ...rPts.map(([x, h]) => `${x},${Y(base + h) + roofT}`).reverse(),
     ].join(" ");
 
-    // Which ends carry a gutter (the low eave), for the little gutter profiles.
-    const eaveEnds = e.slopeInPlane
+    // Which ends carry a gutter (the low eave), at the overhung eave tip.
+    const eaveTip = (x: number) => (x === 0 ? (overStart ? -OH : 0) : (overEnd ? W + OH : W));
+    const eaveEnds = (e.slopeInPlane
       ? (e.roof === "gable" ? [0, W] : [e.lowAtStart ? 0 : W])
-      : [0, W];
+      : [0, W]).map(eaveTip);
 
     const apexH = base + postHeightAt(W / 2);
     // Where the callout block sits, and its leader's landing point.
@@ -2854,8 +2867,12 @@ export function SitePlanBuilder(
         stroke={INK} strokeOpacity={0.55} strokeWidth={em(0.22)} />
     );
     // Vertical height dimensions stack on the clear side (away from the wall):
-    // rank 0 nearest the drawing, rank 1 further out. The label sits outboard.
-    const hx = (rank: number) => dimSide < 0 ? -em(3.4 + rank * 4) : W + em(3.4 + rank * 4);
+    // rank 0 nearest the drawing, rank 1 further out, both clear of the eave
+    // overhang. The label sits outboard.
+    const hx = (rank: number) => {
+      const off = OH + em(2.2) + rank * em(4);
+      return dimSide < 0 ? -off : W + off;
+    };
     const heightDim = (rank: number, h: number, label: string, dashed = false) => {
       const dx = hx(rank);
       return (
@@ -2874,18 +2891,22 @@ export function SitePlanBuilder(
     // When a house takes one margin the datums share the clear side, hugging
     // the drawing edge and reading inward; freestanding, they sit outboard in
     // the empty margin.
-    const levelTag = (y: number, label: string) => {
+    // `below` puts the triangle and label under the line (natural ground) so a
+    // small set-down doesn't collide the FL tag (above its line) with NGL.
+    const levelTag = (y: number, label: string, below = false) => {
       const onLeft = datumSide < 0, t = em(1.1);
       const dx = hasHouse
         ? (onLeft ? em(1.5) : W - em(1.5))            // just inside the edge
         : (onLeft ? -ML * 0.3 : W + MR * 0.3);        // outboard in the margin
       const readInward = hasHouse ? onLeft : !onLeft;
       const tx = readInward ? dx + t + em(0.6) : dx - t - em(0.6);
+      const triBase = below ? y + 2 * t : y - 2 * t;
+      const labelY = below ? y + 2 * t + em(1.6) : y - 2 * t - em(0.5);
       return (
         <g fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.9)} fill={INK} fillOpacity={0.75}>
-          <path d={`M ${dx - t} ${y - 2 * t} L ${dx + t} ${y - 2 * t} L ${dx} ${y} Z`}
+          <path d={`M ${dx - t} ${triBase} L ${dx + t} ${triBase} L ${dx} ${y} Z`}
             fill="none" stroke={INK} strokeOpacity={0.6} strokeWidth={em(0.25)} />
-          <text x={tx} y={y - t} textAnchor={readInward ? "start" : "end"}>{label}</text>
+          <text x={tx} y={labelY} textAnchor={readInward ? "start" : "end"}>{label}</text>
         </g>
       );
     };
@@ -2909,40 +2930,34 @@ export function SitePlanBuilder(
             </pattern>
           </defs>
 
-          {/* The house the patio attaches to — drawn as a gabled dwelling whose
-              eave oversails the patio. The patio beam meets the fascia under
-              that eave (a receiver / rafter brackets), and the patio floor is
-              set one brick course below the house's finished floor. */}
+          {/* The existing building the patio attaches to — a plain hatched
+              block, cut off by the frame. The patio beam lands on its wall at a
+              bracket (fascia / rafter brackets), and the patio slab is set one
+              brick course below the building's finished floor. */}
           {hasHouse && (() => {
-            const dir = e.attachAtStart ? -1 : 1;        // house on this side
-            const body = Math.min(2, (e.attachAtStart ? ML : MR) - 0.35);  // wall face we see
-            const farX = faceX + dir * body;
-            const over = 0.18;                            // modest eave overhang
-            const wx = Math.min(faceX, farX);
-            const eaveY = Y(houseEaveH), ridgeY = Y(houseRidgeH);
-            const tipPatio = faceX - dir * over;          // eave tip over the patio
-            const tipFar = farX + dir * over;
-            const ridgeX = (faceX + farX) / 2;
-            const ffl = base + COURSE;                    // house floor, a course up
+            const dir = e.attachAtStart ? -1 : 1;          // building on this side
+            const body = Math.min(2, (e.attachAtStart ? ML : MR) - 0.3);
+            const wx = Math.min(faceX, faceX + dir * body);
+            const topY = Y(existTop);
+            const ffl = base + COURSE;                      // building floor, a course up
+            const cx = wx + body / 2;
             return (
               <g>
-                {/* wall + shallow gable roof with a small eave overhang */}
-                <rect x={wx} y={eaveY} width={body} height={Math.max(0, houseEaveH)}
-                  fill="#ECE8DD" stroke={INK} strokeWidth={em(0.3)} strokeOpacity={0.85} />
-                <polygon points={`${tipPatio},${eaveY} ${ridgeX},${ridgeY} ${tipFar},${eaveY}`}
-                  fill="#E3DECF" stroke={INK} strokeWidth={em(0.4)} strokeOpacity={0.85} strokeLinejoin="round" />
-                {/* the fascia the patio hangs off, and the beam meeting it */}
-                <line x1={tipPatio} y1={eaveY} x2={faceX} y2={eaveY}
-                  stroke={INK} strokeWidth={em(0.8)} strokeOpacity={0.9} strokeLinecap="round" />
-                <line x1={faceX} y1={eaveY} x2={faceX} y2={Y(patioTopAtFace)}
-                  stroke={POST_INK} strokeWidth={em(0.5)} strokeOpacity={0.7} strokeLinecap="round" />
-                {/* house finished floor, one course above the patio slab */}
+                <rect x={wx} y={topY} width={body} height={Math.max(0, gy - topY)}
+                  fill="#DAD7CD" stroke={INK} strokeWidth={em(0.3)} strokeOpacity={0.7} />
+                {/* bracket where the patio beam attaches to the wall */}
+                <rect x={dir < 0 ? faceX - em(1.5) : faceX} y={Y(patioTopAtFace) - em(0.75)}
+                  width={em(1.5)} height={em(1.5)} fill={POST_INK} fillOpacity={0.55} />
+                {/* building finished floor — one course above the patio slab */}
                 <line x1={wx} y1={Y(ffl)} x2={wx + body} y2={Y(ffl)}
-                  stroke={INK} strokeOpacity={0.4} strokeWidth={em(0.25)} strokeDasharray={`${em(1.2)} ${em(0.9)}`} />
-                <text x={ridgeX} y={Y(houseEaveH * 0.55)} textAnchor="middle"
-                  fontFamily={FONT_LAB} fontSize={em(2)} fill={INK} fillOpacity={0.55}>House</text>
-                <text x={ridgeX} y={Y(ffl) - em(0.8)} textAnchor="middle"
-                  fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.7)} fill={INK} fillOpacity={0.6}>
+                  stroke={INK} strokeOpacity={0.35} strokeWidth={em(0.25)} strokeDasharray={`${em(1.2)} ${em(0.9)}`} />
+                <text x={cx} y={Y(existTop * 0.62)} textAnchor="middle"
+                  fontFamily={FONT_LAB} fontSize={em(1.9)} fill={INK} fillOpacity={0.55}>
+                  <tspan x={cx}>Existing</tspan>
+                  <tspan x={cx} dy={em(2.4)}>structure</tspan>
+                </text>
+                <text x={cx} y={Y(ffl) - em(0.8)} textAnchor="middle"
+                  fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.6)} fill={INK} fillOpacity={0.55}>
                   FFL · patio −1c
                 </text>
               </g>
@@ -2952,6 +2967,10 @@ export function SitePlanBuilder(
           {/* natural ground: a heavy line with hatching just beneath it */}
           <rect x={-ML * 0.5} y={gy} width={W + (ML + MR) * 0.5} height={em(3)} fill={`url(#grd-${uid})`} />
           <line x1={-ML * 0.5} y1={gy} x2={W + MR * 0.5} y2={gy} stroke={INK} strokeWidth={em(0.5)} />
+
+          {/* concrete slab the posts stand on, at the patio floor level */}
+          <rect x={0} y={Y(base)} width={W} height={em(1.5)} fill="#CBC8BE"
+            stroke={INK} strokeOpacity={0.4} strokeWidth={em(0.18)} />
 
           {/* patio floor line (FL), when it sits above the ground */}
           {base > 0.001 && (
@@ -2976,6 +2995,19 @@ export function SitePlanBuilder(
             </g>
           ))}
 
+          {/* knee braces — indicative diagonals from each post up to the beam */}
+          {e.postXs.map((x, i) => {
+            const inward = x > W / 2 ? -1 : 1;              // angle toward the span
+            const run = Math.min(0.5, W * 0.18);
+            const ph = postHeightAt(x);
+            const footH = base + ph - Math.min(0.6, ph * 0.35);
+            const headX = x + inward * run;
+            return (
+              <line key={`br${i}`} x1={x} y1={Y(footH)} x2={headX} y2={Y(base + postHeightAt(headX))}
+                stroke={POST_INK} strokeWidth={em(0.6)} strokeOpacity={0.75} strokeLinecap="round" />
+            );
+          })}
+
           {/* roof, with sheeting thickness */}
           <polygon points={roofPoly} fill={SEAL} fillOpacity={0.14}
             stroke={SEAL} strokeWidth={em(0.55)} strokeLinejoin="round" strokeLinecap="round" />
@@ -2983,7 +3015,7 @@ export function SitePlanBuilder(
           {/* gutter profiles at the low eave(s) */}
           {e.gutterHere && eaveEnds.map((gx, i) => {
             const gy2 = Y(base + e.eave) + roofT;
-            const s0 = gx === 0 ? 1 : -1;    // hook turns back toward the roof
+            const s0 = gx < W / 2 ? 1 : -1;    // hook turns back toward the roof
             return (
               <path key={i}
                 d={`M ${gx + s0 * em(1.4)} ${gy2} L ${gx} ${gy2} L ${gx} ${gy2 + em(1.4)} L ${gx + s0 * em(1.2)} ${gy2 + em(1.4)}`}
@@ -3023,7 +3055,7 @@ export function SitePlanBuilder(
               : null}
 
           {/* level datums on the dwelling side */}
-          {levelTag(gy, "NGL")}
+          {levelTag(gy, "NGL", true)}
           {base > 0.001 && levelTag(Y(base), `FL +${fmtM(base)} m`)}
         </svg>
       </div>
@@ -3044,7 +3076,7 @@ export function SitePlanBuilder(
         : heights.high > heights.eave ? `, ${fmtM(heights.high)} m at the high side` : "") +
       `. Posts ${fmtM(p.colHeight)} m` +
       (p.mount === "attached"
-        ? ", attached under the dwelling eave (fascia / rafter brackets)"
+        ? ", attached to the existing structure (fascia / rafter brackets)"
         : ", freestanding") +
       (p.sheeting ? `. Roof sheeting: ${p.sheeting}` : "") +
       (p.floorAbove > 0.001 ? `. Floor ${fmtM(p.floorAbove)} m above natural ground` : "") +
