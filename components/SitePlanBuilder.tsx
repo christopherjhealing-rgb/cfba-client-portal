@@ -2773,8 +2773,25 @@ export function SitePlanBuilder(
     const W = Math.max(e.width, 0.5);
     const base = e.floorAbove;                      // patio floor above natural ground
     const top = Math.max(e.high, e.ridge ?? 0, e.eave);
-    const dwellTop = e.attachHere ? base + top + 0.9 : 0;
-    const maxH = Math.max(base + top, dwellTop, 0.6);
+    // The roof height at any point across the span — the rake where the slope
+    // shows, flat elsewhere. Defined up here so the house eave can sit just
+    // above wherever the patio actually meets the wall.
+    const postHeightAt = (x: number) => {
+      if (!e.slopeInPlane) return e.eave;
+      const t = W > 0 ? x / W : 0;
+      if (e.roof === "gable") return e.eave + ((e.ridge ?? e.high) - e.eave) * (1 - Math.abs(2 * t - 1));
+      const f = e.lowAtStart ? t : 1 - t;
+      return e.eave + (e.high - e.eave) * f;
+    };
+    // The dwelling is drawn as a gabled house whose eave oversails the patio,
+    // since an attached patio hangs off the fascia / rafter brackets. The eave
+    // sits just above where the patio meets the wall; the gable is a shallow,
+    // house-like pitch on top.
+    const faceX = e.attachAtStart ? 0 : W;          // where the patio meets the wall
+    const patioTopAtFace = base + (e.slopeInPlane ? postHeightAt(faceX) : e.eave);
+    const houseEaveH = e.attachHere ? patioTopAtFace + 0.25 : 0;
+    const houseRidgeH = houseEaveH + 0.55;
+    const maxH = Math.max(base + top, houseRidgeH, 0.6);
     // Pick the largest standard scale that still fits the drawing in the box.
     let dn = 500;
     for (const c of [20, 50, 100, 200, 500]) {
@@ -2782,11 +2799,16 @@ export function SitePlanBuilder(
     }
     const em = (v: number) => (v * dn) / 1000;  // paper mm → metres at this scale
     const uid = `${s.id}-${span}`;
-    // Height dimensions go on whichever side is clear of the dwelling wall; the
-    // level datums take the other side. Width dimension below, roof callout on
-    // top. `dimSide` is -1 for the left, +1 for the right.
-    const wallLeft = e.attachHere && e.attachAtStart;   // dwelling drawn at x = -0.55
-    const dimSide = wallLeft ? 1 : -1;
+    // Height dimensions go on whichever side is clear of the house; the level
+    // datums join them there when a house fills the other margin, or take the
+    // opposite side when the patio is freestanding. `dimSide` is -1 for the
+    // left, +1 for the right.
+    const hasHouse = e.attachHere;
+    const dimSide = hasHouse && e.attachAtStart ? 1 : -1;   // opposite the house
+    const datumSide = hasHouse ? dimSide : 1;               // house margin is taken
+    // A patio slab is set down from the house — conventionally one brick course
+    // (~85 mm), which is what the house floor line shows above the patio floor.
+    const COURSE = 0.085;
     // Roof callout can run to three stacked lines; give the top margin room for
     // however many there are so the first line never clips off the top.
     const roofWord = e.roof === "gable" ? "Gable" : e.roof === "skillion" ? "Skillion" : "Flat";
@@ -2802,20 +2824,12 @@ export function SitePlanBuilder(
     const gy = maxH;
     const Y = (h: number) => gy - h;
 
-    const postHeightAt = (x: number) => {
-      if (!e.slopeInPlane) return e.eave;
-      const t = W > 0 ? x / W : 0;
-      if (e.roof === "gable") return e.eave + ((e.ridge ?? e.high) - e.eave) * (1 - Math.abs(2 * t - 1));
-      const f = e.lowAtStart ? t : 1 - t;
-      return e.eave + (e.high - e.eave) * f;
-    };
     const roofPts: [number, number][] = e.slopeInPlane
       ? (e.roof === "gable"
           ? [[0, e.eave], [W / 2, e.ridge ?? e.high], [W, e.eave]]
           : e.lowAtStart ? [[0, e.eave], [W, e.high]] : [[0, e.high], [W, e.eave]])
       : [[0, e.eave], [W, e.eave]];
     const topRef = e.ridge ?? e.high;   // the high/ridge line, for the into-page view
-    const wallX = e.attachAtStart ? -0.55 : W;
 
     // Roof drawn with a little thickness so it reads as sheeting, not a wire.
     const roofT = em(0.55);
@@ -2857,16 +2871,21 @@ export function SitePlanBuilder(
       );
     };
     // A survey level datum — the open triangle sitting on a level line, tagged.
-    // It takes the side opposite the height dimensions (the dwelling side).
+    // When a house takes one margin the datums share the clear side, hugging
+    // the drawing edge and reading inward; freestanding, they sit outboard in
+    // the empty margin.
     const levelTag = (y: number, label: string) => {
-      const onLeft = dimSide > 0, t = em(1.1);
-      const dx = onLeft ? -ML * 0.3 : W + MR * 0.3;
-      const tx = onLeft ? dx - t - em(0.6) : dx + t + em(0.6);
+      const onLeft = datumSide < 0, t = em(1.1);
+      const dx = hasHouse
+        ? (onLeft ? em(1.5) : W - em(1.5))            // just inside the edge
+        : (onLeft ? -ML * 0.3 : W + MR * 0.3);        // outboard in the margin
+      const readInward = hasHouse ? onLeft : !onLeft;
+      const tx = readInward ? dx + t + em(0.6) : dx - t - em(0.6);
       return (
         <g fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.9)} fill={INK} fillOpacity={0.75}>
           <path d={`M ${dx - t} ${y - 2 * t} L ${dx + t} ${y - 2 * t} L ${dx} ${y} Z`}
             fill="none" stroke={INK} strokeOpacity={0.6} strokeWidth={em(0.25)} />
-          <text x={tx} y={y - t} textAnchor={onLeft ? "end" : "start"}>{label}</text>
+          <text x={tx} y={y - t} textAnchor={readInward ? "start" : "end"}>{label}</text>
         </g>
       );
     };
@@ -2890,15 +2909,45 @@ export function SitePlanBuilder(
             </pattern>
           </defs>
 
-          {/* the dwelling the patio attaches to */}
-          {e.attachHere && (
-            <g>
-              <rect x={wallX} y={Y(dwellTop)} width={0.55} height={dwellTop}
-                fill="#ECE8DD" stroke={INK} strokeWidth={em(0.3)} strokeOpacity={0.8} />
-              <text x={wallX + 0.275} y={Y(dwellTop) + em(3)} textAnchor="middle"
-                fontFamily={FONT_LAB} fontSize={em(2)} fill={INK} fillOpacity={0.6}>Dwelling</text>
-            </g>
-          )}
+          {/* The house the patio attaches to — drawn as a gabled dwelling whose
+              eave oversails the patio. The patio beam meets the fascia under
+              that eave (a receiver / rafter brackets), and the patio floor is
+              set one brick course below the house's finished floor. */}
+          {hasHouse && (() => {
+            const dir = e.attachAtStart ? -1 : 1;        // house on this side
+            const body = Math.min(2, (e.attachAtStart ? ML : MR) - 0.35);  // wall face we see
+            const farX = faceX + dir * body;
+            const over = 0.18;                            // modest eave overhang
+            const wx = Math.min(faceX, farX);
+            const eaveY = Y(houseEaveH), ridgeY = Y(houseRidgeH);
+            const tipPatio = faceX - dir * over;          // eave tip over the patio
+            const tipFar = farX + dir * over;
+            const ridgeX = (faceX + farX) / 2;
+            const ffl = base + COURSE;                    // house floor, a course up
+            return (
+              <g>
+                {/* wall + shallow gable roof with a small eave overhang */}
+                <rect x={wx} y={eaveY} width={body} height={Math.max(0, houseEaveH)}
+                  fill="#ECE8DD" stroke={INK} strokeWidth={em(0.3)} strokeOpacity={0.85} />
+                <polygon points={`${tipPatio},${eaveY} ${ridgeX},${ridgeY} ${tipFar},${eaveY}`}
+                  fill="#E3DECF" stroke={INK} strokeWidth={em(0.4)} strokeOpacity={0.85} strokeLinejoin="round" />
+                {/* the fascia the patio hangs off, and the beam meeting it */}
+                <line x1={tipPatio} y1={eaveY} x2={faceX} y2={eaveY}
+                  stroke={INK} strokeWidth={em(0.8)} strokeOpacity={0.9} strokeLinecap="round" />
+                <line x1={faceX} y1={eaveY} x2={faceX} y2={Y(patioTopAtFace)}
+                  stroke={POST_INK} strokeWidth={em(0.5)} strokeOpacity={0.7} strokeLinecap="round" />
+                {/* house finished floor, one course above the patio slab */}
+                <line x1={wx} y1={Y(ffl)} x2={wx + body} y2={Y(ffl)}
+                  stroke={INK} strokeOpacity={0.4} strokeWidth={em(0.25)} strokeDasharray={`${em(1.2)} ${em(0.9)}`} />
+                <text x={ridgeX} y={Y(houseEaveH * 0.55)} textAnchor="middle"
+                  fontFamily={FONT_LAB} fontSize={em(2)} fill={INK} fillOpacity={0.55}>House</text>
+                <text x={ridgeX} y={Y(ffl) - em(0.8)} textAnchor="middle"
+                  fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.7)} fill={INK} fillOpacity={0.6}>
+                  FFL · patio −1c
+                </text>
+              </g>
+            );
+          })()}
 
           {/* natural ground: a heavy line with hatching just beneath it */}
           <rect x={-ML * 0.5} y={gy} width={W + (ML + MR) * 0.5} height={em(3)} fill={`url(#grd-${uid})`} />
@@ -2994,9 +3043,16 @@ export function SitePlanBuilder(
       (heights.ridge !== null ? `, ${fmtM(heights.ridge)} m to the ridge`
         : heights.high > heights.eave ? `, ${fmtM(heights.high)} m at the high side` : "") +
       `. Posts ${fmtM(p.colHeight)} m` +
-      (p.mount === "attached" ? ", attached to the dwelling" : ", freestanding") +
-      (p.sheeting ? `. Roof sheeting: ${p.sheeting}` : ".") +
-      (p.floorAbove > 0.001 ? `. Floor ${fmtM(p.floorAbove)} m above natural ground.` : "");
+      (p.mount === "attached"
+        ? ", attached under the dwelling eave (fascia / rafter brackets)"
+        : ", freestanding") +
+      (p.sheeting ? `. Roof sheeting: ${p.sheeting}` : "") +
+      (p.floorAbove > 0.001 ? `. Floor ${fmtM(p.floorAbove)} m above natural ground` : "") +
+      (p.mount === "attached"
+        ? (p.floorAbove > 0.001
+            ? ", one brick course (~85 mm) below the house finished floor."
+            : ". Floor set one brick course (~85 mm) below the house finished floor.")
+        : ".");
     return (
       <div key={s.id} className="cfba-sheet">
         <div style={{ border: "0.5mm solid #2B3A31", color: INK, fontFamily: FONT_LAB }}>
