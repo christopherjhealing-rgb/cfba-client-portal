@@ -8,6 +8,7 @@ import { GOOGLE_MAPS_KEY, geocodeAddress } from "@/lib/google-maps";
 import type { LibraryDoc } from "@/lib/library";
 import { JobItems, blankItem, type Item } from "./JobItems";
 import { describeJob } from "@/lib/jobdesc.mjs";
+import { balKinds } from "@/lib/bushfire.mjs";
 
 // Drawings and engineering are both required: an assessment cannot start
 // without them, and a job lodged short of them only comes straight back.
@@ -84,6 +85,19 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
     return () => { alive = false; clearTimeout(timer); };
   }, [address]);
 
+  // The bushfire questions only exist when the lot is prone AND the job's own
+  // rows include a Class 10a building — a patio/carport or a shed. 10b work
+  // (retaining walls, pools, tanks) never triggers them. Derived, not asked:
+  // the form already knows what's being built.
+  const kinds = balKinds(items);
+  const balRequired = bushfireProne && (kinds.patio || kinds.shed);
+
+  // A stale conclusion must never ride along after its trigger goes away —
+  // the address moved off a prone lot, or the patio row was deleted.
+  useEffect(() => {
+    if (!balRequired) { setBushfireSummary(null); setBushfireBal(null); }
+  }, [balRequired]);
+
   const tickedDocs = library.filter((d) => ticked.has(d.id));
 
   function toggleDoc(id: string) {
@@ -111,10 +125,10 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
     setBusy(true); setMsg(null);
 
     // The bushfire assessment rides along in the notes to the office, so the
-    // surveyor sees the client's own answer (distance, type, house age → BAL
-    // outcome) on the job without re-asking. Only when the lot is prone and
-    // they actually answered.
-    const notesOut = [notes.trim(), bushfireProne ? bushfireSummary : null]
+    // surveyor sees the client's own answer (distance, house age → BAL
+    // outcome) on the job without re-asking. Only when the questions were
+    // actually triggered and answered.
+    const notesOut = [notes.trim(), balRequired ? bushfireSummary : null]
       .filter(Boolean).join("\n\n");
 
     // Files go straight to storage via signed URLs (see lib/upload-client) —
@@ -140,7 +154,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address, items, notes: notesOut, contact, clientRef,
-          bal: bushfireProne ? bushfireBal : null,
+          bal: balRequired ? bushfireBal : null,
           draftId: up.draftId,
           files: entries.map((x, i) => ({ name: up.names[i], category: x.category })),
           libraryIds: tickedDocs.map((d) => d.id),
@@ -152,7 +166,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       fd.set("address", address);
       fd.set("items", JSON.stringify(items));
       fd.set("notes", notesOut);
-      if (bushfireProne && bushfireBal) fd.set("bal", bushfireBal);
+      if (balRequired && bushfireBal) fd.set("bal", bushfireBal);
       fd.set("clientRef", clientRef);
       fd.set("contact", contact);
       for (const x of entries) {
@@ -223,22 +237,20 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   const totalMb = (all.reduce((n, f) => n + f.size, 0)
     + tickedDocs.reduce((n, d) => n + d.size, 0)) / 1_048_576;
   // Compulsory now means compulsory: no readable row, no lodgement. A row
-  // whose "Other" has nothing typed in it doesn't count as one.
+  // whose "Other" has nothing typed in it doesn't count as one. And on a
+  // bushfire-prone lot with a 10a building, the bushfire questions are part
+  // of the lodgement, not an optional extra — the office needs the outcome.
   const described = describeJob(items).ok;
-  const ready = described && BUCKETS.every((b) => !b.required || (files[b.key] || []).length > 0
+  const filesOk = BUCKETS.every((b) => !b.required || (files[b.key] || []).length > 0
     || (b.key === "engineering" && tickedDocs.length > 0));
+  const balDone = !balRequired || bushfireSummary !== null;
+  const ready = described && filesOk && balDone;
 
   return (
     <form onSubmit={submit} className="card p-6 sm:p-7">
       <label className="label" htmlFor="address">Site Address</label>
       <AddressField id="address" required autoFocus value={address}
         onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
-
-      {bushfireProne && (
-        <BushfireAssessment
-          onResult={(r) => { setBushfireSummary(r?.summary ?? null); setBushfireBal(r?.bal ?? null); }}
-        />
-      )}
 
       <div className="mt-5">
         <JobItems items={items} onChange={setItems} />
@@ -344,14 +356,24 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         A name is enough — we&apos;ll reply to your account either way.
       </p>
 
+      {balRequired && (
+        <BushfireAssessment
+          patio={kinds.patio}
+          shed={kinds.shed}
+          onResult={(r) => { setBushfireSummary(r?.summary ?? null); setBushfireBal(r?.bal ?? null); }}
+        />
+      )}
+
       <button className="btn mt-6 w-full" disabled={busy || !ready}>
         {busy ? (progress || "Lodging…") : "Lodge This Job"}
       </button>
       {!ready && (
         <p className="mt-2 text-center text-[12px] text-ink/50">
-          {described
-            ? "Attach drawings and engineering to continue."
-            : "Tell us what's being built to continue."}
+          {!described
+            ? "Tell us what's being built to continue."
+            : !filesOk
+              ? "Attach drawings and engineering to continue."
+              : "Answer the bushfire questions above to lodge."}
         </p>
       )}
 
