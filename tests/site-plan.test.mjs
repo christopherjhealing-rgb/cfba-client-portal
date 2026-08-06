@@ -1660,6 +1660,28 @@ test("the dwelling shows in the elevation perpendicular to the attached edge", (
   assert.equal(patioElevationProfile(s2, "d").attachHere, false);
 });
 
+test("a patio defaults to a named sheeting and a floor level with the ground", () => {
+  const p = sanitisePatio(undefined);
+  assert.equal(p.sheeting, "Custom Orb");
+  assert.equal(p.floorAbove, 0);
+  // Clamps: floor above ground is 0..2 m; sheeting is trimmed free text.
+  assert.equal(sanitisePatio({ floorAbove: 9 }).floorAbove, 2);
+  assert.equal(sanitisePatio({ floorAbove: -1 }).floorAbove, 0);
+  assert.equal(sanitisePatio({ sheeting: "  Trimdek  " }).sheeting, "Trimdek");
+});
+
+test("an elevation reports the sheeting, floor and whether its eave carries a gutter", () => {
+  // Skillion falling to side 2 (bottom, a horizontal edge). The gutter runs
+  // along that eave, seen in the width (front) view — not the depth view.
+  const s = P({ roof: "skillion", fall: 2, sheeting: "Smartdek", floorAbove: 0.15 });
+  const front = patioElevationProfile(s, "w");
+  const side = patioElevationProfile(s, "d");
+  assert.equal(front.sheeting, "Smartdek");
+  assert.equal(front.floorAbove, 0.15);
+  assert.equal(front.gutterHere, true, "the width view shows the low eave's gutter");
+  assert.equal(side.gutterHere, false);
+});
+
 test("roof heights: skillion rises over the full run, gable over half", () => {
   // Fall to side 2 (horizontal) → the slope runs the depth, 4 m.
   const sk = patioRoofHeights(P({ roof: "skillion", pitch: 10, fall: 2, colHeight: 2.4 }));

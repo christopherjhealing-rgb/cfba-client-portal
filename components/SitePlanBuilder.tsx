@@ -25,7 +25,7 @@ import {
   structureArea, structureGap, structureState, togglePin, toggleState,
   underlayAnchor, underlayCentre, underlayMapSize,
   underlayScale, underlayZoom,
-  GUTTER_M_PER_DOWNPIPE, PATIO_MAX_COLS, PATIO_MAX_PITCH,
+  GUTTER_M_PER_DOWNPIPE, PATIO_MAX_COLS, PATIO_MAX_PITCH, PATIO_SHEETING,
   downpipesNeeded, patioColumns, patioElevationProfile, patioGutter,
   patioRoofHeights, sanitisePatio,
   sanitisePlanUnderlay, rescalePlanUnderlay,
@@ -2621,6 +2621,34 @@ export function SitePlanBuilder(
         <MetresField label="Post / eave height (m)" value={p.colHeight}
           onCommit={(n) => patchPatio(s.id, { colHeight: n })} />
 
+        {/* Roof sheeting (material) and patio floor level — for the sheet. */}
+        <div>
+          <span className="label">Roof sheeting</span>
+          <select className="field"
+            value={PATIO_SHEETING.includes(p.sheeting) ? p.sheeting : "__custom"}
+            onChange={(e) => patchPatio(s.id, {
+              sheeting: e.target.value === "__custom" ? "" : e.target.value,
+            })}>
+            {PATIO_SHEETING.map((m) => <option key={m} value={m}>{m}</option>)}
+            <option value="__custom">Other / type it in…</option>
+          </select>
+          {!PATIO_SHEETING.includes(p.sheeting) && (
+            <input className="field mt-2" placeholder="e.g. Multiclad" value={p.sheeting}
+              aria-label="Roof sheeting material"
+              onChange={(e) => patchPatio(s.id, { sheeting: e.target.value })} />
+          )}
+        </div>
+        <div>
+          <label className="label" htmlFor="patio-floor">Patio floor above ground (m)</label>
+          <input id="patio-floor" type="number" inputMode="decimal" min={0} max={2} step={0.05}
+            className="field" value={p.floorAbove}
+            onChange={(e) => patchPatio(s.id, { floorAbove: Number(e.target.value) })} />
+          <p className="mt-1 text-[12px] leading-snug text-ink/50">
+            0 for a floor level with the ground. The elevations show natural
+            ground (NGL) and the patio floor (FL) above it.
+          </p>
+        </div>
+
         {/* Downpipes */}
         <div>
           <span className="label">Downpipes</span>
@@ -2729,8 +2757,10 @@ export function SitePlanBuilder(
   function elevationView(s: Structure, span: "w" | "d", title: string, fit = false) {
     const e = patioElevationProfile(s, span);
     const W = Math.max(e.width, 0.5);
-    const dwellTop = e.attachHere ? Math.max(e.high, e.eave) + 0.9 : 0;
-    const maxH = Math.max(e.high, e.ridge ?? 0, e.eave, dwellTop, 0.5);
+    const base = e.floorAbove;                      // patio floor above natural ground
+    const top = Math.max(e.high, e.ridge ?? 0, e.eave);
+    const dwellTop = e.attachHere ? base + top + 0.9 : 0;
+    const maxH = Math.max(base + top, dwellTop, 0.6);
     // Pick the largest standard scale that still fits the drawing in the box.
     let dn = 500;
     for (const c of [20, 50, 100, 200, 500]) {
@@ -2781,25 +2811,43 @@ export function SitePlanBuilder(
                 fontFamily={FONT_LAB} fontSize={em(2)} fill={INK} fillOpacity={0.6}>Dwelling</text>
             </g>
           )}
-          {/* ground */}
+          {/* natural ground line (NGL) */}
           <line x1={-M * 0.6} y1={gy} x2={W + M * 0.6} y2={gy} stroke={INK} strokeWidth={em(0.45)} />
+          {/* patio floor line (FL), when it sits above the ground */}
+          {base > 0.001 && (
+            <line x1={-M * 0.2} y1={Y(base)} x2={W + M * 0.2} y2={Y(base)} stroke={INK}
+              strokeOpacity={0.55} strokeWidth={em(0.3)} strokeDasharray={`${em(1.4)} ${em(1)}`} />
+          )}
           {/* the high/ridge line, when it sits behind the view rather than in it */}
           {!e.slopeInPlane && topRef > e.eave + 0.001 && (
-            <line x1={0} y1={Y(topRef)} x2={W} y2={Y(topRef)} stroke={ROOF_INK}
+            <line x1={0} y1={Y(base + topRef)} x2={W} y2={Y(base + topRef)} stroke={ROOF_INK}
               strokeWidth={em(0.3)} strokeDasharray={`${em(1.6)} ${em(1)}`} />
           )}
-          {/* posts */}
+          {/* posts, standing on the floor */}
           {e.postXs.map((x, i) => (
-            <line key={i} x1={x} y1={gy} x2={x} y2={Y(postHeightAt(x))}
+            <line key={i} x1={x} y1={Y(base)} x2={x} y2={Y(base + postHeightAt(x))}
               stroke={SEAL} strokeWidth={em(0.5)} strokeLinecap="round" />
           ))}
           {/* roof */}
-          <polyline points={roofPts.map(([x, h]) => `${x},${Y(h)}`).join(" ")}
+          <polyline points={roofPts.map(([x, h]) => `${x},${Y(base + h)}`).join(" ")}
             fill="none" stroke={SEAL} strokeWidth={em(0.6)} strokeLinejoin="round" strokeLinecap="round" />
-          {/* roof pitch, called out above the roof */}
-          <text x={W / 2} y={Y(e.ridge ?? e.high) - em(1.5)} textAnchor="middle"
-            fontFamily={FONT_LAB} fontWeight={600} fontSize={em(2.2)} fill={ROOF_INK}>
-            {fmtM(e.pitch)}° pitch
+          {/* gutter, along the low eave */}
+          {e.gutterHere && (() => {
+            const ex = e.slopeInPlane && e.roof !== "gable" ? (e.lowAtStart ? 0 : W) : W * 0.5;
+            const ey = Y(base + e.eave);
+            return (
+              <g>
+                <line x1={Math.max(ex - 0.7, 0)} y1={ey} x2={Math.min(ex + 0.7, W)} y2={ey}
+                  stroke={BRASS} strokeWidth={em(0.8)} strokeLinecap="round" />
+                <text x={ex} y={ey - em(1.1)} textAnchor="middle" fontFamily={FONT_LAB}
+                  fontWeight={600} fontSize={em(1.8)} fill={BRASS}>GUTTER</text>
+              </g>
+            );
+          })()}
+          {/* roof pitch and sheeting, called out above the roof */}
+          <text x={W / 2} y={Y(base + (e.ridge ?? e.high)) - em(1.5)} textAnchor="middle"
+            fontFamily={FONT_LAB} fontWeight={600} fontSize={em(2.1)} fill={ROOF_INK}>
+            {fmtM(e.pitch)}° pitch{e.sheeting ? ` · ${e.sheeting}` : ""}
           </text>
           {/* width dimension, under the ground line */}
           <g fontFamily={FONT_NUM} fontSize={em(2.4)} fill={INK} fillOpacity={0.75}>
@@ -2809,25 +2857,32 @@ export function SitePlanBuilder(
             ))}
             <text x={W / 2} y={gy + M * 1.45} textAnchor="middle">{fmtM(e.width)} m</text>
           </g>
-          {/* heights: the post (eave) height, and the ridge (gable) or high
-              side (skillion) — the figures a builder checks against the fascia. */}
+          {/* heights, measured from the floor: the post (eave) height, and the
+              ridge (gable) or high side (skillion) — checked against the fascia. */}
           <g fontFamily={FONT_NUM} fontSize={em(2.2)} fill={INK} fillOpacity={0.75}>
-            <line x1={-M * 0.5} y1={gy} x2={-M * 0.5} y2={Y(e.eave)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
-            <text transform={`translate(${-M * 0.72} ${Y(e.eave / 2)}) rotate(-90)`} textAnchor="middle">
+            <line x1={-M * 0.5} y1={Y(base)} x2={-M * 0.5} y2={Y(base + e.eave)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
+            <text transform={`translate(${-M * 0.72} ${Y(base + e.eave / 2)}) rotate(-90)`} textAnchor="middle">
               Post {fmtM(e.eave)} m
             </text>
             {e.roof === "gable" && e.ridge !== null ? (
-              <text x={W / 2 + em(1.6)} y={Y(e.ridge) + em(2.2)} textAnchor="start">
+              <text x={W / 2 + em(1.6)} y={Y(base + e.ridge) + em(2.2)} textAnchor="start">
                 Ridge {fmtM(e.ridge)} m
               </text>
             ) : e.high > e.eave + 0.001 ? (
               <>
-                <line x1={W + M * 0.5} y1={gy} x2={W + M * 0.5} y2={Y(e.high)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
-                <text transform={`translate(${W + M * 0.72} ${Y(e.high / 2)}) rotate(-90)`} textAnchor="middle">
+                <line x1={W + M * 0.5} y1={Y(base)} x2={W + M * 0.5} y2={Y(base + e.high)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
+                <text transform={`translate(${W + M * 0.72} ${Y(base + e.high / 2)}) rotate(-90)`} textAnchor="middle">
                   High {fmtM(e.high)} m
                 </text>
               </>
             ) : null}
+          </g>
+          {/* level tags: natural ground, and the patio floor above it */}
+          <g fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.9)} fill={INK} fillOpacity={0.7}>
+            <text x={-M * 0.55} y={gy - em(0.8)} textAnchor="start">NGL</text>
+            {base > 0.001 && (
+              <text x={-M * 0.55} y={Y(base) - em(0.8)} textAnchor="start">FL +{fmtM(base)} m</text>
+            )}
           </g>
         </svg>
       </div>
@@ -2847,7 +2902,9 @@ export function SitePlanBuilder(
       (heights.ridge !== null ? `, ${fmtM(heights.ridge)} m to the ridge`
         : heights.high > heights.eave ? `, ${fmtM(heights.high)} m at the high side` : "") +
       `. Posts ${fmtM(p.colHeight)} m` +
-      (p.mount === "attached" ? ", attached to the dwelling." : ", freestanding.");
+      (p.mount === "attached" ? ", attached to the dwelling" : ", freestanding") +
+      (p.sheeting ? `. Roof sheeting: ${p.sheeting}` : ".") +
+      (p.floorAbove > 0.001 ? `. Floor ${fmtM(p.floorAbove)} m above natural ground.` : "");
     return (
       <div key={s.id} className="cfba-sheet">
         <div style={{ border: "0.5mm solid #2B3A31", color: INK, fontFamily: FONT_LAB }}>
