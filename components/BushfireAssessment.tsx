@@ -1,18 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
-import { balVerdict } from "@/lib/bushfire.mjs";
+import { balVerdict, BAL_RATINGS } from "@/lib/bushfire.mjs";
 
 // The bushfire helper on Lodge a Job. When the site sits in a designated Bush
-// Fire Prone Area, three questions settle what a Class 10 structure actually
-// needs — distance from the house, patio/carport vs shed, and the house's age
-// — and the answer is shown inline and filed with the lodgement (onSummary), so
-// the office sees the conclusion without asking again. The rule itself lives in
-// lib/bushfire.mjs (balVerdict), tested; this is only the asking.
+// Fire Prone Area, a few questions settle what a Class 10 structure actually
+// needs — distance from the house, patio/carport vs shed, the house's age, and
+// (for a newer house) its BAL rating. The conclusion shows inline and is filed
+// with the lodgement (onResult): a summary line for the office, and the BAL
+// column label to stamp on the card. The rule lives in lib/bushfire.mjs
+// (balVerdict), tested; this is only the asking.
 
 type Distance = "near" | "far" | null;
 type Kind = "patio" | "shed" | null;
 type Age = "pre2016" | "post2016" | "unsure" | null;
+
+/** The value sent is the exact board label ("LOW", "12.5", …); the client sees
+ *  proper BAL notation. */
+const RATING_LABEL: Record<string, string> = {
+  LOW: "BAL-Low", "12.5": "BAL-12.5", "19": "BAL-19",
+  "29": "BAL-29", "40": "BAL-40", FZ: "BAL-FZ",
+};
 
 const TONE: Record<string, { border: string; bg: string; icon: "check" | "alert" | "help" }> = {
   clear: { border: "border-seal/40", bg: "bg-[#EDF3EE]", icon: "check" },
@@ -46,23 +54,29 @@ function Question({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-export function BushfireAssessment({ onSummary }: { onSummary?: (s: string | null) => void }) {
+export function BushfireAssessment({
+  onResult,
+}: {
+  onResult?: (r: { summary: string; bal: string | null } | null) => void;
+}) {
   const [distance, setDistance] = useState<Distance>(null);
   const [kind, setKind] = useState<Kind>(null);
   const [age, setAge] = useState<Age>(null);
+  const [rating, setRating] = useState<string>("");
 
   // Changing an answer clears the ones downstream of it, so a half-answered
   // path can never leave a stale verdict showing.
-  const pickDistance = (d: Distance) => { setDistance(d); setKind(null); setAge(null); };
-  const pickKind = (k: Kind) => { setKind(k); setAge(null); };
+  const pickDistance = (d: Distance) => { setDistance(d); setKind(null); setAge(null); setRating(""); };
+  const pickKind = (k: Kind) => { setKind(k); setAge(null); setRating(""); };
+  const pickAge = (a: Age) => { setAge(a); setRating(""); };
 
-  const verdict = balVerdict({ distance, kind, age });
+  const verdict = balVerdict({ distance, kind, age, rating: rating || null });
 
-  // File the one-line conclusion with the lodgement (or clear it if unanswered).
+  // File the conclusion with the lodgement (or clear it if unanswered).
   useEffect(() => {
-    onSummary?.(verdict ? verdict.summary : null);
+    onResult?.(verdict ? { summary: verdict.summary, bal: verdict.mondayBal } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verdict?.summary]);
+  }, [verdict?.summary, verdict?.mondayBal]);
 
   const tone = verdict ? TONE[verdict.tone] : null;
 
@@ -91,10 +105,28 @@ export function BushfireAssessment({ onSummary }: { onSummary?: (s: string | nul
 
       {distance === "near" && kind === "patio" && (
         <Question label="Was the house built before 2016?">
-          <Choice label="Yes, before 2016" active={age === "pre2016"} onClick={() => setAge("pre2016")} />
-          <Choice label="No / 2016 or later" active={age === "post2016"} onClick={() => setAge("post2016")} />
-          <Choice label="Not sure" active={age === "unsure"} onClick={() => setAge("unsure")} />
+          <Choice label="Yes, before 2016" active={age === "pre2016"} onClick={() => pickAge("pre2016")} />
+          <Choice label="No / 2016 or later" active={age === "post2016"} onClick={() => pickAge("post2016")} />
+          <Choice label="Not sure" active={age === "unsure"} onClick={() => pickAge("unsure")} />
         </Question>
+      )}
+
+      {distance === "near" && kind === "patio" && age === "post2016" && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-[13px] font-medium text-ink/80">
+            What&apos;s the house&apos;s BAL rating? <span className="font-normal text-ink/50">(from its BAL report or CDC, if you have it)</span>
+          </p>
+          <select
+            value={rating}
+            onChange={(e) => setRating(e.target.value)}
+            className="field max-w-[220px] text-[14px]"
+          >
+            <option value="">Select a rating…</option>
+            {BAL_RATINGS.map((r) => (
+              <option key={r} value={r}>{RATING_LABEL[r] || r}</option>
+            ))}
+          </select>
+        </div>
       )}
 
       {verdict && tone && (

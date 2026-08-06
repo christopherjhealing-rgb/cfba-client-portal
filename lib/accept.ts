@@ -26,6 +26,11 @@ export async function acceptSubmission(
   const jobContact = (sub.email || "").trim();
   const contactIsEmail = looksLikeEmail(jobContact);
 
+  // The BAL column label the client's assessment settled on, stashed at
+  // lodgement (bushfire-prone patio/carport). Never fatal to read — a missing
+  // stash just leaves the column for the office to set.
+  const balStash = await repo.getSetting<{ bal?: string }>(`bal:${sub.id}`).catch(() => null);
+
   const itemId = await monday.createCard({
     address: sub.address,
     clientName: company?.name || "",
@@ -34,6 +39,7 @@ export async function acceptSubmission(
       ? `AMENDMENT to ${sub.amendmentOf} — ${sub.description}`
       : sub.description,
     jobClass: sub.jobClass,
+    bal: balStash?.bal || undefined,
   });
 
   // Stash the client's own reference against the card id — the sync copies it
