@@ -3,24 +3,24 @@ import { SignJWT, jwtVerify } from "jose";
 import { env } from "./env";
 import * as repo from "./repo";
 import { hashPassword, verifyPassword, passwordProblem } from "./auth";
-import { getClientSession } from "./session";
 
 /**
- * Site Plan Studio — the standalone door into the site-plan tool.
+ * Site Plan Studio — a standalone site-plan tool.
  *
- * Two kinds of people sign in. CFBA portal clients use their portal login
- * (their session already says who they are), and anyone else creates a free
- * studio account. Both end up as an OWNER string, and everything the studio
- * stores hangs off that owner — so the two kinds of account travel one code
- * path everywhere below the front door.
+ * Deliberately independent of the CF Building Approvals client portal: a
+ * building surveyor must not be involved in the design of the projects they
+ * certify, so this design tool shares no identity, no login and no visible
+ * connection with the certifier's portal. Everyone here has a studio account
+ * of their own, and everything the studio stores hangs off that account's
+ * OWNER string.
  *
- * Storage is the portal_settings k/v store, like every other feature that
- * arrived after the schema: `studio_user:<email>` for accounts,
- * `studio_designs:<owner>` for the design index, and
- * `studio_design:<owner>:<id>` for each design's drawing. No migration.
+ * Storage happens to reuse the settings k/v store (invisible backend, no
+ * migration): `studio_user:<email>` for accounts, `studio_designs:<owner>`
+ * for the design index, `studio_design:<owner>:<id>` for each drawing.
  */
 
-const COOKIE = "cfba_studio";
+// Neutral name on purpose — nothing in the browser ties this to the certifier.
+const COOKIE = "siteplan_session";
 const secret = () => new TextEncoder().encode(env.authSecret);
 
 // ---------------------------------------------------------------------------
@@ -91,30 +91,25 @@ export async function clearStudioSession() {
 }
 
 export interface StudioIdentity {
-  /** Everything stored hangs off this: `co:<companyId>` or `u:<email>`. */
+  /** Everything stored hangs off this: `u:<email>`. */
   owner: string;
   /** What the header greets them as. */
   name: string;
-  /** A portal client, in via their portal login. */
-  viaPortal: boolean;
 }
 
-/** Who's at the studio door — portal login first, then a studio account. */
+/**
+ * Who's at the studio door — a studio account, and nothing else. This does
+ * NOT consult the CF Building Approvals portal session on purpose: the design
+ * tool and the certifier's portal must stay independent, so being signed into
+ * the portal in another tab grants no access here.
+ */
 export async function studioIdentity(): Promise<StudioIdentity | null> {
-  const portal = await getClientSession();
-  if (portal) {
-    return { owner: `co:${portal.companyId}`, name: portal.companyName, viaPortal: true };
-  }
   const c = (await cookies()).get(COOKIE)?.value;
   if (!c) return null;
   try {
     const { payload } = await jwtVerify(c, secret());
     if (payload.kind !== "studio" || typeof payload.email !== "string") return null;
-    return {
-      owner: `u:${payload.email}`,
-      name: String(payload.name || payload.email),
-      viaPortal: false,
-    };
+    return { owner: `u:${payload.email}`, name: String(payload.name || payload.email) };
   } catch {
     return null;
   }

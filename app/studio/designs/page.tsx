@@ -9,11 +9,5 @@ export default async function StudioDesignList() {
   if (!who) redirect("/studio");
   const designs = await listDesigns(who.owner);
 
-  return (
-    <StudioDesigns
-      designs={designs}
-      name={who.name}
-      viaPortal={who.viaPortal}
-    />
-  );
+  return <StudioDesigns designs={designs} name={who.name} />;
 }

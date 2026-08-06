@@ -12,8 +12,7 @@ const fmt = (iso: string) => {
 
 /** The studio home: every saved plan as a card, and the New Plan door. */
 export function StudioDesigns(
-  { designs, name, viaPortal }:
-  { designs: DesignMeta[]; name: string; viaPortal: boolean },
+  { designs, name }: { designs: DesignMeta[]; name: string },
 ) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -72,10 +71,7 @@ export function StudioDesigns(
   }
 
   async function signOut() {
-    // Portal clients sign out of the portal session; studio accounts out of
-    // theirs. Either way the front door is the destination.
-    await fetch(viaPortal ? "/api/auth/logout" : "/api/studio/logout", { method: "POST" })
-      .catch(() => {});
+    await fetch("/api/studio/logout", { method: "POST" }).catch(() => {});
     window.location.assign("/studio");
   }
 
@@ -85,8 +81,7 @@ export function StudioDesigns(
         <div>
           <h1 className="font-display text-[24px] font-semibold text-ink">Your plans</h1>
           <p className="mt-1 text-[13.5px] text-ink/55">
-            Signed in as <span className="font-medium text-ink/75">{name}</span>
-            {viaPortal ? " (CFBA portal account)" : ""} ·{" "}
+            Signed in as <span className="font-medium text-ink/75">{name}</span> ·{" "}
             <button onClick={signOut} className="underline hover:text-seal">sign out</button>
           </p>
         </div>

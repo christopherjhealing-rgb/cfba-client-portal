@@ -24,11 +24,11 @@ export default async function StudioFrontDoor() {
           <ul className="mt-5 space-y-2 text-[14px] text-ink/70">
             <li>· Save your plans and come back to them on any device</li>
             <li>· Duplicate a plan for the next job instead of redrawing it</li>
-            <li>· Free to use — built by a Perth building certifier</li>
+            <li>· Free to use, no card, no lock-in</li>
           </ul>
           <p className="mt-5 text-[13px] text-ink/50">
-            Already a CF Building Approvals portal client? Sign in below with
-            your portal login — your studio and your jobs share one account.
+            Create a free account to start — it takes a few seconds and your
+            plans are saved to it.
           </p>
         </div>
         <StudioAuth />

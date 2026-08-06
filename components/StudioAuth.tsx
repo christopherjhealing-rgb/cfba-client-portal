@@ -1,20 +1,19 @@
 "use client";
 import { useState } from "react";
 
-type Mode = "signup" | "signin" | "portal";
+type Mode = "signup" | "signin";
 
 /**
- * The studio's front door. Three ways in, one card: create a free account,
- * sign back into one, or — for CFBA portal clients — use the portal login
- * itself, which posts to the portal's own auth endpoint so there is exactly
- * one password system for them, not a second one to forget.
+ * The studio's front door: create a free account, or sign back into one.
+ * There is deliberately no shortcut for CF Building Approvals portal clients —
+ * the design tool is independent of the certifier's portal, so everyone here
+ * signs in with a studio account of their own.
  */
 export function StudioAuth() {
   const [mode, setMode] = useState<Mode>("signup");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -22,18 +21,11 @@ export function StudioAuth() {
     e.preventDefault();
     setBusy(true); setMsg(null);
     try {
-      const r =
-        mode === "portal"
-          ? await fetch("/api/auth/login", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username, password, remember: true }),
-            })
-          : await fetch(mode === "signup" ? "/api/studio/signup" : "/api/studio/login", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email, name, password }),
-            });
+      const r = await fetch(mode === "signup" ? "/api/studio/signup" : "/api/studio/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, password }),
+      });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
         setMsg(d.error || "That didn't work — check the details and try again.");
@@ -64,27 +56,16 @@ export function StudioAuth() {
       <div className="mb-5 flex flex-wrap gap-1.5">
         {tab("signup", "Create free account")}
         {tab("signin", "Sign in")}
-        {tab("portal", "CFBA portal login")}
       </div>
 
-      {mode === "portal" ? (
+      <label className="label" htmlFor="st-email">Email</label>
+      <input id="st-email" type="email" className="field" autoComplete="email"
+        value={email} onChange={(e) => setEmail(e.target.value)} />
+      {mode === "signup" && (
         <>
-          <label className="label" htmlFor="st-user">Portal username</label>
-          <input id="st-user" className="field" autoComplete="username"
-            value={username} onChange={(e) => setUsername(e.target.value)} />
-        </>
-      ) : (
-        <>
-          <label className="label" htmlFor="st-email">Email</label>
-          <input id="st-email" type="email" className="field" autoComplete="email"
-            value={email} onChange={(e) => setEmail(e.target.value)} />
-          {mode === "signup" && (
-            <>
-              <label className="label mt-3" htmlFor="st-name">Name or company <span className="text-ink/40">(optional)</span></label>
-              <input id="st-name" className="field" autoComplete="organization"
-                value={name} onChange={(e) => setName(e.target.value)} />
-            </>
-          )}
+          <label className="label mt-3" htmlFor="st-name">Name or company <span className="text-ink/40">(optional)</span></label>
+          <input id="st-name" className="field" autoComplete="organization"
+            value={name} onChange={(e) => setName(e.target.value)} />
         </>
       )}
 
@@ -102,8 +83,7 @@ export function StudioAuth() {
       <button className="btn mt-5 w-full" disabled={busy}>
         {busy ? "One moment…"
           : mode === "signup" ? "Create account & start drawing"
-          : mode === "signin" ? "Sign in"
-          : "Sign in with my portal login"}
+          : "Sign in"}
       </button>
 
       {mode === "signup" && (
