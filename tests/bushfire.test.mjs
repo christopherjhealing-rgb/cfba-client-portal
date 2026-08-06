@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readBushfire, bushfireKey, inWA, balVerdict } from "../lib/bushfire.mjs";
+import { readBushfire, bushfireKey, inWA, balVerdict, BAL_EXEMPTION } from "../lib/bushfire.mjs";
 
 // ---------------------------------------------------------------------------
 // The verdict — the one thing a coordinate can settle
@@ -70,18 +70,21 @@ test("distance decides first: 6 m or more needs nothing", () => {
   const v = balVerdict({ distance: "far", kind: null, age: null });
   assert.equal(v.tone, "clear");
   assert.match(v.summary, /not required/);
+  assert.equal(v.mondayBal, null); // nothing stamped on the board
 });
 
 test("a shed within 6 m needs its own report, whatever the house's age", () => {
   const v = balVerdict({ distance: "near", kind: "shed", age: "pre2016" });
   assert.equal(v.tone, "action");
   assert.match(v.headline, /own new BAL report/);
+  assert.equal(v.mondayBal, null); // the office sets it off the new report
 });
 
-test("a patio on a pre-2016 house is exempt", () => {
+test("a patio on a pre-2016 house is exempt, stamped with the exemption code", () => {
   const v = balVerdict({ distance: "near", kind: "patio", age: "pre2016" });
   assert.equal(v.tone, "clear");
   assert.match(v.summary, /exempt/);
+  assert.equal(v.mondayBal, BAL_EXEMPTION); // R31BA(1) Item1 (c)
 });
 
 test("a patio on a 2016-or-later house needs the house's BAL evidence", () => {
@@ -90,6 +93,19 @@ test("a patio on a 2016-or-later house needs the house's BAL evidence", () => {
   assert.match(v.detail, /Certificate of Design Compliance/);
   // CFBA never offers to prepare the report.
   assert.match(v.detail, /don't prepare BAL reports/);
+  assert.equal(v.mondayBal, null); // no rating picked yet → nothing to stamp
+});
+
+test("a picked rating is carried to the board and named in the summary", () => {
+  const v = balVerdict({ distance: "near", kind: "patio", age: "post2016", rating: "19" });
+  assert.equal(v.mondayBal, "19");
+  assert.match(v.summary, /rating 19/);
+});
+
+test("a bogus rating is ignored, never stamped", () => {
+  // The dropdown can only offer real labels, but the field must not trust input.
+  const v = balVerdict({ distance: "near", kind: "patio", age: "post2016", rating: "hacked" });
+  assert.equal(v.mondayBal, null);
 });
 
 test("a patio with the house age unknown defers to assessment", () => {

@@ -18,6 +18,12 @@ export const env = {
   // most issued cards, Certified By is filled in by definition.
   certifiedByColumnId: process.env.CERTIFIED_BY_COLUMN_ID || "multiple_person_mm5ed18d",
 
+  // The board's "BAL" status column. The portal stamps it from the client's
+  // own bushfire assessment at lodgement — a rating (LOW/12.5/19/29/40/FZ) for
+  // a patio/carport on a post-2016 house, or the exemption code for a pre-2016
+  // one. Only ever writes labels that already exist on the column.
+  balColumnId: process.env.BAL_COLUMN_ID || "status_10__1",
+
   // The board's PORTAL column — where a job is up to in the client portal.
   // The portal writes every one of these; nothing here is a manual step. The
   // labels are typed onto the board by a person, so their spelling lives here

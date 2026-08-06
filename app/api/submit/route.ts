@@ -10,6 +10,7 @@ import { pageDisabled } from "@/lib/pages";
 import { listLibrary, libraryPath, type LibraryDoc } from "@/lib/library";
 import { notifyTeams } from "@/lib/teams";
 import { lodgeAmendment, AMENDMENT_OPEN } from "@/lib/amendments";
+import { BAL_LABELS } from "@/lib/bushfire.mjs";
 
 const OFFLINE = {
   error: "This section is temporarily offline while we make updates — please try again shortly.",
@@ -166,6 +167,20 @@ async function stashItems(id: string, items: unknown): Promise<void> {
   catch { /* a lost convenience must never fail a lodgement */ }
 }
 
+/** The BAL column label to stamp on the card, from the client's assessment —
+ *  whitelisted to the board's real options so a request can never mint an
+ *  arbitrary label (create_labels_if_missing is on for card creation). Stashed
+ *  migration-free; acceptSubmission reads it when it builds the card. */
+function validBal(x: unknown): string | null {
+  const s = String(x ?? "").trim();
+  return BAL_LABELS.includes(s) ? s : null;
+}
+async function stashBal(id: string, bal: string | null): Promise<void> {
+  if (!bal) return;
+  try { await repo.setSetting(`bal:${id}`, { bal }); }
+  catch { /* a lost nicety must never fail a lodgement */ }
+}
+
 /** Ticked "My documents" entries, resolved against the caller's OWN library —
  *  an id that isn't in their index simply doesn't exist here, whatever the
  *  request claims. Bytes come back in memory so the documents lodge exactly
@@ -250,6 +265,7 @@ async function handle(req: Request) {
   const notes = String(form.get("notes") || "").trim().slice(0, 4000);
   const clientRef = String(form.get("clientRef") || "").trim().slice(0, 60);
   const contact = String(form.get("contact") || "").trim().slice(0, 80);
+  const bal = validBal(form.get("bal"));
   const amendmentOf = tidyAddress(String(form.get("amendmentOf") || "")) || null;
   if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
     return NextResponse.json(OFFLINE, { status: 503 });
@@ -328,7 +344,7 @@ async function handle(req: Request) {
     createdAt: new Date().toISOString(),
     amendmentOf,
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
-  if (!amendmentOf) await stashItems(id, said.items);
+  if (!amendmentOf) { await stashItems(id, said.items); await stashBal(id, bal); }
 
   const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
   return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });
@@ -350,6 +366,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const notes = String(body.notes || "").trim().slice(0, 4000);
   const clientRef = String(body.clientRef || "").trim().slice(0, 60);
   const contact = String(body.contact || "").trim().slice(0, 80);
+  const bal = validBal(body.bal);
   const amendmentOf = tidyAddress(String(body.amendmentOf || "")) || null;
   if (await pageDisabled(amendmentOf ? "amend" : "submit")) {
     return NextResponse.json(OFFLINE, { status: 503 });
@@ -444,7 +461,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     createdAt: new Date().toISOString(),
     amendmentOf,
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
-  if (!amendmentOf) await stashItems(id, said.items);
+  if (!amendmentOf) { await stashItems(id, said.items); await stashBal(id, bal); }
 
   const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
   return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });

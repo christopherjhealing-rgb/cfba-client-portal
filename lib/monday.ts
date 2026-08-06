@@ -30,6 +30,9 @@ const COL = {
   // every rung of it; see lib/core.mjs. Not the main Status column, which
   // tracks the assessment, and no longer the old "Send?" / "Job Sent" pair.
   portal: env.portalColumnId,
+  // "BAL" — the bushfire attack level (or the exemption code). Set from the
+  // client's own assessment at lodgement, when they've worked it out.
+  bal: env.balColumnId,
 };
 
 async function gql<T = Record<string, unknown>>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -279,7 +282,8 @@ export async function listActive(): Promise<MondayCard[]> {
 
 /** Create a card from an accepted submission. Returns the new item id. */
 export async function createCard(input: {
-  address: string; clientName: string; email: string; description: string; jobClass?: string;
+  address: string; clientName: string; email: string; description: string;
+  jobClass?: string; bal?: string;
 }): Promise<string> {
   if (!MONDAY_READY) return "demo-" + Math.random().toString(36).slice(2, 8);
   const values: Record<string, unknown> = {
@@ -296,6 +300,10 @@ export async function createCard(input: {
   // Set the Class column from the client's selection. create_labels_if_missing
   // means an unseen label (e.g. a new CBC variant) is added rather than erroring.
   if (input.jobClass) values[COL.class] = { label: input.jobClass };
+  // The BAL column, from the client's bushfire assessment. The value is
+  // whitelisted at the route to labels that already exist on the column, so
+  // create_labels_if_missing never mints a new one here.
+  if (input.bal) values[COL.bal] = { label: input.bal };
 
   const q = `
     mutation ($board: ID!, $group: String!, $name: String!, $vals: JSON!) {

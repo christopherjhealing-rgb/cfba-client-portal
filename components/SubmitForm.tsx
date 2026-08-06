@@ -42,8 +42,10 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   const [saveEng, setSaveEng] = useState(false);
   const [saveLabel, setSaveLabel] = useState("");
   const [bushfireProne, setBushfireProne] = useState(false);
-  // The one-line BAL conclusion from the assessment, filed with the lodgement.
+  // The BAL assessment's conclusion: a one-line summary for the office notes,
+  // and the BAL column label to stamp on the Monday card.
   const [bushfireSummary, setBushfireSummary] = useState<string | null>(null);
+  const [bushfireBal, setBushfireBal] = useState<string | null>(null);
 
   // The company's saved documents (see My details). A failed fetch just means
   // no tick-list — the form works exactly as before.
@@ -63,6 +65,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   useEffect(() => {
     setBushfireProne(false);
     setBushfireSummary(null);
+    setBushfireBal(null);
     if (!GOOGLE_MAPS_KEY) return;
     const text = address.trim();
     // Enough to be worth geocoding: a number and a street, not a half-typed
@@ -137,6 +140,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address, items, notes: notesOut, contact, clientRef,
+          bal: bushfireProne ? bushfireBal : null,
           draftId: up.draftId,
           files: entries.map((x, i) => ({ name: up.names[i], category: x.category })),
           libraryIds: tickedDocs.map((d) => d.id),
@@ -148,6 +152,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       fd.set("address", address);
       fd.set("items", JSON.stringify(items));
       fd.set("notes", notesOut);
+      if (bushfireProne && bushfireBal) fd.set("bal", bushfireBal);
       fd.set("clientRef", clientRef);
       fd.set("contact", contact);
       for (const x of entries) {
@@ -229,7 +234,11 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <AddressField id="address" required autoFocus value={address}
         onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
 
-      {bushfireProne && <BushfireAssessment onSummary={setBushfireSummary} />}
+      {bushfireProne && (
+        <BushfireAssessment
+          onResult={(r) => { setBushfireSummary(r?.summary ?? null); setBushfireBal(r?.bal ?? null); }}
+        />
+      )}
 
       <div className="mt-5">
         <JobItems items={items} onChange={setItems} />
