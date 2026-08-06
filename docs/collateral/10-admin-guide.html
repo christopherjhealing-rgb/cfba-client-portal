@@ -9,8 +9,8 @@
 /* Every .page has to BE one sheet: 1119px at 96dpi. Rhythm only, no copy cut. */
 .content { padding-top: 6.5mm; padding-bottom: 6.5mm; }
 .sec { margin-top: 4.6mm; margin-bottom: 2mm; }
-td, th { padding-top: 1.35mm; padding-bottom: 1.35mm; }
-.check li { padding-top: 0.8mm; padding-bottom: 0.8mm; }
+td, th { padding-top: 1.2mm; padding-bottom: 1.2mm; }
+.check li { padding-top: 0.7mm; padding-bottom: 0.7mm; }
 .steps li { padding-top: 1.4mm; padding-bottom: 1.4mm; }
 .callout { padding-top: 2.6mm; padding-bottom: 2.6mm; }
 p + p { margin-top: 1.7mm; }
@@ -169,10 +169,24 @@ p + p { margin-top: 1.7mm; }
         words. (Sending documents to clients is a future feature.)</li>
     </ul>
 
+    <div class="sec">Weekly two-minute sweep</div>
+    <ul class="check dots">
+      <li>Sync banner green?</li>
+      <li>Unmatched list empty — or matched with one click?</li>
+      <li>Submission queue empty?</li>
+      <li>Ready-to-Download snapshot: anything sitting more than a week? Ring them.</li>
+      <li>Reports: median turnaround still inside the published 3–4 days?</li>
+      <li>Any new Monday status labels created this week? Tell Chris so the portal's wording map
+        stays complete.</li>
+      <li>Amendments page: anything sitting in Waiting more than a couple of days?</li>
+      <li>"Did you mean" notes on cards — someone reaching for a shortcut we don't have?
+        Add it.</li>
+    </ul>
+
   </div>
 
   <div class="foot-light">
-    <span>Page 2 of 3 — reports, records, and the messages rules</span><span>CF Building Approvals</span>
+    <span>Page 2 of 3 — reports, records, messages rules, the weekly sweep</span><span>CF Building Approvals</span>
   </div>
 </div>
 
@@ -184,12 +198,11 @@ p + p { margin-top: 1.7mm; }
         card's <strong>Certified By</strong> column, with the office copied — or Rebecca when
         that column is empty. Chris or Rebecca replies "yes" by email, exactly as before.</li>
       <li>The one new step is Kacie's: watermark and re-issue as usual, then upload the revised
-        certificate on <strong>Admin → Amendments</strong>. With no card there's no SharePoint
-        sync to collect it.</li>
+        certificate on <strong>Admin → Amendments</strong> (no card = no sync to collect it).</li>
       <li>The original card gets <em>one</em> note. No new item, no status, no invoice.</li>
       <li>Set the routing first — <strong>Settings → Amendments</strong>, then
-        <strong>Rebuild Now</strong> on the Amendments page. Until both are done a lodged
-        amendment sits there silently and the client thinks it's with us.</li>
+        <strong>Rebuild Now</strong> on the Amendments page — or a lodged amendment sits
+        silently while the client thinks it's with us.</li>
       <li>Off the board, the board can't notice one going quiet — the 5pm report does. An
         amendment email that isn't yours: say so rather than leaving it.</li>
     </ul>
@@ -206,9 +219,8 @@ p + p { margin-top: 1.7mm; }
         <td>Default on. Set <span class="mono">0</span> to make every lodgement wait in the
         review queue for a human Accept.</td></tr>
       <tr><td><span class="mono">DIGEST_ENABLED</span></td>
-        <td>Default off. Set <span class="mono">1</span> to send every builder a Monday-morning
-        summary of their active jobs, with a "with you" section that chases FIRs
-        automatically.</td></tr>
+        <td>Default off. Set <span class="mono">1</span> for a Monday-morning summary to every
+        builder, its "with you" section chasing FIRs automatically.</td></tr>
       <tr><td><span class="mono">RETENTION_MONTHS</span></td>
         <td>How long downloaded packages stay before the files purge. Currently
         <strong>3</strong>.</td></tr>
@@ -216,25 +228,16 @@ p + p { margin-top: 1.7mm; }
         <td>Where client-reply notifications and correspondence records land. Keep it a
         watched inbox.</td></tr>
       <tr><td><span class="mono">RECORD_EMAIL</span></td>
-        <td>Default off. Set <span class="mono">1</span> to email the office each job's
-        correspondence record on first download — the 7-year file that files itself.</td></tr>
+        <td><strong>On by default.</strong> Emails the office each job's correspondence record
+        on first download — the 7-year file that files itself. Set <span class="mono">0</span>
+        to stop.</td></tr>
+      <tr><td><span class="mono">RECORD_TO_FOLDER</span></td>
+        <td>Default off. Set <span class="mono">1</span> to also file the record into the job's
+        SharePoint Issued folder. Needs Graph write (Sites.ReadWrite.All); the Records test
+        button says if it's missing.</td></tr>
     </table>
     <p class="small muted" style="margin-top:2mm">Changing a Vercel variable does nothing until
     the project is <strong>redeployed</strong> — Deployments → ⋯ → Redeploy.</p>
-
-    <div class="sec">Weekly two-minute sweep</div>
-    <ul class="check dots">
-      <li>Sync banner green?</li>
-      <li>Unmatched list empty — or matched with one click?</li>
-      <li>Submission queue empty?</li>
-      <li>Ready-to-Download snapshot: anything sitting more than a week? Ring them.</li>
-      <li>Reports: median turnaround still inside the published 3–4 days?</li>
-      <li>Any new Monday status labels created this week? Tell Chris so the portal's wording map
-        stays complete.</li>
-      <li>Amendments page: anything sitting in Waiting more than a couple of days?</li>
-      <li>Any "did you mean" notes on cards this week — someone reaching for a shortcut we
-        don't have? Worth adding it.</li>
-    </ul>
 
     <div class="callout" style="margin-top:4mm">
       <strong>The two calendar reminders that matter:</strong> the Microsoft Graph client secret

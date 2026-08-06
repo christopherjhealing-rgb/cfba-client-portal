@@ -1,6 +1,6 @@
 import { env } from "./env";
 import { sendMail, recordEmail, fitAttachments, type MailAttachment } from "./mail";
-import { buildRecord } from "./record-build";
+import { buildRecord, type BuiltRecord } from "./record-build";
 import * as repo from "./repo";
 
 /**
@@ -27,7 +27,7 @@ import * as repo from "./repo";
  */
 export async function mailJobRecord(
   ref: string,
-  opts: { force?: boolean } = {}
+  opts: { force?: boolean; prebuilt?: BuiltRecord | null } = {}
 ): Promise<"sent" | "no-messages" | "off" | "no-mailbox" | "failed"> {
   // `force` is the test-send from /admin/records. It ignores the on/off switch
   // so the thing can be tried before it is switched on, and nothing else — a
@@ -36,7 +36,10 @@ export async function mailJobRecord(
   if (!opts.force && !env.recordEmailEnabled) return "off";
   if (!env.officeEmail) return "no-mailbox";
 
-  const built = await buildRecord(ref);
+  // `prebuilt` lets the download route build the record once and hand it to
+  // both this and the folder copy, instead of pulling every attachment out of
+  // storage twice.
+  const built = opts.prebuilt ?? (await buildRecord(ref));
   if (!built) return "failed";
   // Nothing was ever said on this job. Nothing to file.
   if (built.transcript.count === 0) return "no-messages";

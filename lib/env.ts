@@ -89,6 +89,12 @@ export const env = {
   // whole point, and a job with no correspondence sends nothing anyway. Set
   // RECORD_EMAIL=0 to stop it.
   recordEmailEnabled: process.env.RECORD_EMAIL !== "0",
+  // Also file that record back into the job's SharePoint Issued folder — the
+  // record lives beside the certified documents it belongs to. OFF by default:
+  // it writes into the document library, so it's switched on deliberately, and
+  // the Graph app needs write permission (Sites.ReadWrite.All) first. Set
+  // RECORD_TO_FOLDER=1 to enable.
+  recordToFolderEnabled: process.env.RECORD_TO_FOLDER === "1",
   turnaroundDays: process.env.TURNAROUND_DAYS || "3-4",
   retentionMonths: Number(process.env.RETENTION_MONTHS || "3"),
   // Minutes a card must sit at Issued before the portal pulls files and

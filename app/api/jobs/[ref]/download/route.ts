@@ -4,6 +4,8 @@ import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
 import { notifyTeams } from "@/lib/teams";
 import { mailJobRecord } from "@/lib/record-mail";
+import { fileJobRecord } from "@/lib/record-file";
+import { buildRecord } from "@/lib/record-build";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -102,16 +104,23 @@ export async function GET(
     // The file copy. A client collecting their package is the moment a job is
     // finished in every sense that matters, so the seven-year record of the
     // correspondence goes to the office now rather than waiting for somebody
-    // to remember. A job with nothing said on it sends nothing.
+    // to remember — emailed to the office, and (when RECORD_TO_FOLDER is on)
+    // filed back into the job's own Issued folder beside the certified
+    // documents. Built once, handed to both. A job with nothing said on it
+    // sends and files nothing.
     //
     // Wrapped, like everything else below: the zip is already built and the
-    // client is mid-download. A mailbox that's down is the office's problem to
-    // read in the log, never the client's to meet at the Download button.
+    // client is mid-download. A mailbox or library that's down is the office's
+    // problem to read in the log, never the client's to meet at the Download
+    // button.
     try {
-      const r = await mailJobRecord(ref);
+      const built = await buildRecord(ref);
+      const r = await mailJobRecord(ref, { prebuilt: built });
       if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
+      const f = await fileJobRecord(ref, { prebuilt: built });
+      if (f === "failed") console.warn(`download ${ref}: correspondence record not filed to SharePoint`);
     } catch (e) {
-      console.warn(`download ${ref}: correspondence record not emailed —`, (e as Error).message);
+      console.warn(`download ${ref}: correspondence record not kept —`, (e as Error).message);
     }
 
     // First download only. Off by default: it's the one notification here that

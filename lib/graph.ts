@@ -229,6 +229,61 @@ export async function downloadFile(f: RemoteFile): Promise<Buffer> {
   return Buffer.from(await r.arrayBuffer());
 }
 
+/** Upload a file into a folder, addressed by its path relative to the
+ *  client-files root (the shape job.sourceFolder holds).
+ *
+ *  Always an upload session, never the simple PUT: the simple route caps at
+ *  4 MB and a correspondence record carrying the client's drawings routinely
+ *  exceeds it. Chunks must be multiples of 320 KiB — 10 MiB is 32 of them.
+ *  Same-name uploads replace, so a re-run files the fresher snapshot rather
+ *  than littering the folder with copies.
+ *
+ *  Needs write permission (Sites.ReadWrite.All or Files.ReadWrite.All) on the
+ *  Graph app — a 403 here means the registration only has read. */
+export async function uploadFile(
+  relFolder: string,
+  filename: string,
+  bytes: Buffer
+): Promise<void> {
+  const parts = [env.clientFilesRoot, ...relFolder.split("/"), filename]
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join("/");
+  const r = await fetch(
+    `${GRAPH}/drives/${env.graphDriveId}/root:/${parts}:/createUploadSession`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${await token()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        item: { "@microsoft.graph.conflictBehavior": "replace" },
+      }),
+    }
+  );
+  if (!r.ok) throw new Error(`Upload session ${filename} -> ${r.status} ${await r.text()}`);
+  const uploadUrl = String((await r.json()).uploadUrl || "");
+  if (!uploadUrl) throw new Error(`Upload session ${filename} -> no uploadUrl`);
+
+  const CHUNK = 32 * 320 * 1024; // 10 MiB, a legal multiple of 320 KiB
+  for (let start = 0; start < bytes.length; start += CHUNK) {
+    const end = Math.min(start + CHUNK, bytes.length);
+    const piece = bytes.subarray(start, end);
+    // The session URL is pre-authenticated — no bearer header, same as the
+    // pre-signed download links above.
+    const put = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Length": String(piece.length),
+        "Content-Range": `bytes ${start}-${end - 1}/${bytes.length}`,
+      },
+      body: new Uint8Array(piece),
+    });
+    if (!put.ok) throw new Error(`Upload ${filename} chunk @${start} -> ${put.status} ${await put.text()}`);
+  }
+}
+
 // --- Diagnostics -----------------------------------------------------------
 // Used only by the staff SharePoint check in /admin. These answer "what can
 // the portal actually see", which an empty file list never could.

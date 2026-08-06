@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isStaff } from "@/lib/session";
 import { env } from "@/lib/env";
 import { mailJobRecord } from "@/lib/record-mail";
+import { fileJobRecord } from "@/lib/record-file";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,8 +35,24 @@ export async function POST(
       off: "Correspondence records are switched off (RECORD_EMAIL=0).",
       failed: "The record was built but the mailbox wouldn't take it — check the Graph mail credentials.",
     };
+    // The SharePoint copy, when it's switched on. Deliberately NOT forced past
+    // its flag: a test that writes into the document library before the office
+    // has opted in isn't a test, it's a surprise. Flag on → the button proves
+    // the whole path, write permission included.
+    let message = said[r] || r;
+    if (env.recordToFolderEnabled) {
+      const f = await fileJobRecord(ref);
+      const filed: Record<string, string> = {
+        filed: "Also filed into the job's SharePoint Issued folder.",
+        "no-folder": "Not filed to SharePoint — this job has no recorded source folder (it will after its next sync).",
+        "no-messages": "",
+        failed: "Not filed to SharePoint — check the Graph app has write permission (Sites.ReadWrite.All).",
+        off: "",
+      };
+      if (filed[f]) message += ` ${filed[f]}`;
+    }
     return NextResponse.json(
-      { ok: r === "sent", result: r, message: said[r] || r },
+      { ok: r === "sent", result: r, message },
       { status: r === "sent" ? 200 : 409 }
     );
   } catch (e) {
