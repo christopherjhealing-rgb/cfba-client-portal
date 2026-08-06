@@ -54,6 +54,14 @@ export default async function AdminHome() {
   const lastReport = await repo.getSetting<{ at?: string; ok?: boolean; error?: string }>(
     "last_report").catch(() => null);
 
+  // Emails that failed to send in the last week. Quiet when there are none —
+  // the log page always exists, the banner only when something needs a human.
+  const sendLog = await repo.listSendLog().catch(() => []);
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const emailFails = sendLog.filter(
+    (e) => !e.ok && Number.isFinite(Date.parse(e.at)) && Date.parse(e.at) > weekAgo
+  ).length;
+
   const reportHealthy = !!(env.dailyReportEnabled && env.officeEmail
     && process.env.CRON_SECRET && lastReport?.ok);
   const reportNote = !env.dailyReportEnabled ? "switched off."
@@ -74,8 +82,18 @@ export default async function AdminHome() {
         <div className="mb-6 flex flex-wrap justify-end gap-2">
           <Link href="/admin/reports" className="btn-ghost">Turnaround Reports</Link>
           <Link href="/admin/audit" className="btn-ghost">Activity Log</Link>
+          <Link href="/admin/emails" className="btn-ghost">Email Log</Link>
           <SyncButton />
         </div>
+
+        {emailFails > 0 && (
+          <Link href="/admin/emails"
+            className="mb-6 block rounded-lg border border-flag/40 bg-[#FBECEC] px-4 py-3 text-[13px] text-ink/80 transition hover:border-flag">
+            <strong>{emailFails}</strong> email{emailFails === 1 ? "" : "s"} failed to
+            send in the last week — a client may not know their job is ready.{" "}
+            <span className="text-seal underline">Open the Email Log →</span>
+          </Link>
+        )}
 
         {/* One line here, the controls on Settings. Worth keeping in sight
             because a report that has stopped sending is invisible by nature. */}

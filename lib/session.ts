@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { env, DEMO_MODE } from "./env";
+import * as repo from "./repo";
 
 const secret = new TextEncoder().encode(env.authSecret);
 const CLIENT_COOKIE = "cfba_session";
@@ -53,6 +54,42 @@ export async function setClientSession(s: ClientSession, hours = 24 * 30) {
   });
 }
 
+/**
+ * Whether a login has been disabled (or deleted) since its session was signed.
+ *
+ * A session is a signed cookie that can outlive its login by thirty days, and
+ * the team screen exists precisely to lock out someone who has left — a
+ * disable that only bites at the NEXT sign-in would miss the one person it's
+ * for. Cached per instance for a minute so the check doesn't add a database
+ * read to literally every request; the cache is dropped for a username the
+ * moment this instance disables it.
+ *
+ * Fails OPEN on a read error: a database hiccup must sign nobody out. It only
+ * ends a session on a definite "disabled" or "gone".
+ */
+const liveness = new Map<string, { at: number; dead: boolean }>();
+const LIVENESS_TTL_MS = 60_000;
+
+async function loginDead(username: string): Promise<boolean> {
+  const hit = liveness.get(username);
+  if (hit && Date.now() - hit.at < LIVENESS_TTL_MS) return hit.dead;
+  let dead = false;
+  try {
+    const login = await repo.getLogin(username);
+    dead = !login || login.disabled;
+  } catch {
+    dead = false;
+  }
+  liveness.set(username, { at: Date.now(), dead });
+  return dead;
+}
+
+/** Make a just-disabled login bite immediately on this instance, rather than
+ *  up to a minute later. Other serverless instances converge within the TTL. */
+export function forgetLoginLiveness(username: string) {
+  liveness.delete(username);
+}
+
 export async function getClientSession(): Promise<ClientSession | null> {
   assertSecret();
   const c = (await cookies()).get(CLIENT_COOKIE)?.value;
@@ -60,13 +97,16 @@ export async function getClientSession(): Promise<ClientSession | null> {
   try {
     const { payload } = await jwtVerify(c, secret);
     if (payload.kind !== "client") return null;
-    return {
+    const s: ClientSession = {
       companyId: String(payload.companyId),
       companyName: String(payload.companyName),
       username: String(payload.username || ""),
       displayName: payload.displayName ? String(payload.displayName) : undefined,
       impersonated: !!payload.impersonated,
     };
+    // An impersonated session is a staff member, not the login itself.
+    if (s.username && !s.impersonated && (await loginDead(s.username))) return null;
+    return s;
   } catch {
     return null;
   }

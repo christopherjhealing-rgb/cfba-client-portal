@@ -6,6 +6,7 @@ import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { Icon } from "@/components/Icon";
 import { LibraryManager } from "@/components/LibraryManager";
+import { TeamLogins, type TeamLogin } from "@/components/TeamLogins";
 import { listLibrary } from "@/lib/library";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +17,31 @@ export default async function Details() {
   // In parallel, and each caught: a hiccup reading the document library — a
   // portal_settings read — should not 500 the whole My Details page. The other
   // client pages that touch these already catch; this one was the exception.
-  const [unread, company, jobs, docs, hidden] = await Promise.all([
+  const [unread, company, jobs, docs, logins, hidden] = await Promise.all([
     unreadCount(session.companyId).catch(() => 0),
     repo.companyById(session.companyId).catch(() => null),
     repo.listJobsForCompany(session.companyId).catch(() => []),
     listLibrary(session.companyId).catch(() => []),
+    repo.listLoginsForCompany(session.companyId).catch(() => []),
     disabledPages(),
   ]);
   const jobCount = jobs.length;
+
+  // Whitelisted BEFORE crossing to the client component — a Login row carries
+  // password and setup-code hashes, and component props end up in the page
+  // payload. You first, then active, then disabled.
+  const team: TeamLogin[] = logins
+    .map((l) => ({
+      username: l.username,
+      displayName: l.displayName || "",
+      lastLoginAt: l.lastLoginAt,
+      disabled: l.disabled,
+      you: l.username === session.username,
+    }))
+    .sort((a, b) =>
+      Number(b.you) - Number(a.you)
+      || Number(a.disabled) - Number(b.disabled)
+      || a.username.localeCompare(b.username));
 
   return (
     <AppShell company={session.companyName} impersonated={session.impersonated} unread={unread} hidden={hiddenHrefs(hidden)}>
@@ -38,6 +56,8 @@ export default async function Details() {
       </div>
 
       <LibraryManager initial={docs} />
+
+      {team.length > 0 && <TeamLogins logins={team} readonly={session.impersonated} />}
 
       {/* Read-only on purpose: Monday is the master record, and a client
           editing their own email here would silently break job matching. */}
