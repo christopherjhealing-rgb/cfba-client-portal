@@ -142,16 +142,16 @@ export const env = {
   // job is lodged at an address inside a designated bushfire-prone area.
   //
   // OFF until BUSHFIRE_ENABLED=1 — the one switch. The URL below is the DFES
-  // Bush Fire Prone Areas feature service on SLIP (layer 0, the same
-  // SLIP_Public_Services family as the cadastre). It has NOT been called from
-  // this build — SLIP is unreachable from CI — so it is confirmed live on
-  // Vercel, and stays an env override so a wrong layer is a Vercel setting away
-  // from right, never a code change. This flags the ZONE only (whether a BAL
-  // assessment is on the table); it can never give the BAL rating, which is a
-  // site assessment.
+  // "Bush Fire Prone Area Planning" layer (OBRM-023, layer 3 of the SLIP FS
+  // service): the map that carries BOTH designation categories — Area 1 and
+  // Area 2 — and the one CFBA checks an address against. Layer 0 (OBRM-001)
+  // was tried first and proved to hold Area 2 but not Area 1, so it missed
+  // genuinely prone lots. Stays an env override so a different layer is a
+  // Vercel setting away, never a code change. This flags the ZONE only
+  // (whether a BAL is on the table); it can never give the BAL rating.
   bushfireEnabled: process.env.BUSHFIRE_ENABLED === "1",
   bushfireUrl: process.env.BUSHFIRE_URL ||
-    "https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/0",
+    "https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/3",
   // Server-side only, like the cadastre token. Never NEXT_PUBLIC_.
   bushfireToken: process.env.BUSHFIRE_TOKEN || "",
   bushfireSource: process.env.BUSHFIRE_SOURCE_NAME || "DFES Bush Fire Prone Areas (SLIP)",

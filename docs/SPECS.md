@@ -291,11 +291,19 @@ address decides.
   never blocks a lodgement.
 
 **OFF until `BUSHFIRE_ENABLED=1` — the one switch.** The default `BUSHFIRE_URL`
-is the DFES Bush Fire Prone Areas feature service on SLIP:
+is the DFES "Bush Fire Prone Area Planning" layer (OBRM-023, layer **3**) of the
+SLIP feature service:
 
 ```
-https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/0
+https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/3
 ```
+
+Layer 3 carries **both** designation categories — Area 1 and Area 2 — and is the
+map CFBA checks an address against. Layer 0 (OBRM-001) was tried first and holds
+Area 2 but not Area 1, so it missed genuinely prone lots (a Tapping address in
+Area 1 didn't flag; a Carmel address in Area 2 did). The cache key includes the
+layer number, so repointing `BUSHFIRE_URL` re-queries rather than serving the
+old layer's verdict for a point already looked up.
 
 It is baked in but **unverified from CI** (SLIP is unreachable from the build —
 every call 403s at the egress proxy), and it stays an env override, so a wrong

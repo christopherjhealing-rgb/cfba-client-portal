@@ -17,6 +17,7 @@
 import { NextResponse } from "next/server";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
+import { env } from "@/lib/env";
 import { inWA, bushfireKey, readBushfire } from "@/lib/bushfire.mjs";
 import { BUSHFIRE_READY, fetchBushfire } from "@/lib/bushfire-source";
 
@@ -58,8 +59,11 @@ export async function GET(req: Request) {
       );
     }
 
-    // Cache first, always — one lookup per lot, whoever asks.
-    const key = bushfireKey(lat, lng);
+    // Cache first, always — one lookup per lot, whoever asks. Keyed by the
+    // layer as well as the point, so repointing BUSHFIRE_URL to another
+    // designation layer re-queries rather than serving the old layer's answer.
+    const layer = env.bushfireUrl.match(/\/(\d+)\/*(?:\?.*)?$/)?.[1] ?? "x";
+    const key = bushfireKey(lat, lng, layer);
     const hit = await repo.getSetting<Cached>(key).catch(() => null);
     if (hit && typeof hit.prone === "boolean" && fresh(hit)) {
       return NextResponse.json({ checked: true, prone: hit.prone, cached: true });
