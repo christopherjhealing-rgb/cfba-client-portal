@@ -445,6 +445,10 @@ export function SitePlanBuilder(
   /** Show the patio elevations on screen (they otherwise only appear when you
    *  print). Studio only. */
   const [showElevations, setShowElevations] = useState(false);
+  /** On-screen magnification of the canvas, for working up close. 1 is
+   *  fit-to-width; above that the canvas overflows into a scrollable pane.
+   *  Screen only — the printed sheet is always the true-scale drawing. */
+  const [zoom, setZoom] = useState(1);
   const [today, setToday] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
@@ -3852,8 +3856,30 @@ export function SitePlanBuilder(
               )}
             </div>
           )}
+          {/* Zoom, for working up close — resizing a small structure is far
+              easier magnified. Fit (100%) is the resting state; above it the
+              canvas overflows into the scroll pane below. Never affects the
+              print, which is always the true-scale drawing. */}
+          <div className="mb-2 flex items-center justify-end gap-1.5 text-ink/55">
+            <span className="text-[11px] uppercase tracking-[0.12em]">Zoom</span>
+            <button type="button" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(1, Math.round((z / 1.5) * 100) / 100))}
+              disabled={zoom <= 1}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-rule bg-white text-ink transition hover:bg-wash disabled:opacity-40">−</button>
+            <span className="w-12 text-center font-mono text-[12px] text-ink/70">{Math.round(zoom * 100)}%</span>
+            <button type="button" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(4, Math.round((z * 1.5) * 100) / 100))}
+              disabled={zoom >= 4}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-rule bg-white text-ink transition hover:bg-wash disabled:opacity-40">+</button>
+            {zoom > 1 && (
+              <button type="button" onClick={() => setZoom(1)}
+                className="ml-1 rounded-md border border-rule bg-white px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink transition hover:bg-wash">Fit</button>
+            )}
+          </div>
+          <div className="overflow-auto" style={zoom > 1 ? { maxHeight: "78vh" } : undefined}>
           <div ref={canvasRef} tabIndex={0} onKeyDown={onKeyDown} aria-label="Site plan drawing area"
-            className="relative mx-auto select-none rounded-md" style={{ maxWidth: `${maxCanvasPx}px` }}>
+            className="relative mx-auto select-none rounded-md"
+            style={zoom > 1
+              ? { width: `${Math.round(maxCanvasPx * zoom)}px`, maxWidth: "none" }
+              : { maxWidth: `${maxCanvasPx}px` }}>
             {/* The aerial, behind everything and clipped to the canvas. Marked
                 out for the print stylesheet twice over: it is off the printed
                 sheet's ancestor path, and cfba-underlay is struck out
@@ -3940,6 +3966,7 @@ export function SitePlanBuilder(
                 onPointerCancel={planUp}
               />
             )}
+          </div>
           </div>
           {/* Google draws its own logo and imagery credit inside the map, and
               we never cover or strip them. This line sits outside the canvas
