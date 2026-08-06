@@ -2518,7 +2518,14 @@ export function SitePlanBuilder(
           <div className="grid grid-cols-3 gap-1.5">
             {(["flat", "skillion", "gable"] as const).map((rf) => (
               <button key={rf} type="button" aria-pressed={p.roof === rf}
-                onClick={() => patchPatio(s.id, { roof: rf })}
+                onClick={() => patchPatio(s.id, {
+                  roof: rf,
+                  // A sensible starting pitch when moving off flat, and a
+                  // shallow one moving back to flat — only when the current
+                  // pitch is the other type's default, never a value set by hand.
+                  ...(rf !== "flat" && p.pitch < 3 ? { pitch: rf === "gable" ? 15 : 5 } : {}),
+                  ...(rf === "flat" && p.pitch > 5 ? { pitch: 2 } : {}),
+                })}
                 className={`min-h-[40px] rounded-md border px-1 py-2 font-display text-[11.5px] font-semibold capitalize transition ${
                   p.roof === rf ? "border-seal bg-white text-seal" : "border-rule bg-white text-ink/60 hover:bg-white"
                 }`}>
@@ -2754,6 +2761,11 @@ export function SitePlanBuilder(
           {/* roof */}
           <polyline points={roofPts.map(([x, h]) => `${x},${Y(h)}`).join(" ")}
             fill="none" stroke={SEAL} strokeWidth={em(0.6)} strokeLinejoin="round" strokeLinecap="round" />
+          {/* roof pitch, called out above the roof */}
+          <text x={W / 2} y={Y(e.ridge ?? e.high) - em(1.5)} textAnchor="middle"
+            fontFamily={FONT_LAB} fontWeight={600} fontSize={em(2.2)} fill={ROOF_INK}>
+            {fmtM(e.pitch)}° pitch
+          </text>
           {/* width dimension, under the ground line */}
           <g fontFamily={FONT_NUM} fontSize={em(2.4)} fill={INK} fillOpacity={0.75}>
             <line x1={0} y1={gy + M * 0.75} x2={W} y2={gy + M * 0.75} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.2)} />
@@ -2762,16 +2774,25 @@ export function SitePlanBuilder(
             ))}
             <text x={W / 2} y={gy + M * 1.45} textAnchor="middle">{fmtM(e.width)} m</text>
           </g>
-          {/* eave and high/ridge heights, either side */}
-          <g fontFamily={FONT_NUM} fontSize={em(2.3)} fill={INK} fillOpacity={0.7}>
+          {/* heights: the post (eave) height, and the ridge (gable) or high
+              side (skillion) — the figures a builder checks against the fascia. */}
+          <g fontFamily={FONT_NUM} fontSize={em(2.2)} fill={INK} fillOpacity={0.75}>
             <line x1={-M * 0.5} y1={gy} x2={-M * 0.5} y2={Y(e.eave)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
-            <text transform={`translate(${-M * 0.7} ${Y(e.eave / 2)}) rotate(-90)`} textAnchor="middle">{fmtM(e.eave)} m</text>
-            {topRef > e.eave + 0.001 && (
+            <text transform={`translate(${-M * 0.72} ${Y(e.eave / 2)}) rotate(-90)`} textAnchor="middle">
+              Post {fmtM(e.eave)} m
+            </text>
+            {e.roof === "gable" && e.ridge !== null ? (
+              <text x={W / 2 + em(1.6)} y={Y(e.ridge) + em(2.2)} textAnchor="start">
+                Ridge {fmtM(e.ridge)} m
+              </text>
+            ) : e.high > e.eave + 0.001 ? (
               <>
-                <line x1={W + M * 0.5} y1={gy} x2={W + M * 0.5} y2={Y(topRef)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
-                <text transform={`translate(${W + M * 0.72} ${Y(topRef / 2)}) rotate(-90)`} textAnchor="middle">{fmtM(topRef)} m</text>
+                <line x1={W + M * 0.5} y1={gy} x2={W + M * 0.5} y2={Y(e.high)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
+                <text transform={`translate(${W + M * 0.72} ${Y(e.high / 2)}) rotate(-90)`} textAnchor="middle">
+                  High {fmtM(e.high)} m
+                </text>
               </>
-            )}
+            ) : null}
           </g>
         </svg>
       </div>
