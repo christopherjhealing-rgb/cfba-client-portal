@@ -146,3 +146,62 @@ body {
   .chip { transition: transform 0.15s ease; }
   a:hover .chip, a:active .chip { transform: translateY(-1px); }
 }
+
+/* ===========================================================================
+   Site Plan Studio — the CDC-checklist look.
+
+   Scoped entirely under .studio-chrome (the studio layout's root), so the
+   certifier portal keeps its own styling untouched. Borrows the checklist's
+   palette and feel — warm paper, a deep-green hero with a lime eyebrow,
+   rounded white cards, serif titles — but carries none of the CF Building
+   Approvals identity. The drawing canvas and the printed A4 sheet are never
+   restyled: that is the true-scale document and it stays exactly as it is.
+   =========================================================================== */
+.studio-chrome {
+  --sp-paper: #F1F3EC;
+  --sp-panel: #ECEFE4;
+  --sp-rule:  #CFD3C5;
+  --sp-band:  #0F2418;
+  --sp-band2: #183422;
+  --sp-lime:  #A9C83D;
+  --sp-ink:   #17201A;
+  --sp-faint: #6C776E;
+  background: var(--sp-paper);
+}
+
+/* Warm paper instead of the portal's cool wash, and no green corner glows. */
+.studio-chrome, body:has(.studio-chrome) { background: var(--sp-paper) !important; }
+
+/* The hero band. */
+.studio-hero { background: var(--sp-band); border-bottom: 1px solid rgba(169, 200, 61, 0.35); }
+.studio-eyebrow {
+  margin: 0 0 6px; color: var(--sp-lime); font-family: theme(fontFamily.mono);
+  font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.studio-wordmark {
+  font-family: Georgia, "Times New Roman", serif; font-size: 25px; font-weight: 600;
+  letter-spacing: -0.01em; color: #fff; line-height: 1;
+}
+/* Serif page titles, echoing the checklist's headings. */
+.studio-title { font-family: Georgia, "Times New Roman", serif; font-weight: 600; letter-spacing: -0.01em; }
+
+/* Rounded cards with the checklist's rule tone and a quieter shadow. */
+.studio-chrome .card {
+  border-radius: 14px; border-color: var(--sp-rule);
+  box-shadow: 0 1px 2px rgba(16, 26, 21, 0.05);
+}
+.studio-chrome .card:hover, .studio-chrome a.card:hover { transform: none; }
+.studio-chrome .sectionhead { color: #3D443F; }
+.studio-chrome .field { border-radius: 10px; }
+.studio-chrome .field:focus { transform: none; }
+
+/* The editor toolbar: a segmented row of menus on a panel-tinted card. */
+.studio-toolbar {
+  border: 1px solid var(--sp-rule); background: var(--sp-panel); border-radius: 12px;
+}
+.studio-tab {
+  border-radius: 8px; font-family: theme(fontFamily.display); font-weight: 600;
+  font-size: 13px; color: var(--sp-ink); transition: background 0.15s ease, color 0.15s ease;
+}
+.studio-tab:hover { background: rgba(255, 255, 255, 0.7); }
+.studio-tab[aria-pressed="true"] { background: var(--sp-band); color: #fff; }

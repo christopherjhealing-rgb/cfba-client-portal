@@ -14,11 +14,17 @@ export function StudioAuth() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function go(e: React.FormEvent) {
     e.preventDefault();
+    // Catch a mistyped new password before it ever reaches the server.
+    if (mode === "signup" && password !== confirm) {
+      setMsg("Those two passwords don't match — check and try again.");
+      return;
+    }
     setBusy(true); setMsg(null);
     try {
       const r = await fetch(mode === "signup" ? "/api/studio/signup" : "/api/studio/login", {
@@ -28,7 +34,15 @@ export function StudioAuth() {
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setMsg(d.error || "That didn't work — check the details and try again.");
+        // A 4xx carries a reason worth showing ("password too short", "already
+        // an account"). A 5xx is our problem, not the client's details — say so,
+        // rather than sending them to re-check a form that's fine.
+        setMsg(
+          d.error
+          || (r.status >= 500
+            ? "Something went wrong our end — please try again in a moment."
+            : "That didn't work — check the details and try again."),
+        );
         return;
       }
       window.location.assign("/studio/designs");
@@ -73,6 +87,17 @@ export function StudioAuth() {
       <input id="st-pass" type="password" className="field"
         autoComplete={mode === "signup" ? "new-password" : "current-password"}
         value={password} onChange={(e) => setPassword(e.target.value)} />
+
+      {mode === "signup" && (
+        <>
+          <label className="label mt-3" htmlFor="st-confirm">Confirm password</label>
+          <input id="st-confirm" type="password" className="field" autoComplete="new-password"
+            value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          {confirm.length > 0 && confirm !== password && (
+            <p className="mt-1.5 text-[12px] text-brass-deep">Those don&apos;t match yet.</p>
+          )}
+        </>
+      )}
 
       {msg && (
         <p role="alert" className="mt-3 rounded-md bg-[#FBEBEC] px-3 py-2 text-[13px] text-[#8C2630]">

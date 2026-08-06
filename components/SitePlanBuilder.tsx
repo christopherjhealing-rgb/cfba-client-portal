@@ -442,6 +442,9 @@ export function SitePlanBuilder(
    *  reveals one group of controls at a time). Null is the resting state — the
    *  canvas has the screen to itself. Only ever used when `chrome` is on. */
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  /** Show the patio elevations on screen (they otherwise only appear when you
+   *  print). Studio only. */
+  const [showElevations, setShowElevations] = useState(false);
   const [today, setToday] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
@@ -3111,15 +3114,13 @@ export function SitePlanBuilder(
       { id: "sheet", label: "Sheet" },
     ];
     return (
-      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-rule bg-white p-1.5 shadow-sm">
+      <div className="studio-toolbar mb-4 flex flex-wrap gap-1 p-1.5">
         {items.map((it) => {
           const on = openMenu === it.id;
           return (
             <button key={it.id} type="button" aria-pressed={on}
               onClick={() => setOpenMenu(on ? null : it.id)}
-              className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-md px-3.5 font-display text-[13px] font-semibold transition ${
-                on ? "bg-seal text-white" : "text-ink hover:bg-wash"
-              }`}>
+              className="studio-tab inline-flex min-h-[40px] items-center gap-1.5 px-3.5">
               {it.label}
               <span className={`text-[9px] transition ${on ? "rotate-180" : ""}`}>▾</span>
             </button>
@@ -3710,6 +3711,15 @@ export function SitePlanBuilder(
               <button type="button" className="btn w-full" onClick={() => window.print()}>
                 Print / Save as PDF
               </button>
+              {/* Elevations otherwise only appear on the printout — this shows
+                  them on screen so a patio's roof can be checked without
+                  printing. Studio only, and only once a patio has a roof. */}
+              {patioTools && design.structures.some((s) => s.kind === "patio" && s.patio) && (
+                <button type="button" className="btn-ghost w-full"
+                  onClick={() => setShowElevations((v) => !v)}>
+                  {showElevations ? "Hide the Elevations" : "Preview the Elevations"}
+                </button>
+              )}
               <button type="button" className="btn-ghost w-full"
                 onClick={() => {
                   if (window.confirm("Clear every structure and start this plan again?")) {
@@ -3932,6 +3942,27 @@ export function SitePlanBuilder(
           </p>
         </div>
       </div>
+
+      {/* On-screen elevation preview (studio only). The same sheets the print
+          produces, shown here so a patio's roof can be checked without
+          printing. It sits outside #site-plan-print, so it's hidden on paper —
+          the print set is the source of truth for what actually prints. */}
+      {chrome && showElevations && (() => {
+        const patios = design.structures.filter((s) => s.kind === "patio" && s.patio);
+        if (patios.length === 0) return null;
+        return (
+          <div className="card mt-5 p-4">
+            <h2 className="sectionhead !mb-3">Patio elevations — preview</h2>
+            <div className="space-y-6 overflow-x-auto">
+              {patios.map((s) => patioElevationSheet(s))}
+            </div>
+            <p className="mt-3 text-[12.5px] leading-relaxed text-ink/50">
+              This is exactly what prints after the site plan — one sheet per
+              patio. Nothing here is on the site plan itself.
+            </p>
+          </div>
+        );
+      })()}
 
       {/* The print set. Hidden on screen; the print stylesheet below shows this
           and nothing else. The site plan first, then a patio elevation sheet

@@ -22,7 +22,7 @@ export default async function StudioDesignPage(
           <Link href="/studio/designs" className="text-[13px] text-seal underline">
             ← All plans
           </Link>
-          <h1 className="mt-0.5 truncate font-display text-[20px] font-semibold text-ink">
+          <h1 className="studio-title mt-0.5 truncate text-[22px] text-ink">
             {meta.name}
           </h1>
         </div>
