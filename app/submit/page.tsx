@@ -71,16 +71,52 @@ export default async function SubmitPage({
         title="Lodge a Job"
         sub="Send us the site address and your plans — the job lands straight on our board and appears in your job list."
       />
-      <div className="max-w-2xl">
-        {seedItems && (
-          <div className="mb-5 rounded-lg border border-seal/25 bg-[#EDF3EE] px-4 py-3 text-[13px] leading-relaxed text-ink/75">
-            We&apos;ve carried the work across from your other job to save you
-            re-typing it — <strong>check it, add the new site address, and attach
-            this site&apos;s drawings.</strong> Nothing has been lodged yet.
-          </div>
-        )}
-        <div className="mb-5"><TurnaroundLine /></div>
-        <SubmitForm seedItems={seedItems} />
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
+        <div className="min-w-0">
+          {seedItems && (
+            <div className="mb-5 rounded-lg border border-seal/25 bg-[#EDF3EE] px-4 py-3 text-[13px] leading-relaxed text-ink/75">
+              We&apos;ve carried the work across from your other job to save you
+              re-typing it — <strong>check it, add the new site address, and attach
+              this site&apos;s drawings.</strong> Nothing has been lodged yet.
+            </div>
+          )}
+          <div className="mb-5"><TurnaroundLine /></div>
+          <SubmitForm seedItems={seedItems} />
+        </div>
+
+        <div className="card p-5">
+          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+            How This Works
+          </p>
+          <ol className="mt-3 space-y-3 text-[13px] leading-relaxed text-ink/70">
+            <li>
+              <span className="font-medium text-ink">1. You send us the job.</span>{" "}
+              The site address, the structures being built, and your drawings and
+              engineering.
+            </li>
+            <li>
+              <span className="font-medium text-ink">2. It lands on our board.</span>{" "}
+              Straight away — no re-keying at our end — and it shows at the top of
+              My Jobs the moment you lodge.
+            </li>
+            <li>
+              <span className="font-medium text-ink">3. We assess it.</span>{" "}
+              If we need anything further you&apos;ll get an email, and the request
+              sits on the job — reply and attach it right there.
+            </li>
+            <li>
+              <span className="font-medium text-ink">4. You download the certificate.</span>{" "}
+              When it&apos;s issued we email you, and the whole package is in
+              Downloads.
+            </li>
+          </ol>
+          <p className="mt-4 border-t border-rule pt-4 text-[13px] leading-relaxed text-ink/60">
+            Lodging complete is the single biggest thing that speeds a job up — a
+            job missing drawings or engineering only comes straight back. Not sure
+            what&apos;s needed? Put a note in the box and lodge it anyway; it goes
+            to the assessing surveyor.
+          </p>
+        </div>
       </div>
     </AppShell>
   );

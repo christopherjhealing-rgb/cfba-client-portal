@@ -6,6 +6,7 @@ import * as repo from "@/lib/repo";
 import * as graph from "@/lib/graph";
 import { clientStatusLabel, jobBucket, COLLECT_STATUS_SET } from "@/lib/core.mjs";
 import { StaffShell } from "@/components/StaffShell";
+import { RemoveJob } from "@/components/RemoveJob";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,9 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
                     <span className="chip">{job.mondayStatus || "no status"}</span>
                     <span className="text-[12px] text-ink/45">
                       client sees: “{clientStatusLabel(job.mondayStatus, job.fileCount)}” · {bucket.replace("_", " ")}
+                    </span>
+                    <span className="ml-auto">
+                      <RemoveJob jobRef={job.ref} address={job.address} />
                     </span>
                   </div>
 
