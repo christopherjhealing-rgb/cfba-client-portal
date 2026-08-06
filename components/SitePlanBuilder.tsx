@@ -442,6 +442,9 @@ export function SitePlanBuilder(
    *  reveals one group of controls at a time). Null is the resting state — the
    *  canvas has the screen to itself. Only ever used when `chrome` is on. */
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  /** Show the patio elevations on screen (they otherwise only appear when you
+   *  print). Studio only. */
+  const [showElevations, setShowElevations] = useState(false);
   const [today, setToday] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
@@ -2375,10 +2378,38 @@ export function SitePlanBuilder(
       );
     }
 
+    // The dwelling the patio attaches to: a heavy wall line along the attached
+    // side, and a light strip just outside it standing in for the building, so
+    // the plan shows plainly that this side isn't open — it butts a wall.
+    let wallNode: React.ReactNode = null;
+    if (p.mount === "attached") {
+      const [wa, wb] = SIDE_PAIRS[p.attach];
+      const a = fp[wa], b = fp[wb];
+      const mid = sideMid(p.attach);
+      const out = unit(mid.x - cx, mid.y - cy);
+      const d = 0.5;
+      const strip = [a, b,
+        { x: b.x + out.x * d, y: b.y + out.y * d },
+        { x: a.x + out.x * d, y: a.y + out.y * d }];
+      wallNode = (
+        <g>
+          <polygon points={strip.map((pt) => `${pt.x},${pt.y}`).join(" ")}
+            fill="#ECE8DD" fillOpacity={0.9} stroke={INK} strokeOpacity={0.3} strokeWidth={mm(0.2)} />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={SEAL} strokeWidth={mm(0.9)} strokeLinecap="round" />
+          <text x={mid.x + out.x * (d / 2)} y={mid.y + out.y * (d / 2) + mm(0.8)}
+            textAnchor="middle" fontFamily={FONT_LAB} fontWeight={600} fontSize={mm(1.9)}
+            letterSpacing={mm(0.2)} fill={INK} fillOpacity={0.55} style={halo}>
+            DWELLING
+          </text>
+        </g>
+      );
+    }
+
     const roofWord = p.roof === "skillion" ? "Skillion" : p.roof === "gable" ? "Gable" : "Flat";
     const postSize = Math.max(mm(0.95), 0.08);
     return (
       <g pointerEvents="none">
+        {wallNode}
         {roofGeom}
         {soakNode}
         {dpMarks.map((q, i) => (
@@ -2973,8 +3004,8 @@ export function SitePlanBuilder(
   function lotSetup() {
     return (
       <div className="card mb-5 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="sm:col-span-2 lg:col-span-1">
+        <div className={chrome ? "grid grid-cols-2 gap-3" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
+          <div className={chrome ? "col-span-2" : "sm:col-span-2 lg:col-span-1"}>
             <label className="label">Site Address</label>
             <input className="field" value={design.address} placeholder="e.g. 12 Wandoo Rise, Baldivis"
               onChange={(e) => {
@@ -2987,7 +3018,7 @@ export function SitePlanBuilder(
               onBlur={commitAddress}
               onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
           </div>
-          <div>
+          <div className={chrome ? "col-span-2" : undefined}>
             <label className="label">Street Name (frontage)</label>
             <input className="field" value={street} placeholder="e.g. Wandoo Rise"
               onChange={(e) => {
@@ -3003,7 +3034,7 @@ export function SitePlanBuilder(
               }} />
           </div>
           {isPoly ? (
-            <div className="sm:col-span-2 grid grid-cols-2 gap-2">
+            <div className={chrome ? "col-span-2 grid grid-cols-2 gap-2" : "sm:col-span-2 grid grid-cols-2 gap-2"}>
               <div>
                 <span className="label">Lot Area</span>
                 <p className="font-mono text-[15px] leading-[38px] text-ink">{fmtM(lotArea)} m²</p>
@@ -3083,15 +3114,13 @@ export function SitePlanBuilder(
       { id: "sheet", label: "Sheet" },
     ];
     return (
-      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-rule bg-white p-1.5 shadow-sm">
+      <div className="studio-toolbar mb-4 flex flex-wrap gap-1 p-1.5">
         {items.map((it) => {
           const on = openMenu === it.id;
           return (
             <button key={it.id} type="button" aria-pressed={on}
               onClick={() => setOpenMenu(on ? null : it.id)}
-              className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-md px-3.5 font-display text-[13px] font-semibold transition ${
-                on ? "bg-seal text-white" : "text-ink hover:bg-wash"
-              }`}>
+              className="studio-tab inline-flex min-h-[40px] items-center gap-1.5 px-3.5">
               {it.label}
               <span className={`text-[9px] transition ${on ? "rotate-180" : ""}`}>▾</span>
             </button>
@@ -3109,7 +3138,7 @@ export function SitePlanBuilder(
       {chrome ? studioToolbar() : lotSetup()}
 
       <div className={chrome
-        ? (openMenu ? "grid gap-5 lg:grid-cols-[340px,minmax(0,1fr)]" : "")
+        ? (openMenu ? "grid gap-5 lg:grid-cols-[380px,minmax(0,1fr)]" : "")
         : "grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]"}>
         {/* toolbox + selected structure */}
         <div className={chrome && !openMenu ? "hidden" : "space-y-5"}>
@@ -3682,6 +3711,15 @@ export function SitePlanBuilder(
               <button type="button" className="btn w-full" onClick={() => window.print()}>
                 Print / Save as PDF
               </button>
+              {/* Elevations otherwise only appear on the printout — this shows
+                  them on screen so a patio's roof can be checked without
+                  printing. Studio only, and only once a patio has a roof. */}
+              {patioTools && design.structures.some((s) => s.kind === "patio" && s.patio) && (
+                <button type="button" className="btn-ghost w-full"
+                  onClick={() => setShowElevations((v) => !v)}>
+                  {showElevations ? "Hide the Elevations" : "Preview the Elevations"}
+                </button>
+              )}
               <button type="button" className="btn-ghost w-full"
                 onClick={() => {
                   if (window.confirm("Clear every structure and start this plan again?")) {
@@ -3904,6 +3942,27 @@ export function SitePlanBuilder(
           </p>
         </div>
       </div>
+
+      {/* On-screen elevation preview (studio only). The same sheets the print
+          produces, shown here so a patio's roof can be checked without
+          printing. It sits outside #site-plan-print, so it's hidden on paper —
+          the print set is the source of truth for what actually prints. */}
+      {chrome && showElevations && (() => {
+        const patios = design.structures.filter((s) => s.kind === "patio" && s.patio);
+        if (patios.length === 0) return null;
+        return (
+          <div className="card mt-5 p-4">
+            <h2 className="sectionhead !mb-3">Patio elevations — preview</h2>
+            <div className="space-y-6 overflow-x-auto">
+              {patios.map((s) => patioElevationSheet(s))}
+            </div>
+            <p className="mt-3 text-[12.5px] leading-relaxed text-ink/50">
+              This is exactly what prints after the site plan — one sheet per
+              patio. Nothing here is on the site plan itself.
+            </p>
+          </div>
+        );
+      })()}
 
       {/* The print set. Hidden on screen; the print stylesheet below shows this
           and nothing else. The site plan first, then a patio elevation sheet
