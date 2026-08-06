@@ -3,6 +3,7 @@ import { token as graphToken } from "./graph";
 import { resolveAppUrl } from "./appurl";
 import { rewriteLinks } from "./url.mjs";
 import type { DayActivity } from "./report.mjs";
+import * as repo from "./repo";
 
 const MAIL_READY = Boolean(
   env.graphTenantId && env.graphClientId && env.graphClientSecret && env.mailFrom
@@ -46,13 +47,45 @@ export function fitAttachments(files: MailAttachment[]): {
 
 /** Send as the CFBA mailbox via Microsoft Graph. Requires the app registration
  *  to hold the Mail.Send application permission and MAIL_FROM to be a real
- *  mailbox in the tenant (admin@cfba.com.au). */
+ *  mailbox in the tenant (admin@cfba.com.au).
+ *
+ *  Every attempt with a real recipient is written to the send log, success or
+ *  failure — this is the one choke point all portal email passes through, and
+ *  a bounced "your job is ready" is invisible everywhere else. Behaviour is
+ *  otherwise unchanged: false when unconfigured, throw on a Graph refusal. */
 export async function sendMail(
   to: string[], subject: string, html: string, attachments: MailAttachment[] = []
 ): Promise<boolean> {
   const recipients = to.filter(Boolean);
-  if (!MAIL_READY || recipients.length === 0) return false;
+  if (recipients.length === 0) return false;
 
+  const record = (ok: boolean, error?: string) =>
+    repo.logSend({
+      at: new Date().toISOString(),
+      to: recipients.join(", "),
+      subject,
+      ok,
+      error: error ? error.slice(0, 300) : null,
+    });
+
+  if (!MAIL_READY) {
+    await record(false, "mail isn't configured — Graph credentials or MAIL_FROM missing");
+    return false;
+  }
+
+  try {
+    const sent = await graphSend(recipients, subject, html, attachments);
+    await record(true);
+    return sent;
+  } catch (e) {
+    await record(false, (e as Error).message);
+    throw e;
+  }
+}
+
+async function graphSend(
+  recipients: string[], subject: string, html: string, attachments: MailAttachment[]
+): Promise<boolean> {
   // Last stop before the wire, and the only one every email passes through.
   // The templates embed env.appUrl; if the portal's real address has been set
   // from /admin since this deployment was built, every link is repointed here

@@ -264,6 +264,19 @@ export async function listLogins(): Promise<Login[]> {
   return (data || []).map(rowToLogin);
 }
 
+/** The logins belonging to one company — the client-facing team screen reads
+ *  this. Callers must whitelist before anything leaves the server: a Login
+ *  carries password and setup-code hashes. */
+export async function listLoginsForCompany(companyId: string): Promise<Login[]> {
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    return Object.values(db.logins).filter((l) => l.companyId === companyId);
+  }
+  const { data } = await sb().from("client_logins").select("*")
+    .eq("company_id", companyId).order("username");
+  return (data || []).map(rowToLogin);
+}
+
 export async function createLogin(l: {
   username: string; companyId: string; setupCodeHash: string; setupExpiresAt: string;
   displayName?: string | null;
@@ -703,6 +716,42 @@ export async function logAudit(action: string, target?: string, detail?: string,
 export interface AuditEntry {
   id: number; at: string; actor: string; action: string;
   target: string | null; detail: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// The send log.
+//
+// Every email the portal tries to send, recorded at the one choke point they
+// all pass through (lib/mail sendMail). The point is the failures: a bounced
+// "your job is ready" email is invisible by nature — the client doesn't know
+// they weren't told, and the office doesn't know the telling failed. A ring
+// buffer in one settings row, newest first, because 200 recent sends is the
+// question anyone actually asks ("did it go?"), not a mail archive.
+// ---------------------------------------------------------------------------
+export interface SendLogEntry {
+  at: string;
+  to: string;
+  subject: string;
+  ok: boolean;
+  error?: string | null;
+}
+
+const SEND_LOG_KEY = "send_log";
+const SEND_LOG_CAP = 200;
+
+/** Never throws — a logging failure must not break the email being sent. */
+export async function logSend(e: SendLogEntry): Promise<void> {
+  try {
+    const cur = (await getSetting<SendLogEntry[]>(SEND_LOG_KEY)) || [];
+    await setSetting(SEND_LOG_KEY, [e, ...cur].slice(0, SEND_LOG_CAP));
+  } catch (err) {
+    console.warn("send log write failed:", (err as Error).message);
+  }
+}
+
+export async function listSendLog(): Promise<SendLogEntry[]> {
+  const list = await getSetting<SendLogEntry[]>(SEND_LOG_KEY).catch(() => null);
+  return Array.isArray(list) ? list : [];
 }
 
 export async function listAudit(limit = 200): Promise<AuditEntry[]> {
