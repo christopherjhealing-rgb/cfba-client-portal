@@ -446,9 +446,12 @@ export function SitePlanBuilder(
    *  print). Studio only. */
   const [showElevations, setShowElevations] = useState(false);
   /** On-screen magnification of the canvas, for working up close. 1 is
-   *  fit-to-width; above that the canvas overflows into a scrollable pane.
-   *  Screen only — the printed sheet is always the true-scale drawing. */
+   *  fit-the-whole-plan; above that the canvas overflows into a scrollable
+   *  pane. Screen only — the printed sheet is always the true-scale drawing. */
   const [zoom, setZoom] = useState(1);
+  /** The viewport's live pixel size, so the plan can be sized to fit the whole
+   *  of it (both dimensions) at zoom 1 rather than only its width. */
+  const [vpSize, setVpSize] = useState({ w: 900, h: 640 });
   const [today, setToday] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
@@ -695,6 +698,17 @@ export function SitePlanBuilder(
     };
     vp.addEventListener("wheel", onWheel, { passive: false });
     return () => vp.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Track the viewport's size so the plan can be fit whole inside it.
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const update = () => setVpSize({ w: vp.clientWidth, h: vp.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(vp);
+    return () => ro.disconnect();
   }, []);
 
   // ---- the aerial underlay -------------------------------------------------
@@ -2766,14 +2780,27 @@ export function SitePlanBuilder(
     for (const c of [20, 50, 100, 200, 500]) {
       if ((W * 1000) / c <= 150 && (maxH * 1000) / c <= 70) { dn = c; break; }
     }
-    const M = 0.7;
-    // Room below the ground line for the width dimension and its label, and a
-    // little above for the ridge; the viewBox top sits at -M.
-    const vbW = W + M * 2.4, vbH = maxH + M * 3.4;
+    const em = (v: number) => (v * dn) / 1000;  // paper mm → metres at this scale
+    const uid = `${s.id}-${span}`;
+    // Height dimensions go on whichever side is clear of the dwelling wall; the
+    // level datums take the other side. Width dimension below, roof callout on
+    // top. `dimSide` is -1 for the left, +1 for the right.
+    const wallLeft = e.attachHere && e.attachAtStart;   // dwelling drawn at x = -0.55
+    const dimSide = wallLeft ? 1 : -1;
+    // Roof callout can run to three stacked lines; give the top margin room for
+    // however many there are so the first line never clips off the top.
+    const roofWord = e.roof === "gable" ? "Gable" : e.roof === "skillion" ? "Skillion" : "Flat";
+    const callout = [`${roofWord} · ${fmtM(e.pitch)}° pitch`];
+    if (e.sheeting) callout.push(e.sheeting);
+    if (e.gutterHere) callout.push("Gutter to eave");
+    // Generous, dedicated margins so every annotation band sits clear of the
+    // drawing and of the others.
+    const ML = 2.4, MR = 2.4, MB = 1.9;
+    const MT = Math.max(1.9, em(2.2) + (callout.length - 1) * em(2.5) + em(1.4));
+    const vbW = W + ML + MR, vbH = maxH + MT + MB;
     const wmm = (vbW * 1000) / dn, hmm = (vbH * 1000) / dn;
     const gy = maxH;
     const Y = (h: number) => gy - h;
-    const em = (v: number) => (v * dn) / 1000;  // paper mm → metres at this scale
 
     const postHeightAt = (x: number) => {
       if (!e.slopeInPlane) return e.eave;
@@ -2790,6 +2817,60 @@ export function SitePlanBuilder(
     const topRef = e.ridge ?? e.high;   // the high/ridge line, for the into-page view
     const wallX = e.attachAtStart ? -0.55 : W;
 
+    // Roof drawn with a little thickness so it reads as sheeting, not a wire.
+    const roofT = em(0.55);
+    const roofPoly = [
+      ...roofPts.map(([x, h]) => `${x},${Y(base + h)}`),
+      ...roofPts.map(([x, h]) => `${x},${Y(base + h) + roofT}`).reverse(),
+    ].join(" ");
+
+    // Which ends carry a gutter (the low eave), for the little gutter profiles.
+    const eaveEnds = e.slopeInPlane
+      ? (e.roof === "gable" ? [0, W] : [e.lowAtStart ? 0 : W])
+      : [0, W];
+
+    const apexH = base + postHeightAt(W / 2);
+    // Where the callout block sits, and its leader's landing point.
+    const calloutTop = -MT + em(2.2);
+    const calloutBottom = calloutTop + (callout.length - 1) * em(2.5) + em(1);
+
+    // Architectural tick — a short 45° stroke centred on a dimension end.
+    const tick = (x: number, y: number, key: React.Key) => (
+      <line key={key} x1={x - em(0.9)} y1={y + em(0.9)} x2={x + em(0.9)} y2={y - em(0.9)}
+        stroke={INK} strokeOpacity={0.55} strokeWidth={em(0.22)} />
+    );
+    // Vertical height dimensions stack on the clear side (away from the wall):
+    // rank 0 nearest the drawing, rank 1 further out. The label sits outboard.
+    const hx = (rank: number) => dimSide < 0 ? -em(3.4 + rank * 4) : W + em(3.4 + rank * 4);
+    const heightDim = (rank: number, h: number, label: string, dashed = false) => {
+      const dx = hx(rank);
+      return (
+        <g fontFamily={FONT_NUM} fontSize={em(2)} fill={INK} fillOpacity={0.8}>
+          <line x1={dx} y1={Y(base)} x2={dx} y2={Y(base + h)} stroke={INK} strokeOpacity={0.5}
+            strokeWidth={em(0.22)} strokeDasharray={dashed ? `${em(1.4)} ${em(1)}` : undefined} />
+          {tick(dx, Y(base), "a")}
+          {tick(dx, Y(base + h), "b")}
+          <text transform={`translate(${dx + dimSide * em(0.9)} ${Y(base + h / 2)}) rotate(-90)`} textAnchor="middle">
+            {label} {fmtM(h)} m
+          </text>
+        </g>
+      );
+    };
+    // A survey level datum — the open triangle sitting on a level line, tagged.
+    // It takes the side opposite the height dimensions (the dwelling side).
+    const levelTag = (y: number, label: string) => {
+      const onLeft = dimSide > 0, t = em(1.1);
+      const dx = onLeft ? -ML * 0.3 : W + MR * 0.3;
+      const tx = onLeft ? dx - t - em(0.6) : dx + t + em(0.6);
+      return (
+        <g fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.9)} fill={INK} fillOpacity={0.75}>
+          <path d={`M ${dx - t} ${y - 2 * t} L ${dx + t} ${y - 2 * t} L ${dx} ${y} Z`}
+            fill="none" stroke={INK} strokeOpacity={0.6} strokeWidth={em(0.25)} />
+          <text x={tx} y={y - t} textAnchor={onLeft ? "end" : "start"}>{label}</text>
+        </g>
+      );
+    };
+
     return (
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "2.6mm", fontWeight: 600, color: INK, fontFamily: FONT_LAB }}>
@@ -2798,10 +2879,17 @@ export function SitePlanBuilder(
             1:{dn}
           </span>
         </div>
-        <svg viewBox={`${-M} ${-M} ${vbW} ${vbH}`} aria-hidden="true"
+        <svg viewBox={`${-ML} ${-MT} ${vbW} ${vbH}`} aria-hidden="true"
           style={fit
             ? { width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`, display: "block", marginTop: "1mm" }
             : { width: `${wmm.toFixed(1)}mm`, height: `${hmm.toFixed(1)}mm`, display: "block", marginTop: "1mm" }}>
+          <defs>
+            <pattern id={`grd-${uid}`} width={em(2.2)} height={em(2.2)}
+              patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1={0} y1={0} x2={0} y2={em(2.2)} stroke={INK} strokeOpacity={0.28} strokeWidth={em(0.18)} />
+            </pattern>
+          </defs>
+
           {/* the dwelling the patio attaches to */}
           {e.attachHere && (
             <g>
@@ -2811,79 +2899,83 @@ export function SitePlanBuilder(
                 fontFamily={FONT_LAB} fontSize={em(2)} fill={INK} fillOpacity={0.6}>Dwelling</text>
             </g>
           )}
-          {/* natural ground line (NGL) */}
-          <line x1={-M * 0.6} y1={gy} x2={W + M * 0.6} y2={gy} stroke={INK} strokeWidth={em(0.45)} />
+
+          {/* natural ground: a heavy line with hatching just beneath it */}
+          <rect x={-ML * 0.5} y={gy} width={W + (ML + MR) * 0.5} height={em(3)} fill={`url(#grd-${uid})`} />
+          <line x1={-ML * 0.5} y1={gy} x2={W + MR * 0.5} y2={gy} stroke={INK} strokeWidth={em(0.5)} />
+
           {/* patio floor line (FL), when it sits above the ground */}
           {base > 0.001 && (
-            <line x1={-M * 0.2} y1={Y(base)} x2={W + M * 0.2} y2={Y(base)} stroke={INK}
-              strokeOpacity={0.55} strokeWidth={em(0.3)} strokeDasharray={`${em(1.4)} ${em(1)}`} />
+            <line x1={-em(2)} y1={Y(base)} x2={W + em(2)} y2={Y(base)} stroke={INK}
+              strokeOpacity={0.6} strokeWidth={em(0.32)} strokeDasharray={`${em(1.4)} ${em(1)}`} />
           )}
+
           {/* the high/ridge line, when it sits behind the view rather than in it */}
           {!e.slopeInPlane && topRef > e.eave + 0.001 && (
             <line x1={0} y1={Y(base + topRef)} x2={W} y2={Y(base + topRef)} stroke={ROOF_INK}
               strokeWidth={em(0.3)} strokeDasharray={`${em(1.6)} ${em(1)}`} />
           )}
-          {/* posts, standing on the floor */}
+
+          {/* posts: slim columns on pad footings under the floor */}
           {e.postXs.map((x, i) => (
-            <line key={i} x1={x} y1={Y(base)} x2={x} y2={Y(base + postHeightAt(x))}
-              stroke={SEAL} strokeWidth={em(0.5)} strokeLinecap="round" />
+            <g key={i}>
+              <rect x={x - em(0.45)} y={Y(base + postHeightAt(x))} width={em(0.9)}
+                height={Math.max(0, postHeightAt(x))} fill={POST_INK} fillOpacity={0.85} />
+              <rect x={x - em(1.3)} y={Y(base)} width={em(2.6)} height={em(0.9)}
+                fill="none" stroke={POST_INK} strokeOpacity={0.5} strokeWidth={em(0.22)}
+                strokeDasharray={`${em(1)} ${em(0.7)}`} />
+            </g>
           ))}
-          {/* roof */}
-          <polyline points={roofPts.map(([x, h]) => `${x},${Y(base + h)}`).join(" ")}
-            fill="none" stroke={SEAL} strokeWidth={em(0.6)} strokeLinejoin="round" strokeLinecap="round" />
-          {/* gutter, along the low eave */}
-          {e.gutterHere && (() => {
-            const ex = e.slopeInPlane && e.roof !== "gable" ? (e.lowAtStart ? 0 : W) : W * 0.5;
-            const ey = Y(base + e.eave);
+
+          {/* roof, with sheeting thickness */}
+          <polygon points={roofPoly} fill={SEAL} fillOpacity={0.14}
+            stroke={SEAL} strokeWidth={em(0.55)} strokeLinejoin="round" strokeLinecap="round" />
+
+          {/* gutter profiles at the low eave(s) */}
+          {e.gutterHere && eaveEnds.map((gx, i) => {
+            const gy2 = Y(base + e.eave) + roofT;
+            const s0 = gx === 0 ? 1 : -1;    // hook turns back toward the roof
             return (
-              <g>
-                <line x1={Math.max(ex - 0.7, 0)} y1={ey} x2={Math.min(ex + 0.7, W)} y2={ey}
-                  stroke={BRASS} strokeWidth={em(0.8)} strokeLinecap="round" />
-                <text x={ex} y={ey - em(1.1)} textAnchor="middle" fontFamily={FONT_LAB}
-                  fontWeight={600} fontSize={em(1.8)} fill={BRASS}>GUTTER</text>
-              </g>
+              <path key={i}
+                d={`M ${gx + s0 * em(1.4)} ${gy2} L ${gx} ${gy2} L ${gx} ${gy2 + em(1.4)} L ${gx + s0 * em(1.2)} ${gy2 + em(1.4)}`}
+                fill="none" stroke={BRASS} strokeWidth={em(0.6)} strokeLinecap="round" strokeLinejoin="round" />
             );
-          })()}
-          {/* roof pitch and sheeting, called out above the roof */}
-          <text x={W / 2} y={Y(base + (e.ridge ?? e.high)) - em(1.5)} textAnchor="middle"
-            fontFamily={FONT_LAB} fontWeight={600} fontSize={em(2.1)} fill={ROOF_INK}>
-            {fmtM(e.pitch)}° pitch{e.sheeting ? ` · ${e.sheeting}` : ""}
-          </text>
-          {/* width dimension, under the ground line */}
-          <g fontFamily={FONT_NUM} fontSize={em(2.4)} fill={INK} fillOpacity={0.75}>
-            <line x1={0} y1={gy + M * 0.75} x2={W} y2={gy + M * 0.75} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.2)} />
-            {[0, W].map((x) => (
-              <line key={x} x1={x} y1={gy + M * 0.55} x2={x} y2={gy + M * 0.95} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.2)} />
+          })}
+
+          {/* roof callout, stacked clear in the top margin, leader to the ridge */}
+          <line x1={W / 2} y1={Y(apexH)} x2={W / 2} y2={calloutBottom} stroke={ROOF_INK}
+            strokeOpacity={0.45} strokeWidth={em(0.22)} strokeDasharray={`${em(1)} ${em(0.8)}`} />
+          <text x={W / 2} y={calloutTop} textAnchor="middle" fontFamily={FONT_LAB}
+            fontWeight={600} fontSize={em(2)} fill={ROOF_INK}>
+            {callout.map((c, i) => (
+              <tspan key={i} x={W / 2} dy={i === 0 ? 0 : em(2.5)}
+                fontWeight={i === 0 ? 700 : 500} fillOpacity={i === 0 ? 1 : 0.85}>{c}</tspan>
             ))}
-            <text x={W / 2} y={gy + M * 1.45} textAnchor="middle">{fmtM(e.width)} m</text>
+          </text>
+
+          {/* overall width dimension, below the ground */}
+          <g fontFamily={FONT_NUM} fontSize={em(2.3)} fill={INK} fillOpacity={0.8}>
+            {[0, W].map((x) => (
+              <line key={x} x1={x} y1={gy + em(3.4)} x2={x} y2={gy + MB * 0.82 + em(0.6)}
+                stroke={INK} strokeOpacity={0.4} strokeWidth={em(0.2)} />
+            ))}
+            <line x1={0} y1={gy + MB * 0.82} x2={W} y2={gy + MB * 0.82} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.22)} />
+            {tick(0, gy + MB * 0.82, "l")}
+            {tick(W, gy + MB * 0.82, "r")}
+            <text x={W / 2} y={gy + MB * 0.82 - em(0.9)} textAnchor="middle">{fmtM(e.width)} m</text>
           </g>
-          {/* heights, measured from the floor: the post (eave) height, and the
-              ridge (gable) or high side (skillion) — checked against the fascia. */}
-          <g fontFamily={FONT_NUM} fontSize={em(2.2)} fill={INK} fillOpacity={0.75}>
-            <line x1={-M * 0.5} y1={Y(base)} x2={-M * 0.5} y2={Y(base + e.eave)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
-            <text transform={`translate(${-M * 0.72} ${Y(base + e.eave / 2)}) rotate(-90)`} textAnchor="middle">
-              Post {fmtM(e.eave)} m
-            </text>
-            {e.roof === "gable" && e.ridge !== null ? (
-              <text x={W / 2 + em(1.6)} y={Y(base + e.ridge) + em(2.2)} textAnchor="start">
-                Ridge {fmtM(e.ridge)} m
-              </text>
-            ) : e.high > e.eave + 0.001 ? (
-              <>
-                <line x1={W + M * 0.5} y1={Y(base)} x2={W + M * 0.5} y2={Y(base + e.high)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
-                <text transform={`translate(${W + M * 0.72} ${Y(base + e.high / 2)}) rotate(-90)`} textAnchor="middle">
-                  High {fmtM(e.high)} m
-                </text>
-              </>
-            ) : null}
-          </g>
-          {/* level tags: natural ground, and the patio floor above it */}
-          <g fontFamily={FONT_LAB} fontWeight={600} fontSize={em(1.9)} fill={INK} fillOpacity={0.7}>
-            <text x={-M * 0.55} y={gy - em(0.8)} textAnchor="start">NGL</text>
-            {base > 0.001 && (
-              <text x={-M * 0.55} y={Y(base) - em(0.8)} textAnchor="start">FL +{fmtM(base)} m</text>
-            )}
-          </g>
+
+          {/* heights, measured from the floor, on the side clear of the wall */}
+          {heightDim(0, e.eave, "Post")}
+          {e.roof === "gable" && e.ridge !== null
+            ? heightDim(1, e.ridge, "Ridge", !e.slopeInPlane)
+            : e.high > e.eave + 0.001
+              ? heightDim(1, e.high, "High", !e.slopeInPlane)
+              : null}
+
+          {/* level datums on the dwelling side */}
+          {levelTag(gy, "NGL")}
+          {base > 0.001 && levelTag(Y(base), `FL +${fmtM(base)} m`)}
         </svg>
       </div>
     );
@@ -3133,6 +3225,12 @@ export function SitePlanBuilder(
   const fitFactor = Math.min(186 / mToMmOnPaper(vbW, denom), 237 / mToMmOnPaper(vbH, denom), 1);
   const sheetWmm = mToMmOnPaper(vbW, denom) * fitFactor;
   const sheetHmm = mToMmOnPaper(vbH, denom) * fitFactor;
+
+  // Canvas width so the WHOLE plan fits the viewport at zoom 1 (bound by
+  // whichever of width or height is tighter), then multiplied by the zoom.
+  const canvasW = Math.round(
+    Math.max(160, Math.min(vpSize.w, vpSize.h * (vbW / vbH))) * zoom,
+  );
 
   /** The lot's address, street, size and the lookup buttons — the top card in
    *  the classic layout, and the contents of the "Lot" menu in studio chrome. */
@@ -4023,14 +4121,14 @@ export function SitePlanBuilder(
           </div>
           <div ref={viewportRef}
             className="relative select-none overflow-auto rounded-md border border-rule bg-white"
-            style={{ height: "72vh", touchAction: "none", cursor: canPan && zoom > 1 ? "grab" : undefined }}
+            style={{ height: "calc(100vh - 205px)", minHeight: "440px", touchAction: "none", cursor: canPan && zoom > 1 ? "grab" : undefined }}
             onPointerDown={onViewportPanDown}
             onPointerMove={onViewportPanMove}
             onPointerUp={onViewportPanUp}
             onPointerCancel={onViewportPanUp}>
           <div ref={canvasRef} tabIndex={0} onKeyDown={onKeyDown} aria-label="Site plan drawing area"
             className="relative select-none rounded-md"
-            style={{ width: `${Math.round(zoom * 100)}%`, minWidth: "100%" }}>
+            style={{ width: `${canvasW}px`, marginInline: canvasW <= vpSize.w ? "auto" : "0" }}>
             {/* The aerial, behind everything and clipped to the canvas. Marked
                 out for the print stylesheet twice over: it is off the printed
                 sheet's ancestor path, and cfba-underlay is struck out

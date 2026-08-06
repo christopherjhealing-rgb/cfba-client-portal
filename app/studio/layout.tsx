@@ -27,7 +27,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
   return (
     <div className="studio-chrome min-h-screen">
       <header className="studio-hero text-white">
-        <div className="mx-auto max-w-6xl px-5 py-4">
+        <div className="mx-auto max-w-[1560px] px-5 py-4">
           <p className="studio-eyebrow">Draw · Measure · Print at true scale</p>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <Link href="/studio">
@@ -39,7 +39,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-5 py-7">{children}</main>
+      <main className="mx-auto max-w-[1560px] px-5 py-7">{children}</main>
       <footer className="px-5 py-6 text-center text-[12.5px] text-ink/45">
         Site Plan Studio · a free tool for drawing a site plan to scale
       </footer>

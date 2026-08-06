@@ -1658,6 +1658,16 @@ test("the dwelling shows in the elevation perpendicular to the attached edge", (
   const s2 = P({ mount: "attached", attach: 3, roof: "skillion", fall: 2 });
   assert.equal(patioElevationProfile(s2, "w").attachHere, true);
   assert.equal(patioElevationProfile(s2, "d").attachHere, false);
+  // In the view that shows the wall, no post stands at the wall end: side 3
+  // sits at x = 0, so the x = 0 post is struck and only the far post remains.
+  const s2front = patioElevationProfile(s2, "w");
+  assert.ok(!s2front.postXs.some((x) => Math.abs(x) < 1e-6), "no post at the attached wall (x = 0)");
+  assert.deepEqual(s2front.postXs, [6]);
+  // A bottom/right attach (side 1) puts the wall at x = width, struck there.
+  const s3 = P({ mount: "attached", attach: 1, roof: "skillion", fall: 2 });
+  const s3front = patioElevationProfile(s3, "w");
+  assert.equal(s3front.attachHere, true);
+  assert.ok(!s3front.postXs.some((x) => Math.abs(x - s3front.width) < 1e-6), "no post at the attached wall (x = width)");
 });
 
 test("a patio defaults to a named sheeting and a floor level with the ground", () => {
