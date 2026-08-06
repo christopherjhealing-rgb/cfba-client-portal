@@ -1,0 +1,117 @@
+"use client";
+import { useState } from "react";
+
+type Mode = "signup" | "signin" | "portal";
+
+/**
+ * The studio's front door. Three ways in, one card: create a free account,
+ * sign back into one, or — for CFBA portal clients — use the portal login
+ * itself, which posts to the portal's own auth endpoint so there is exactly
+ * one password system for them, not a second one to forget.
+ */
+export function StudioAuth() {
+  const [mode, setMode] = useState<Mode>("signup");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function go(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      const r =
+        mode === "portal"
+          ? await fetch("/api/auth/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, password, remember: true }),
+            })
+          : await fetch(mode === "signup" ? "/api/studio/signup" : "/api/studio/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, name, password }),
+            });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setMsg(d.error || "That didn't work — check the details and try again.");
+        return;
+      }
+      window.location.assign("/studio/designs");
+    } catch {
+      setMsg("We couldn't reach the server — check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const tab = (m: Mode, label: string) => (
+    <button
+      type="button"
+      onClick={() => { setMode(m); setMsg(null); }}
+      className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+        mode === m ? "bg-seal text-white" : "text-ink/60 hover:bg-seal/10"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <form onSubmit={go} className="card p-6">
+      <div className="mb-5 flex flex-wrap gap-1.5">
+        {tab("signup", "Create free account")}
+        {tab("signin", "Sign in")}
+        {tab("portal", "CFBA portal login")}
+      </div>
+
+      {mode === "portal" ? (
+        <>
+          <label className="label" htmlFor="st-user">Portal username</label>
+          <input id="st-user" className="field" autoComplete="username"
+            value={username} onChange={(e) => setUsername(e.target.value)} />
+        </>
+      ) : (
+        <>
+          <label className="label" htmlFor="st-email">Email</label>
+          <input id="st-email" type="email" className="field" autoComplete="email"
+            value={email} onChange={(e) => setEmail(e.target.value)} />
+          {mode === "signup" && (
+            <>
+              <label className="label mt-3" htmlFor="st-name">Name or company <span className="text-ink/40">(optional)</span></label>
+              <input id="st-name" className="field" autoComplete="organization"
+                value={name} onChange={(e) => setName(e.target.value)} />
+            </>
+          )}
+        </>
+      )}
+
+      <label className="label mt-3" htmlFor="st-pass">Password</label>
+      <input id="st-pass" type="password" className="field"
+        autoComplete={mode === "signup" ? "new-password" : "current-password"}
+        value={password} onChange={(e) => setPassword(e.target.value)} />
+
+      {msg && (
+        <p role="alert" className="mt-3 rounded-md bg-[#FBEBEC] px-3 py-2 text-[13px] text-[#8C2630]">
+          {msg}
+        </p>
+      )}
+
+      <button className="btn mt-5 w-full" disabled={busy}>
+        {busy ? "One moment…"
+          : mode === "signup" ? "Create account & start drawing"
+          : mode === "signin" ? "Sign in"
+          : "Sign in with my portal login"}
+      </button>
+
+      {mode === "signup" && (
+        <p className="mt-3 text-[12px] leading-relaxed text-ink/50">
+          Free, no card, no lock-in. Your email is your login and is never
+          passed to anyone else.
+        </p>
+      )}
+    </form>
+  );
+}

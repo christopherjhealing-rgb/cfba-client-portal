@@ -371,8 +371,17 @@ function MetresField({ label, value, onCommit }: {
   );
 }
 
+/** Somewhere other than localStorage to keep the drawing — the studio passes
+ *  its API here. load() runs once; save() is already debounced by the
+ *  builder, so it can go straight to the network. */
+export interface DesignStore {
+  load(): Promise<unknown | null>;
+  save(design: unknown, address: string): void;
+}
+
 export function SitePlanBuilder(
-  { companyId, cadastre = false }: { companyId: string; cadastre?: boolean },
+  { companyId, cadastre = false, store }:
+  { companyId: string; cadastre?: boolean; store?: DesignStore },
 ) {
   const [design, setDesign] = useState<Design>(BLANK);
   const [selected, setSelected] = useState<string | null>(null);
@@ -472,6 +481,19 @@ export function SitePlanBuilder(
   // Restore the last design for this company; date is set client-side only so
   // the server render never disagrees with the browser's timezone.
   useEffect(() => {
+    const finish = () => {
+      setLoaded(true);
+      setToday(new Date().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }));
+    };
+    if (store) {
+      // The studio's copy of this drawing. A load that fails just means a
+      // blank sheet — same promise localStorage makes below.
+      store.load()
+        .then((raw) => { if (raw) setDesign(readStreet(sanitise(raw))); })
+        .catch(() => {})
+        .finally(finish);
+      return;
+    }
     try {
       const last = localStorage.getItem(pointerKey(companyId));
       const raw = last && localStorage.getItem(last);
@@ -482,8 +504,8 @@ export function SitePlanBuilder(
         keyRef.current = designKey(companyId, "");
       }
     } catch { /* a broken saved design just means a blank sheet */ }
-    setLoaded(true);
-    setToday(new Date().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }));
+    finish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store is stable per mount
   }, [companyId]);
 
   // Autosave, debounced. Never before the restore has run, or the blank
@@ -491,17 +513,22 @@ export function SitePlanBuilder(
   useEffect(() => {
     if (!loaded) return;
     const t = setTimeout(() => {
+      if (store) { store.save(design, design.address); return; }
       try {
         localStorage.setItem(keyRef.current, JSON.stringify(design));
         localStorage.setItem(pointerKey(companyId), keyRef.current);
       } catch { /* storage full or blocked — keep drawing */ }
     }, 400);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store is stable per mount
   }, [design, loaded, companyId]);
 
   /** The address is the document key. Committed on blur; typing a previously
-   *  used address onto an empty sheet brings that design back. */
+   *  used address onto an empty sheet brings that design back. (localStorage
+   *  mode only — in the studio the design IS the record, whatever the
+   *  address says, so there is no key to switch.) */
   function commitAddress() {
+    if (store) return;
     const key = designKey(companyId, design.address);
     if (key === keyRef.current) return;
     if (design.structures.length === 0) {
