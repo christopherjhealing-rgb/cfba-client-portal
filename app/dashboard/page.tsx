@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import {
   groupJobs, clientStatusLabel, retention, isClientVisible, splitInProgress,
-  businessDaysSince,
+  businessDaysSince, awaitingBoardRows,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell } from "@/components/AppShell";
@@ -62,7 +62,10 @@ export default async function Dashboard() {
   // client held the job would be the portal flattering us.
   const lodgedDays = (j: { receivedAt: unknown }) =>
     j.receivedAt ? businessDaysSince(j.receivedAt as string) : null;
-  const pending = subs.filter((s) => s.status === "pending");
+  // Freshly lodged jobs count too — pending review, or accepted but not yet
+  // synced into a job row — so the "no jobs" empty state can never greet a
+  // client seconds after they lodged one.
+  const pending = awaitingBoardRows(subs, jobs);
 
   const nothing =
     g.ready.length + g.in_progress.length + g.downloaded.length + pending.length === 0;

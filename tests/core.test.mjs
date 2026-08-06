@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   aliasKey, matchCompany, parseRef, folderMatchesRef, clientStatusLabel,
-  addMonths, retention, jobBucket, groupJobs, isClientVisible,
+  addMonths, retention, jobBucket, groupJobs, isClientVisible, awaitingBoardRows,
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
   canCancel, portalColumnWrite, portalLadder, portalRank,
@@ -341,6 +341,19 @@ test("groupJobs partitions a mixed list", () => {
   assert.equal(g.in_progress.length, 1);
   assert.equal(g.ready.length, 1);
   assert.equal(g.downloaded.length, 1);
+});
+
+test("a lodged job never vanishes between acceptance and the sync", () => {
+  const subs = [
+    { id: "a", status: "pending", mondayItemId: null, amendmentOf: null },
+    { id: "b", status: "accepted", mondayItemId: "m1", amendmentOf: null },   // card up, job not synced yet
+    { id: "c", status: "accepted", mondayItemId: "m2", amendmentOf: null },   // job row exists — retired
+    { id: "d", status: "accepted", mondayItemId: null, amendmentOf: null },   // could never match — excluded
+    { id: "e", status: "accepted", mondayItemId: "m3", amendmentOf: "56000" }, // amendment — lives on its job
+    { id: "f", status: "rejected", mondayItemId: null, amendmentOf: null },
+  ];
+  const jobs = [{ mondayItemId: "m2" }];
+  assert.deepEqual(awaitingBoardRows(subs, jobs).map((s) => s.id), ["a", "b"]);
 });
 
 // --- progress stages -------------------------------------------------------

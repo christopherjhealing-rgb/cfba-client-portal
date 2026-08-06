@@ -57,6 +57,9 @@ export const CANCELLED_STATUS: string;
 export const ISSUED_STATUSES: StatusSet;
 export const COLLECT_STATUSES: string[];
 export const COLLECT_STATUS_SET: StatusSet;
+export function awaitingBoardRows<
+  S extends { status?: string | null; mondayItemId?: string | null; amendmentOf?: string | null },
+>(subs: S[], jobs: { mondayItemId?: string | null }[]): S[];
 /** All canCancel needs. Both repo.Job and PortalJob satisfy it. */
 export interface CancellableJob {
   mondayStatus?: string | null;

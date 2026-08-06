@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import {
   groupJobs, clientStatusLabel, isClientVisible, needsClientInfo,
-  elapsedBusinessDays, businessDaysSince, PAUSED_STATUSES,
+  elapsedBusinessDays, businessDaysSince, PAUSED_STATUSES, awaitingBoardRows,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -50,9 +50,11 @@ export default async function MyJobs({
       .then((j) => j.map(repo.toPortalJob).filter(isClientVisible)),
     repo.listSubmissionsForCompany(session.companyId),
   ]);
-  // Lodged but not yet accepted onto the board. Shown here as Received rather
-  // than on the dashboard, so there is one place a client looks for a job.
-  const received = subs.filter((x) => x.status === "pending");
+  // Lodged but not yet a job row — pending review, or accepted and waiting on
+  // its reference + the next sync. Shown here as their own rows so a job never
+  // vanishes between "Job Lodged" and the sync catching up: that gap is
+  // exactly when the client looks.
+  const received = awaitingBoardRows(subs, all);
   const g = groupJobs(all, new Date(), env.retentionMonths);
 
   // Amendments in flight, and the revised certificate when it comes back.
@@ -200,7 +202,11 @@ export default async function MyJobs({
                       </div>
                     </div>
                   </td>
-                  <td className="td"><span className="chip">Received — awaiting CFBA</span></td>
+                  <td className="td">
+                    <span className="chip">
+                      {r.status === "accepted" ? "Lodged — on our board" : "Received — awaiting CFBA"}
+                    </span>
+                  </td>
                   <td className="td text-right"><span className="text-[13px] text-ink/35">—</span></td>
                 </tr>
               ))}
@@ -292,7 +298,9 @@ function JobCards({
             </div>
           </div>
           <div className="mt-3">
-            <span className="chip">Received — awaiting CFBA</span>
+            <span className="chip">
+              {r.status === "accepted" ? "Lodged — on our board" : "Received — awaiting CFBA"}
+            </span>
           </div>
         </div>
       ))}

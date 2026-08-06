@@ -151,8 +151,8 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         <h2 className="font-display text-[21px] font-semibold">Job Lodged</h2>
         <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-ink/65">
           {instant ? (
-            <>Thanks — it&apos;s on our board. It&apos;ll appear at the top of
-            your jobs within a couple of minutes.</>
+            <>Thanks — it&apos;s on our board, and it&apos;s already showing at the
+            top of <span className="font-medium">My Jobs</span>.</>
           ) : (
             <>Thanks — it&apos;s with the CFBA office for checking. It will show in your
             job list under <span className="font-medium">Waiting to be accepted</span>,
@@ -166,7 +166,13 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
             is on the job — you&apos;ll see it against this job and in our emails.
           </p>
         )}
-        <a href="/jobs" className="btn mt-6">View My Jobs</a>
+        {/* Plain anchors on purpose: "Lodge Another Job" must arrive on a
+            fresh form, and a client-side hop to the route we're already on
+            wouldn't remount this component — the full load does. */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <a href="/jobs" className="btn">View My Jobs</a>
+          <a href="/submit" className="btn-ghost">Lodge Another Job</a>
+        </div>
       </div>
     );
   }

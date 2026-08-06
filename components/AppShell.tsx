@@ -202,7 +202,15 @@ export function AppShell({
               <Link
                 key={n.href}
                 href={n.href}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                  // Clicking the page you're already on: Next treats a
+                  // same-route link as a no-op, which leaves page-local state
+                  // (a submitted form's "Job Lodged" screen, say) exactly
+                  // where it was — the click looks broken. Force a fresh
+                  // load instead, which is what the click means.
+                  if (active) window.location.assign(n.href);
+                }}
                 aria-current={active ? "page" : undefined}
                 title={collapsed ? n.label : undefined}
                 className={`shell-row relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-2.5 text-[14px] transition ${
