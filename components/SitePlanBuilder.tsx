@@ -512,6 +512,12 @@ export function SitePlanBuilder(
   const keyRef = useRef(designKey(companyId, ""));
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  /** The fixed pane the plan is panned and zoomed inside, and the drag that
+   *  pans it. The plan fills this pane; scrolling it magnifies (layout only,
+   *  so every measurement and handle stays true), and dragging empty space
+   *  moves around it — like a map. */
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ x: number; y: number; sl: number; st: number } | null>(null);
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<GoogleMapLike | null>(null);
   /** Claimed synchronously so a re-render mid-import can't build two maps. */
@@ -661,6 +667,35 @@ export function SitePlanBuilder(
     ro.observe(el);
     return () => ro.disconnect();
   }, [vbW]);
+
+  // Scroll-wheel zoom, toward the cursor. A native non-passive listener so the
+  // page itself doesn't scroll under it. Magnifies by growing the canvas
+  // (layout, not a transform), then nudges the scroll so the point under the
+  // cursor stays put — the map gesture. Handles keep their true size because
+  // pxPerM grows with it.
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = vp.getBoundingClientRect();
+      const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
+      const px = ox + vp.scrollLeft, py = oy + vp.scrollTop;
+      setZoom((z) => {
+        const nz = Math.min(4, Math.max(1, Math.round(z * (e.deltaY < 0 ? 1.2 : 1 / 1.2) * 100) / 100));
+        const ratio = nz / z;
+        if (ratio !== 1) {
+          requestAnimationFrame(() => {
+            vp.scrollLeft = px * ratio - ox;
+            vp.scrollTop = py * ratio - oy;
+          });
+        }
+        return nz;
+      });
+    };
+    vp.addEventListener("wheel", onWheel, { passive: false });
+    return () => vp.removeEventListener("wheel", onWheel);
+  }, []);
 
   // ---- the aerial underlay -------------------------------------------------
 
@@ -3034,8 +3069,6 @@ export function SitePlanBuilder(
     );
   }
 
-  // Cap the on-screen canvas height so deep lots don't become a scroll.
-  const maxCanvasPx = Math.max(280, Math.round(680 * (vbW / vbH)));
   // Printed drawing size in real millimetres. When the lot is beyond A4 at
   // 1:500 the whole drawing shrinks by one factor — never distorts — and the
   // sheet stops claiming a scale (the scale bar shrinks with it, so it stays
@@ -3046,6 +3079,43 @@ export function SitePlanBuilder(
 
   /** The lot's address, street, size and the lookup buttons — the top card in
    *  the classic layout, and the contents of the "Lot" menu in studio chrome. */
+  // Panning the plan is only on while nothing else claims a drag — placing
+  // points, editing the boundary, lining up an underlay all own the pointer.
+  const canPan = !draw && !trace && !editing && !planScaling && !aligning && !planAligning;
+  function onViewportPanDown(e: React.PointerEvent) {
+    if (!canPan) return;
+    const vp = viewportRef.current;
+    if (!vp) return;
+    panRef.current = { x: e.clientX, y: e.clientY, sl: vp.scrollLeft, st: vp.scrollTop };
+    try { vp.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
+  }
+  function onViewportPanMove(e: React.PointerEvent) {
+    const pr = panRef.current, vp = viewportRef.current;
+    if (!pr || !vp) return;
+    vp.scrollLeft = pr.sl - (e.clientX - pr.x);
+    vp.scrollTop = pr.st - (e.clientY - pr.y);
+  }
+  const onViewportPanUp = () => { panRef.current = null; };
+  /** Zoom about the pane's centre, for the +/− buttons. */
+  function zoomBy(factor: number) {
+    const vp = viewportRef.current;
+    setZoom((z) => {
+      const nz = Math.min(4, Math.max(1, Math.round(z * factor * 100) / 100));
+      const ratio = nz / z;
+      if (vp && ratio !== 1) {
+        const cx = vp.clientWidth / 2, cy = vp.clientHeight / 2;
+        const px = cx + vp.scrollLeft, py = cy + vp.scrollTop;
+        requestAnimationFrame(() => { vp.scrollLeft = px * ratio - cx; vp.scrollTop = py * ratio - cy; });
+      }
+      return nz;
+    });
+  }
+  const fitZoom = () => {
+    setZoom(1);
+    const vp = viewportRef.current;
+    if (vp) requestAnimationFrame(() => { vp.scrollLeft = 0; vp.scrollTop = 0; });
+  };
+
   function lotSetup() {
     return (
       <div className="card mb-5 p-4">
@@ -3877,30 +3947,33 @@ export function SitePlanBuilder(
               )}
             </div>
           )}
-          {/* Zoom, for working up close — resizing a small structure is far
-              easier magnified. Fit (100%) is the resting state; above it the
-              canvas overflows into the scroll pane below. Never affects the
-              print, which is always the true-scale drawing. */}
+          {/* Zoom, for working up close. Scroll the wheel over the plan to zoom
+              toward the cursor, drag empty space to move around — like a map.
+              Screen only; the print is always the true-scale drawing. */}
           <div className="mb-2 flex items-center justify-end gap-1.5 text-ink/55">
             <span className="text-[11px] uppercase tracking-[0.12em]">Zoom</span>
-            <button type="button" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(1, Math.round((z / 1.5) * 100) / 100))}
+            <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.5)}
               disabled={zoom <= 1}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-rule bg-white text-ink transition hover:bg-wash disabled:opacity-40">−</button>
             <span className="w-12 text-center font-mono text-[12px] text-ink/70">{Math.round(zoom * 100)}%</span>
-            <button type="button" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(4, Math.round((z * 1.5) * 100) / 100))}
+            <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1.5)}
               disabled={zoom >= 4}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-rule bg-white text-ink transition hover:bg-wash disabled:opacity-40">+</button>
             {zoom > 1 && (
-              <button type="button" onClick={() => setZoom(1)}
+              <button type="button" onClick={fitZoom}
                 className="ml-1 rounded-md border border-rule bg-white px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink transition hover:bg-wash">Fit</button>
             )}
           </div>
-          <div className="overflow-auto" style={zoom > 1 ? { maxHeight: "78vh" } : undefined}>
+          <div ref={viewportRef}
+            className="relative select-none overflow-auto rounded-md border border-rule bg-white"
+            style={{ height: "72vh", touchAction: "none", cursor: canPan && zoom > 1 ? "grab" : undefined }}
+            onPointerDown={onViewportPanDown}
+            onPointerMove={onViewportPanMove}
+            onPointerUp={onViewportPanUp}
+            onPointerCancel={onViewportPanUp}>
           <div ref={canvasRef} tabIndex={0} onKeyDown={onKeyDown} aria-label="Site plan drawing area"
-            className="relative mx-auto select-none rounded-md"
-            style={zoom > 1
-              ? { width: `${Math.round(maxCanvasPx * zoom)}px`, maxWidth: "none" }
-              : { maxWidth: `${maxCanvasPx}px` }}>
+            className="relative select-none rounded-md"
+            style={{ width: `${Math.round(zoom * 100)}%`, minWidth: "100%" }}>
             {/* The aerial, behind everything and clipped to the canvas. Marked
                 out for the print stylesheet twice over: it is off the printed
                 sheet's ancestor path, and cfba-underlay is struck out
