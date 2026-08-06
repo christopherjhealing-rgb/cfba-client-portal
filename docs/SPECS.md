@@ -276,9 +276,12 @@ address decides.
   reused from the cadastre) over synthetic fixtures in `tests/bushfire.test.mjs`.
   A returned feature means "inside a prone-area polygon"; an ArcGIS `{ error }`
   body reads as "couldn't tell", never "not prone".
-- **The one socket:** `lib/bushfire-source.ts`, same ArcGIS point-intersect
-  query as the cadastre but `returnGeometry=false` (we only need whether a
-  polygon exists). Host pinned; never caller-supplied.
+- **The one socket:** `lib/bushfire-source.ts`. A bare ArcGIS COUNT query —
+  `returnCountOnly=true&f=json`, no geojson, no pagination params — because
+  that exact shape was hand-verified against the live service after a fancier
+  shape disagreed with it. `BUSHFIRE_QUERY_VERSION` is folded into the cache
+  key, so changing the shape retires every answer the old shape produced.
+  Host pinned; never caller-supplied.
 - **The route:** `app/api/bushfire/route.ts`, GET `?lat=&lng=`, signed-in
   clients only, WA-bounds guarded. Hard-whitelisted to `{ checked, prone }` —
   none of the service's own fields leave the server. Cached under

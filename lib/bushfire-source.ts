@@ -42,10 +42,21 @@ export type BushfireResult =
   | { ok: true; raw: unknown }
   | { ok: false; reason: BushfireMiss };
 
+/** Bumped whenever the query below changes shape. Part of the cache key, so
+ *  every answer fetched by an older shape is retired the moment the shape
+ *  changes — a cached verdict is only as good as the query that fetched it. */
+export const BUSHFIRE_QUERY_VERSION = "2";
+
 /** The exact URL a lookup calls. Exported so a test and the runbook can read it
- *  back — never so a caller can supply one. Geometry only, no polygon returned:
- *  all we need is whether one exists, so returnGeometry is false and the count
- *  is capped at one. */
+ *  back — never so a caller can supply one.
+ *
+ *  A COUNT query, deliberately the plainest thing ArcGIS can be asked: no
+ *  geometry back, no fields, no f=geojson (which some servers don't support),
+ *  no resultRecordCount (which needs pagination support). This exact shape was
+ *  verified by hand against the live SLIP service on a known designated lot —
+ *  layers 0, 2 and 3 all answered {"count":1} — after the earlier, fancier
+ *  query shape disagreed with it. All we ever need is whether a prone-area
+ *  polygon contains the point, and a count answers that in ~20 bytes. */
 export function bushfireQueryUrl(lat: number, lng: number): string {
   const base = env.bushfireUrl.replace(/\/+$/, "");
   const url = new URL(`${base}/query`);
@@ -53,13 +64,9 @@ export function bushfireQueryUrl(lat: number, lng: number): string {
   p.set("geometry", `${lng},${lat}`);       // ArcGIS wants x,y — longitude first
   p.set("geometryType", "esriGeometryPoint");
   p.set("inSR", "4326");
-  p.set("outSR", "4326");
   p.set("spatialRel", "esriSpatialRelIntersects");
-  p.set("outFields", "*");
-  p.set("returnGeometry", "false");
-  p.set("returnCountOnly", "false");
-  p.set("resultRecordCount", "1");
-  p.set("f", "geojson");
+  p.set("returnCountOnly", "true");
+  p.set("f", "json");
   if (env.bushfireToken) p.set("token", env.bushfireToken);
   return url.toString();
 }

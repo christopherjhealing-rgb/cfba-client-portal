@@ -7,6 +7,15 @@ import {
 // ---------------------------------------------------------------------------
 // The verdict — the one thing a coordinate can settle
 // ---------------------------------------------------------------------------
+test("a count answers directly — the shape the portal actually asks for", () => {
+  // returnCountOnly=true, hand-verified against the live SLIP service.
+  assert.deepEqual(readBushfire({ count: 1 }), { prone: true });
+  assert.deepEqual(readBushfire({ count: 3 }), { prone: true });
+  assert.deepEqual(readBushfire({ count: 0 }), { prone: false });
+  // A count that isn't a number is no answer at all.
+  assert.equal(readBushfire({ count: "one" }), null);
+});
+
 test("a feature returned means the point is in a prone area", () => {
   // The layer holds prone-area polygons only, so one containing feature is the
   // whole answer.
