@@ -23,6 +23,7 @@ import {
   rotationCoverScale, underlayMapSize, groundToPlanVector, planToGroundVector,
   offsetLatLng, metresBetween, underlayAnchor, underlayCentre,
   clampUnderlayOpacity, clampUnderlayRot, sanitiseUnderlay,
+  PLAN_UNDERLAY_MAX_MPP, sanitisePlanUnderlay, rescalePlanUnderlay,
   PATIO_ROOFS, PATIO_MAX_PITCH, GUTTER_M_PER_DOWNPIPE,
   sanitisePatio, patioColumns, patioGutter, downpipesNeeded, patioRoofHeights,
   patioElevationProfile,
@@ -1478,6 +1479,48 @@ test("printed rows report 0 m for structures drawn on top of each other", () => 
   assert.equal(rows.length, 1);
   assert.equal(rows[0].d, 0);
   assert.equal(rows[0].overlap, true);
+});
+
+// ---------------------------------------------------------------------------
+// The house-plan underlay
+// ---------------------------------------------------------------------------
+
+test("no house plan means nothing placed — every old design, and every one without one", () => {
+  for (const raw of [undefined, null, {}, { placed: true }, { placed: true, w: 100, h: 100, mpp: 0 }]) {
+    const u = sanitisePlanUnderlay(raw);
+    assert.equal(u.placed, false);
+    assert.equal(u.mpp, 0);
+    assert.equal(u.visible, true);
+    assert.equal(u.locked, true);
+  }
+});
+
+test("a placed house plan keeps its placement, clamped and wrapped", () => {
+  const u = sanitisePlanUnderlay({
+    placed: true, w: 1600, h: 1200, mpp: 0.02, cx: 3.1234567, cy: -0, rot: 405,
+    opacity: 5, visible: false, locked: false, page: 2.6,
+  });
+  assert.equal(u.placed, true);
+  assert.equal(u.w, 1600);
+  assert.equal(u.h, 1200);
+  assert.equal(u.cx, 3.123);
+  assert.equal(u.rot, 45);          // 405 wrapped into 0..360
+  assert.equal(u.opacity, 1);       // clamped to the max
+  assert.equal(u.visible, false);
+  assert.equal(u.locked, false);
+  assert.equal(u.page, 3);
+});
+
+test("mpp is clamped to a sane range", () => {
+  assert.equal(sanitisePlanUnderlay({ placed: true, w: 10, h: 10, mpp: 999 }).mpp, PLAN_UNDERLAY_MAX_MPP);
+});
+
+test("rescaling makes a drawn span read its true length, about the centre", () => {
+  // A 3 m span at the current scale is really 6 m → the picture doubles.
+  assert.equal(rescalePlanUnderlay(0.02, 3, 6), 0.04);
+  // Nonsense in, current scale back out (never zero, never NaN).
+  assert.equal(rescalePlanUnderlay(0.02, 0, 6), 0.02);
+  assert.equal(rescalePlanUnderlay(0.02, 3, 0), 0.02);
 });
 
 // ---------------------------------------------------------------------------

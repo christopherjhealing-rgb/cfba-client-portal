@@ -64,27 +64,37 @@ surface** — both use it.
   it attaches (`patioElevationProfile`, tested). The print set is now a
   `#site-plan-print` wrapper of `.cfba-sheet` pages.
 
-### The CoI gate on C/D (important)
+- **Stage B — house-plan trace underlay.** Upload a PDF (rendered client-side
+  with `pdfjs-dist`) or an image and place / turn / scale / opacity it as a
+  second trace-over underlay beside the aerial. Scale is set by drawing a line
+  along a known length and typing that length (`rescalePlanUnderlay`). The
+  picture stays **in the browser (IndexedDB, `lib/underlay-store.ts`), never
+  uploaded** — see the CoI/privacy note below. Placement is a handful of
+  numbers on the design (`sanitisePlanUnderlay`, tested). Never printed (it
+  carries the same `.cfba-underlay` strip as the aerial).
 
-The patio tooling and its elevations are **studio only**, behind a new
-`patioTools` prop on `SitePlanBuilder` that **only `StudioEditor` passes**. The
-certifier's client portal (`app/site-plan/page.tsx`) must never turn it on —
-that page's own rule is "no compliance wording in the builder", and soakwell
-sizing / a downpipe rule is design help a surveyor must not be seen to give for
-what they certify. The tool still only measures and offers; it never judges.
+### The CoI / privacy line on B–D (important)
 
-## Next (stage B, agreed with Chris)
+- The patio tooling and its elevations are **studio only**, behind a
+  `patioTools` prop on `SitePlanBuilder` that **only `StudioEditor` passes**.
+  The certifier's client portal (`app/site-plan/page.tsx`) must never turn it
+  on — that page's own rule is "no compliance wording in the builder", and
+  soakwell sizing / a downpipe rule is design help a surveyor must not be seen
+  to give for what they certify. The tool still only measures and offers.
+- The house-plan underlay is studio-only too (the `underlayKey` prop, = the
+  design id, both enables it and keys its browser-local picture). The picture
+  is the client's private drawing, so it is deliberately **kept in their
+  browser and never sent to a server** — the same way the aerial is a guide
+  that never lodges. The trade-off is that it's device-local: open a design on
+  another machine and the traced result is there, but the picture behind it is
+  re-added. That's by design, and the card says so.
+- The pdf.js worker is copied into `public/` by `scripts/copy-pdf-worker.mjs`
+  (a `predev`/`prebuild` hook), gitignored, and always matches the installed
+  `pdfjs-dist` so it can't drift.
 
-- **B — house-plan trace underlay.** Let the user upload a PDF or image of
-  their house plans and place/scale/rotate/pin it as a second trace-over
-  underlay beside the aerial. Render PDFs with `pdfjs-dist`. The aerial
-  underlay plumbing in `SitePlanBuilder` (`Underlay`, `underlay*` helpers) is
-  the pattern to extend. Two decisions still open: the render approach (draw
-  the PDF page to a bitmap client-side so no PDF is stored), and where the
-  bitmap lives — a design is capped at 512 KB (`MAX_DESIGN_BYTES`), so either a
-  downscaled bitmap in a separate k/v key (`studio_underlay:<owner>:<id>`) or a
-  private Supabase bucket + streamed upload API. A house plan has no inherent
-  scale, so it also needs a "set scale" gesture (draw a line, type its length).
+## Next
+
+Stages B–D are done. What's left is the pre-launch list below.
 
 ## Open follow-ups
 

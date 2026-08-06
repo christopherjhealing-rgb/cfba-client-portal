@@ -28,9 +28,12 @@ import {
   GUTTER_M_PER_DOWNPIPE, PATIO_MAX_COLS, PATIO_MAX_PITCH,
   downpipesNeeded, patioColumns, patioElevationProfile, patioGutter,
   patioRoofHeights, sanitisePatio,
-  type Lot, type LotOrigin, type PatioParams, type Pin, type StructureState, type Underlay,
+  sanitisePlanUnderlay, rescalePlanUnderlay,
+  type Lot, type LotOrigin, type PatioParams, type Pin, type PlanUnderlay,
+  type StructureState, type Underlay,
 } from "@/lib/site-plan.mjs";
 import { findSize, sizeKey, sizeLabel, sizeNew, SOAKWELLS, SOAKWELL_CAVEAT } from "@/lib/soakwell.mjs";
+import { getUnderlay, putUnderlay, delUnderlay } from "@/lib/underlay-store";
 import { buildLot, reorientLot } from "@/lib/cadastre.mjs";
 import { WA_BOUNDS } from "@/lib/address.mjs";
 import { GOOGLE_MAPS_KEY, loadMapsLibrary } from "@/lib/google-maps";
@@ -174,6 +177,10 @@ interface Design {
    *  is a screen aid; a pinned one is part of the drawing and prints. Every
    *  design saved before pinning existed has none. */
   pins: Pin[];
+  /** Where the client's own house plan sits behind the drawing, if they've
+   *  added one. Screen-only tracing guide, never printed; the picture itself
+   *  lives in the browser, so only this placement is saved. Studio only. */
+  planUnderlay: PlanUnderlay;
 }
 
 interface Guide {
@@ -221,6 +228,7 @@ const BLANK: Design = {
   underlay: sanitiseUnderlay(undefined),
   lot: sanitiseLot(undefined),
   pins: [],
+  planUnderlay: sanitisePlanUnderlay(undefined),
 };
 
 const INK = "#101A15";
@@ -357,6 +365,7 @@ function sanitise(raw: unknown): Design {
     lot: sanitiseLot(d.lot),
     // A pin naming a structure that is no longer on the plan goes with it.
     pins: sanitisePins(d.pins, structures.map((s) => s.id)),
+    planUnderlay: sanitisePlanUnderlay(d.planUnderlay),
   };
 }
 
@@ -386,6 +395,33 @@ function MetresField({ label, value, onCommit }: {
   );
 }
 
+/** The one question the set-scale line asks: this span is so-many metres now,
+ *  what is it really? Its own tiny component so the field's half-typed text
+ *  never lives in the builder's state. */
+function PlanScaleAsk({ drawn, onApply, onCancel }: {
+  drawn: number; onApply: (n: number) => void; onCancel: () => void;
+}) {
+  const [text, setText] = useState("");
+  const val = parseMetres(text);
+  return (
+    <div className="flex flex-1 flex-wrap items-center gap-2">
+      <span className="text-[12.5px] leading-snug text-ink/70">
+        That line is <span className="font-mono">{fmtM(drawn)} m</span> at the moment. How long is it really?
+      </span>
+      <input className="field !h-9 w-24" inputMode="decimal" autoFocus placeholder="metres"
+        aria-label="The line's real length in metres"
+        value={text} onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && val) onApply(val);
+          if (e.key === "Escape") onCancel();
+        }} />
+      <button type="button" className="btn min-h-[40px] !px-3 !py-1.5" disabled={!val}
+        onClick={() => val && onApply(val)}>Set the scale</button>
+      <button type="button" className="btn-ghost min-h-[40px] !px-3 !py-1.5" onClick={onCancel}>Cancel</button>
+    </div>
+  );
+}
+
 /** Somewhere other than localStorage to keep the drawing — the studio passes
  *  its API here. load() runs once; save() is already debounced by the
  *  builder, so it can go straight to the network. */
@@ -395,8 +431,9 @@ export interface DesignStore {
 }
 
 export function SitePlanBuilder(
-  { companyId, cadastre = false, store, patioTools = false }:
-  { companyId: string; cadastre?: boolean; store?: DesignStore; patioTools?: boolean },
+  { companyId, cadastre = false, store, patioTools = false, underlayKey }:
+  { companyId: string; cadastre?: boolean; store?: DesignStore;
+    patioTools?: boolean; underlayKey?: string },
 ) {
   const [design, setDesign] = useState<Design>(BLANK);
   const [selected, setSelected] = useState<string | null>(null);
@@ -446,6 +483,21 @@ export function SitePlanBuilder(
    *  land. A blank note is the ordinary state — this never nags. */
   const [findingLot, setFindingLot] = useState(false);
   const [lotNote, setLotNote] = useState("");
+  /** House-plan underlay (studio only). The picture in the browser right now,
+   *  how many pages a PDF had, whether one is being read in, a message when a
+   *  saved plan's picture isn't on this device, and the two points of a
+   *  set-scale line waiting for a real length. */
+  const planOn = !!underlayKey;
+  const [planImg, setPlanImg] = useState<string | null>(null);
+  const [planPages, setPlanPages] = useState(1);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [planMissing, setPlanMissing] = useState(false);
+  const [planScaling, setPlanScaling] = useState(false);
+  const [planScale, setPlanScale] = useState<{ pts: Pt[]; metres: number | null }>({ pts: [], metres: null });
+  const planDragRef = useRef<{ cx: number; cy: number; start: Pt; frame: Frame } | null>(null);
+  /** The file the house plan came from, kept for this session so a multi-page
+   *  PDF can switch page. Not persisted — a reload asks for it again. */
+  const planFileRef = useRef<File | null>(null);
   const keyRef = useRef(designKey(companyId, ""));
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -640,6 +692,195 @@ export function SitePlanBuilder(
       ...p,
       underlay: { ...p.underlay, ...(typeof patch === "function" ? patch(p.underlay) : patch) },
     }));
+
+  // ---- the house-plan underlay (studio only) ------------------------------
+
+  const plan0 = design.planUnderlay;
+  /** A house plan is placed AND its picture is here to draw. */
+  const planShowing = planOn && plan0.placed && !!planImg && plan0.visible;
+  /** Lining the house plan up: it's placed, visible, unlocked, and no other
+   *  gesture owns the canvas. */
+  const planAligning = planShowing && !plan0.locked && !draw && !trace && !lotEdit && !planScaling;
+
+  const patchPlan = (patch: Partial<PlanUnderlay> | ((u: PlanUnderlay) => Partial<PlanUnderlay>)) =>
+    setDesign((p) => ({
+      ...p,
+      planUnderlay: sanitisePlanUnderlay({
+        ...p.planUnderlay,
+        ...(typeof patch === "function" ? patch(p.planUnderlay) : patch),
+      }),
+    }));
+
+  // Bring the saved picture back from this browser when a design that has one
+  // loads. Not on the server — if it isn't on this device, say so and offer to
+  // re-add it, keeping the placement so a same-size picture lands back true.
+  // Keyed on the load, not on `placed`: a design that arrives with a house
+  // plan fetches its picture once; adding one later sets the picture in hand
+  // and must not be clobbered by a re-fetch (which, with no IndexedDB, would
+  // read back null and wrongly report it missing).
+  useEffect(() => {
+    if (!planOn || !loaded || !plan0.placed) return;
+    let dead = false;
+    void getUnderlay(underlayKey!).then((data) => {
+      if (dead) return;
+      if (data) { setPlanImg(data); setPlanMissing(false); }
+      else setPlanMissing(true);
+    });
+    return () => { dead = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once the design has loaded; underlayKey is stable per mount
+  }, [planOn, loaded]);
+
+  /** Read an image file to a data URL and its natural pixel size. */
+  function readImage(file: File): Promise<{ dataUrl: string; w: number; h: number }> {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => {
+        const dataUrl = String(fr.result || "");
+        const img = new Image();
+        img.onload = () => resolve({ dataUrl, w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => reject(new Error("image"));
+        img.src = dataUrl;
+      };
+      fr.onerror = () => reject(new Error("read"));
+      fr.readAsDataURL(file);
+    });
+  }
+
+  /** Render one page of a PDF to a data URL, big enough to trace over without
+   *  going soft, capped so a huge sheet doesn't blow the browser's memory. */
+  async function renderPdf(file: File, page: number): Promise<{ dataUrl: string; w: number; h: number; pages: number }> {
+    const pdfjs = await import("pdfjs-dist");
+    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjs.getDocument({ data: buf }).promise;
+    const pg = await doc.getPage(Math.min(Math.max(page, 1), doc.numPages));
+    const base = pg.getViewport({ scale: 1 });
+    const target = 2000;                              // long edge, in pixels
+    const scale = Math.min(target / Math.max(base.width, base.height), 4);
+    const viewport = pg.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await pg.render({ canvasContext: ctx, viewport }).promise;
+    const pages = doc.numPages;
+    await doc.destroy();
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.85), w: canvas.width, h: canvas.height, pages };
+  }
+
+  /** Take the picture on: read or render it, drop it behind the plan roughly
+   *  fitting the lot width, and go straight into lining it up. The picture
+   *  stays in this browser; only the placement is saved. */
+  async function addPlan(file: File, page = 1, keepPlacement = false) {
+    if (!planOn || !file) return;
+    planFileRef.current = file;
+    setPlanBusy(true);
+    setPlanMissing(false);
+    try {
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const r = isPdf ? await renderPdf(file, page) : { ...(await readImage(file)), pages: 1 };
+      if (!(r.w > 0) || !(r.h > 0)) throw new Error("empty");
+      await putUnderlay(underlayKey!, r.dataUrl);
+      setPlanImg(r.dataUrl);
+      setPlanPages(r.pages);
+      if (keepPlacement && plan0.placed) {
+        // Just a different page of the same plan — leave it where it sits.
+        patchPlan({ w: r.w, h: r.h, page });
+      } else {
+        setSelected(null);
+        setDraw(null);
+        // Fit the picture's width to about three-quarters of the lot, centred,
+        // so there's something sensible on screen before the scale is even set.
+        patchPlan({
+          placed: true, w: r.w, h: r.h, page,
+          cx: lotW / 2, cy: lotD / 2, mpp: (lotW * 0.75) / r.w, rot: 0,
+          visible: true, locked: false,
+        });
+      }
+    } catch {
+      setPlanMissing(true);
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  const removePlan = () => {
+    if (underlayKey) void delUnderlay(underlayKey);
+    setPlanImg(null);
+    setPlanPages(1);
+    setPlanMissing(false);
+    setPlanScaling(false);
+    setPlanScale({ pts: [], metres: null });
+    patchPlan(sanitisePlanUnderlay(undefined));
+  };
+
+  // Set the scale by drawing a line along something of a known length. The
+  // line is measured in the drawing's own metres at the current size; telling
+  // the tool what it really is resizes the picture to match, about the line.
+  function startPlanScale() {
+    setPlanScaling(true);
+    setPlanScale({ pts: [], metres: null });
+    patchPlan({ locked: true });
+    setSelected(null);
+    setDraw(null);
+    canvasRef.current?.focus({ preventScroll: true });
+  }
+  function addPlanScalePoint(e: { clientX: number; clientY: number }) {
+    const p = toM(e);
+    setPlanScale((s) => {
+      if (s.metres !== null) return s;
+      const pts = [...s.pts, { x: snap(p.x, 0.01), y: snap(p.y, 0.01) }];
+      if (pts.length >= 2) {
+        return { pts: [pts[0], pts[1]], metres: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) };
+      }
+      return { pts, metres: null };
+    });
+  }
+  function applyPlanScale(realM: number) {
+    const now = planScale.metres;
+    const [a, b] = planScale.pts;
+    if (now && now > 0 && realM > 0 && a && b) {
+      const k = realM / now;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      patchPlan((u) => ({
+        mpp: rescalePlanUnderlay(u.mpp, now, realM),
+        cx: mx + k * (u.cx - mx),
+        cy: my + k * (u.cy - my),
+      }));
+    }
+    setPlanScaling(false);
+    setPlanScale({ pts: [], metres: null });
+  }
+  const cancelPlanScale = () => { setPlanScaling(false); setPlanScale({ pts: [], metres: null }); };
+
+  // Dragging the house plan to line it up — one finger moves it; rotation and
+  // scale are set from the card, so the drag only ever translates.
+  function planDown(e: React.PointerEvent) {
+    e.preventDefault();
+    canvasRef.current?.focus({ preventScroll: true });
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    const frame = frameNow();
+    planDragRef.current = { cx: plan0.cx, cy: plan0.cy, start: toMIn(e, frame), frame };
+  }
+  function planMove(e: React.PointerEvent) {
+    const g = planDragRef.current;
+    if (!g) return;
+    const p = toMIn(e, g.frame);
+    patchPlan({ cx: g.cx + (p.x - g.start.x), cy: g.cy + (p.y - g.start.y) });
+  }
+  const planUp = () => { planDragRef.current = null; };
+
+  /** The house plan's box on the canvas, in CSS pixels — where the picture
+   *  sits behind the drawing, before its own rotation. */
+  function planBox() {
+    const u = plan0;
+    const wPx = u.w * u.mpp * pxPerM, hPx = u.h * u.mpp * pxPerM;
+    const cxPx = (u.cx + mL) * pxPerM, cyPx = (u.cy + mT) * pxPerM;
+    return { left: cxPx - wPx / 2, top: cyPx - hPx / 2, w: wPx, h: hPx };
+  }
 
   // Taking the photo off throws the map element away with it, so let the map
   // go too — the next one has to build into the element that's really there.
@@ -950,6 +1191,7 @@ export function SitePlanBuilder(
     setSelected(null);
     setLotSel(null);
     setLotNudge("");
+    cancelPlanScale();
     // Handles get grabbed on the plan, so the photo has to stop taking drags.
     if (aligning) patchUnderlay({ locked: true });
     canvasRef.current?.focus({ preventScroll: true });
@@ -1007,6 +1249,7 @@ export function SitePlanBuilder(
     setDraw(null);
     setSelected(null);
     setLotNudge("");
+    cancelPlanScale();
     if (aligning) patchUnderlay({ locked: true });
     canvasRef.current?.focus({ preventScroll: true });
   }
@@ -1220,6 +1463,7 @@ export function SitePlanBuilder(
   function startDraw() {
     setDraw({ pts: [], hint: "" });
     setSelected(null);
+    cancelPlanScale();
     // Corners get tapped on the plan, so the photo has to stop taking taps.
     if (aligning) patchUnderlay({ locked: true });
     canvasRef.current?.focus({ preventScroll: true });
@@ -1269,6 +1513,11 @@ export function SitePlanBuilder(
   };
 
   function onKeyDown(e: React.KeyboardEvent) {
+    // Setting the house-plan scale owns Escape while it's on.
+    if (planScaling) {
+      if (e.key === "Escape") { e.preventDefault(); cancelPlanScale(); }
+      return;
+    }
     // Undo is the way back from a boundary drag, wherever you are.
     if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
       e.preventDefault();
@@ -2665,6 +2914,20 @@ export function SitePlanBuilder(
             ))}
           </g>
         )}
+        {/* the set-scale line across the house plan */}
+        {interactive && planScaling && (
+          <g pointerEvents="none">
+            {planScale.pts.length === 2 && (
+              <line x1={planScale.pts[0].x} y1={planScale.pts[0].y}
+                x2={planScale.pts[1].x} y2={planScale.pts[1].y}
+                stroke={SEAL} strokeWidth={mm(0.6)} strokeLinecap="round" />
+            )}
+            {planScale.pts.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={mm(1.4)}
+                fill="#fff" stroke={SEAL} strokeWidth={mm(0.45)} />
+            ))}
+          </g>
+        )}
         {/* the outline being drawn */}
         {interactive && draw && (
           <g pointerEvents="none">
@@ -3018,6 +3281,132 @@ export function SitePlanBuilder(
             </div>
           )}
 
+          {/* House plan (trace) — studio only. The client's own PDF or image,
+              placed behind the drawing to trace over. Kept in this browser,
+              never uploaded, never printed. */}
+          {planOn && (
+            <div className="card p-4">
+              <h2 className="sectionhead !mb-2">House Plan (trace)</h2>
+              {!plan0.placed ? (
+                <>
+                  <label className={`btn-ghost flex min-h-[40px] w-full cursor-pointer items-center justify-center !py-2 ${planBusy ? "opacity-60" : ""}`}>
+                    {planBusy ? "Adding…" : "Add a House Plan"}
+                    <input type="file" accept="application/pdf,image/*" className="hidden" disabled={planBusy}
+                      onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void addPlan(f); }} />
+                  </label>
+                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                    Upload a PDF or a photo of your house plans and trace over it.
+                    It stays on this device — it&apos;s never uploaded, and it
+                    never appears on the printed plan.
+                  </p>
+                </>
+              ) : planMissing || !planImg ? (
+                <>
+                  <p className="text-[12.5px] leading-snug text-brass-deep">
+                    Your house plan isn&apos;t on this device. It stays in the
+                    browser you added it in and was never uploaded — add it again
+                    here to keep tracing. What you&apos;ve already drawn is safe.
+                  </p>
+                  <label className={`btn-ghost mt-2 flex min-h-[40px] w-full cursor-pointer items-center justify-center !py-2 ${planBusy ? "opacity-60" : ""}`}>
+                    {planBusy ? "Adding…" : "Re-add the House Plan"}
+                    <input type="file" accept="application/pdf,image/*" className="hidden" disabled={planBusy}
+                      onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void addPlan(f, 1, true); }} />
+                  </label>
+                  <button type="button" onClick={removePlan}
+                    className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
+                    Forget This House Plan
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <button type="button"
+                      onClick={() => patchPlan((u) => ({ visible: !u.visible }))}
+                      className="btn-ghost min-h-[40px] flex-1 !px-2 !py-2">
+                      {plan0.visible ? "Hide Plan" : "Show Plan"}
+                    </button>
+                    <button type="button"
+                      onClick={() => {
+                        const unlocking = plan0.locked;
+                        patchPlan({ locked: !plan0.locked, visible: true });
+                        if (unlocking) patchUnderlay({ locked: true });
+                      }}
+                      className={`min-h-[40px] flex-1 rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
+                        planAligning ? "border-seal bg-wash text-seal" : "border-rule bg-white text-ink hover:bg-wash"
+                      }`}>
+                      {plan0.locked ? "Line it up" : "Lock it"}
+                    </button>
+                  </div>
+
+                  {plan0.visible && (
+                    <div className="mt-3 space-y-3">
+                      {planPages > 1 && planFileRef.current && (
+                        <div>
+                          <span className="label">Page</span>
+                          <select className="field" value={plan0.page} disabled={planBusy}
+                            onChange={(e) => {
+                              const pg = Number(e.target.value);
+                              if (planFileRef.current) void addPlan(planFileRef.current, pg, true);
+                            }}>
+                            {Array.from({ length: planPages }, (_, i) => i + 1).map((n) => (
+                              <option key={n} value={n}>Page {n} of {planPages}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Scale — the one thing a photo of a plan doesn't carry. */}
+                      <div>
+                        <span className="label">Scale</span>
+                        <button type="button" onClick={startPlanScale}
+                          className="btn-ghost min-h-[40px] w-full !py-2">
+                          Set the Scale by a Known Length
+                        </button>
+                        <div className="mt-2">
+                          <MetresField label="…or type its width on the plan (m)"
+                            value={Math.round(plan0.w * plan0.mpp * 100) / 100}
+                            onCommit={(n) => { if (plan0.w > 0) patchPlan({ mpp: n / plan0.w }); }} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="label !mb-0">Turn the plan</span>
+                          <span className="font-mono text-[11.5px] text-ink/55">{Math.round(plan0.rot)}°</span>
+                        </div>
+                        <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
+                          min={0} max={360} step={1} value={plan0.rot}
+                          aria-label="House plan rotation in degrees"
+                          onChange={(e) => patchPlan({ rot: Number(e.target.value) })} />
+                      </div>
+
+                      <div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="label !mb-0">How strong</span>
+                          <span className="font-mono text-[11.5px] text-ink/55">{Math.round(plan0.opacity * 100)}%</span>
+                        </div>
+                        <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
+                          min={UNDERLAY_MIN_OPACITY} max={1} step={0.05} value={plan0.opacity}
+                          aria-label="How strongly the house plan shows through"
+                          onChange={(e) => patchPlan({ opacity: clampUnderlayOpacity(Number(e.target.value)) })} />
+                      </div>
+                    </div>
+                  )}
+
+                  <button type="button" onClick={removePlan}
+                    className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
+                    Take the House Plan Off
+                  </button>
+                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                    {planAligning
+                      ? "Drag the plan to line it up with your drawing, then lock it. Set the scale off a length you know, and it'll sit true to the metre."
+                      : "A tracing guide only — it stays on this device, isn't uploaded, and never appears on the printed plan."}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Add a Structure</h2>
             <div className="grid grid-cols-2 gap-2">
@@ -3325,6 +3714,29 @@ export function SitePlanBuilder(
               </div>
             </div>
           )}
+          {/* Setting the house plan's scale by a known length. */}
+          {planScaling && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-seal/30 bg-wash px-3 py-2">
+              {planScale.metres === null ? (
+                <p className="min-w-[180px] flex-1 text-[12.5px] leading-snug text-ink/70">
+                  {planScale.pts.length === 0
+                    ? "Tap the two ends of something on your plan you know the real length of — a wall, a boundary, the scale bar."
+                    : "Now tap the other end."}
+                </p>
+              ) : (
+                <PlanScaleAsk
+                  drawn={planScale.metres}
+                  onApply={applyPlanScale}
+                  onCancel={cancelPlanScale}
+                />
+              )}
+              {planScale.metres === null && (
+                <button type="button" className="btn-ghost min-h-[40px] !px-3 !py-1.5" onClick={cancelPlanScale}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
           <div ref={canvasRef} tabIndex={0} onKeyDown={onKeyDown} aria-label="Site plan drawing area"
             className="relative mx-auto select-none rounded-md" style={{ maxWidth: `${maxCanvasPx}px` }}>
             {/* The aerial, behind everything and clipped to the canvas. Marked
@@ -3350,6 +3762,25 @@ export function SitePlanBuilder(
                   }} />
               </div>
             )}
+            {/* The client's own house plan, behind the drawing and clipped to
+                the canvas. Same cfba-underlay mark as the aerial: a tracing
+                guide only, struck from the print, never part of what lodges.
+                Its picture lives in this browser; it is never uploaded. */}
+            {planShowing && (() => {
+              const box = planBox();
+              return (
+                <div className="cfba-underlay pointer-events-none absolute inset-0 overflow-hidden rounded-[3px]"
+                  aria-hidden="true" style={{ zIndex: 0, opacity: plan0.opacity, transition: "opacity 0.15s ease" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a client-local data URL, never a remote asset */}
+                  <img src={planImg!} alt=""
+                    style={{
+                      position: "absolute", left: `${box.left}px`, top: `${box.top}px`,
+                      width: `${box.w}px`, height: `${box.h}px`, maxWidth: "none",
+                      transform: `rotate(${plan0.rot}deg)`, transformOrigin: "50% 50%",
+                    }} />
+                </div>
+              );
+            })()}
             <svg ref={svgRef} viewBox={viewBox} role="img" aria-label="Site plan"
               style={{
                 width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`,
@@ -3357,17 +3788,18 @@ export function SitePlanBuilder(
                 cursor: draw || trace ? "crosshair" : undefined,
               }}
               onPointerDown={(e) => {
+                if (planScaling) { addPlanScalePoint(e); return; }
                 if (trace) { addTracePoint(e); return; }
                 if (draw) { addDrawPoint(e); return; }
                 if (editing) { setLotSel(null); return; }
                 setSelected(null);
               }}>
-              {plan(true, tracing)}
+              {plan(true, tracing || planShowing)}
             </svg>
             {/* Alignment only exists while it's unlocked. Locked, this is
                 gone from the tree entirely and every structure is as
                 draggable as it ever was. */}
-            {aligning && (
+            {aligning && !planAligning && (
               <div
                 className="absolute inset-0 cursor-move rounded-[3px] ring-2 ring-brass/70"
                 style={{ zIndex: 3, touchAction: "none" }}
@@ -3377,6 +3809,20 @@ export function SitePlanBuilder(
                 onPointerMove={alignMove}
                 onPointerUp={alignUp}
                 onPointerCancel={alignUp}
+              />
+            )}
+            {/* Lining the house plan up — one finger moves it; turn and scale
+                are set from its card. Only here while it's unlocked. */}
+            {planAligning && (
+              <div
+                className="absolute inset-0 cursor-move rounded-[3px] ring-2 ring-seal/60"
+                style={{ zIndex: 3, touchAction: "none" }}
+                role="application"
+                aria-label="Drag to line your house plan up with the drawing"
+                onPointerDown={planDown}
+                onPointerMove={planMove}
+                onPointerUp={planUp}
+                onPointerCancel={planUp}
               />
             )}
           </div>

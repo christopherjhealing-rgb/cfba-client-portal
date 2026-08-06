@@ -387,6 +387,32 @@ export interface Underlay {
 }
 export function sanitiseUnderlay(raw: unknown): Underlay;
 
+// --- the house-plan underlay (screen only, browser-local) ------------------
+
+export const PLAN_UNDERLAY_MIN_MPP: number;
+export const PLAN_UNDERLAY_MAX_MPP: number;
+
+/** A house-plan underlay's placement, stored on the design. The picture itself
+ *  lives in the browser (IndexedDB), never here and never on the server; this
+ *  is only where it sits, how big and how turned. `mpp` is metres of real
+ *  ground per image pixel; `cx`/`cy` the image centre in plan metres; `rot` its
+ *  own free turn in degrees; `w`/`h` the picture's natural pixel size. */
+export interface PlanUnderlay {
+  placed: boolean;
+  cx: number;
+  cy: number;
+  mpp: number;
+  rot: number;
+  opacity: number;
+  visible: boolean;
+  locked: boolean;
+  w: number;
+  h: number;
+  page: number;
+}
+export function sanitisePlanUnderlay(raw: unknown): PlanUnderlay;
+export function rescalePlanUnderlay(mpp: number, nowM: number, realM: number): number;
+
 export function parseMetres(s: string | null | undefined): number | null;
 export function fmtM(n: number): string;
 export function fmtM2(n: number): string;
