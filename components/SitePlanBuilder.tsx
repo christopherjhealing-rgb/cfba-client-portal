@@ -2653,6 +2653,24 @@ export function SitePlanBuilder(
           )}
           <p className="mt-1.5 text-[11.5px] leading-snug text-ink/45">{SOAKWELL_CAVEAT}</p>
         </div>
+
+        {/* Live elevation — the front and side views, updating as the roof,
+            pitch, posts and height change. The same drawing that prints, just
+            scaled to fit here. */}
+        <div>
+          <span className="label">Live elevation</span>
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1 rounded-md border border-rule bg-white p-1.5">
+              {elevationView(s, "w", "Front", true)}
+            </div>
+            <div className="min-w-0 flex-1 rounded-md border border-rule bg-white p-1.5">
+              {elevationView(s, "d", "Side", true)}
+            </div>
+          </div>
+          <p className="mt-1 text-[12px] leading-snug text-ink/50">
+            Updates as you change the roof. The full-size sheet prints after the plan.
+          </p>
+        </div>
       </div>
     );
   }
@@ -2662,7 +2680,7 @@ export function SitePlanBuilder(
    *  roof as a rake where the slope shows and a flat eave with a dashed
    *  ridge/high line where it runs into the page, the dwelling wall where the
    *  patio attaches, and the figures that carry it all. Studio only. */
-  function elevationView(s: Structure, span: "w" | "d", title: string) {
+  function elevationView(s: Structure, span: "w" | "d", title: string, fit = false) {
     const e = patioElevationProfile(s, span);
     const W = Math.max(e.width, 0.5);
     const dwellTop = e.attachHere ? Math.max(e.high, e.eave) + 0.9 : 0;
@@ -2705,7 +2723,9 @@ export function SitePlanBuilder(
           </span>
         </div>
         <svg viewBox={`${-M} ${-M} ${vbW} ${vbH}`} aria-hidden="true"
-          style={{ width: `${wmm.toFixed(1)}mm`, height: `${hmm.toFixed(1)}mm`, display: "block", marginTop: "1mm" }}>
+          style={fit
+            ? { width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`, display: "block", marginTop: "1mm" }
+            : { width: `${wmm.toFixed(1)}mm`, height: `${hmm.toFixed(1)}mm`, display: "block", marginTop: "1mm" }}>
           {/* the dwelling the patio attaches to */}
           {e.attachHere && (
             <g>
