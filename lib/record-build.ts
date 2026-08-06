@@ -31,10 +31,20 @@ export async function buildRecord(ref: string): Promise<BuiltRecord | null> {
   const job = await repo.getJob(ref);
   if (!job) return null;
 
-  const [messages, company] = await Promise.all([
+  const [messages, company, subs] = await Promise.all([
     repo.listMessagesByRef(ref),
     job.companyId ? repo.companyById(job.companyId).catch(() => null) : null,
+    job.companyId ? repo.listSubmissionsForCompany(job.companyId).catch(() => []) : [],
   ]);
+
+  // The documents lodged at the start: the original lodgement submission for
+  // this job's card (not an amendment). Its file list is what the client
+  // supplied up front. Absent for a job lodged by email — the transcript says
+  // so rather than pretending none were lodged.
+  const lodgement = job.mondayItemId
+    ? subs.find((s) => s.mondayItemId === job.mondayItemId && !s.amendmentOf)
+    : undefined;
+  const lodgedDocuments = lodgement?.files || [];
 
   const t = transcript({
     job: {
@@ -49,6 +59,7 @@ export async function buildRecord(ref: string): Promise<BuiltRecord | null> {
     messages,
     companyName: company?.name || "",
     exportedAt: new Date().toISOString(),
+    lodgedDocuments,
   });
 
   const pdf = Buffer.from(renderPdf(t.blocks));
