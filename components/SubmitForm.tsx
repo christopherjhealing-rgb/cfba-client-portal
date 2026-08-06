@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { AddressField } from "./AddressField";
-import { Icon } from "./Icon";
+import { BushfireAssessment } from "./BushfireAssessment";
 import { FileBucket, type Bucket } from "./FileBucket";
 import { uploadDirect } from "@/lib/upload-client";
 import { GOOGLE_MAPS_KEY, geocodeAddress } from "@/lib/google-maps";
@@ -42,6 +42,8 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   const [saveEng, setSaveEng] = useState(false);
   const [saveLabel, setSaveLabel] = useState("");
   const [bushfireProne, setBushfireProne] = useState(false);
+  // The one-line BAL conclusion from the assessment, filed with the lodgement.
+  const [bushfireSummary, setBushfireSummary] = useState<string | null>(null);
 
   // The company's saved documents (see My details). A failed fetch just means
   // no tick-list — the form works exactly as before.
@@ -60,6 +62,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   // exactly as it was. It never blocks a lodgement and never shows an error.
   useEffect(() => {
     setBushfireProne(false);
+    setBushfireSummary(null);
     if (!GOOGLE_MAPS_KEY) return;
     const text = address.trim();
     // Enough to be worth geocoding: a number and a street, not a half-typed
@@ -104,6 +107,13 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
     }
     setBusy(true); setMsg(null);
 
+    // The bushfire assessment rides along in the notes to the office, so the
+    // surveyor sees the client's own answer (distance, type, house age → BAL
+    // outcome) on the job without re-asking. Only when the lot is prone and
+    // they actually answered.
+    const notesOut = [notes.trim(), bushfireProne ? bushfireSummary : null]
+      .filter(Boolean).join("\n\n");
+
     // Files go straight to storage via signed URLs (see lib/upload-client) —
     // a full drawing set doesn't fit through a serverless request body. Site
     // photos aren't a bucket of their own; they ride in Other Supporting
@@ -126,7 +136,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          address, items, notes, contact, clientRef,
+          address, items, notes: notesOut, contact, clientRef,
           draftId: up.draftId,
           files: entries.map((x, i) => ({ name: up.names[i], category: x.category })),
           libraryIds: tickedDocs.map((d) => d.id),
@@ -137,7 +147,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       const fd = new FormData();
       fd.set("address", address);
       fd.set("items", JSON.stringify(items));
-      fd.set("notes", notes);
+      fd.set("notes", notesOut);
       fd.set("clientRef", clientRef);
       fd.set("contact", contact);
       for (const x of entries) {
@@ -219,37 +229,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <AddressField id="address" required autoFocus value={address}
         onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
 
-      {bushfireProne && (
-        <div className="mt-2 rounded-lg border-l-[3px] border-brass bg-[#FBF4E6] px-4 py-3 text-[13px] leading-relaxed text-ink/80">
-          <div className="flex items-center gap-2 font-semibold text-ink">
-            <span className="text-brass"><Icon name="alert" size={15} /></span>
-            This lot is in a designated Bush Fire Prone Area
-          </div>
-          <p className="mt-1.5">
-            A Class&nbsp;10 structure isn&apos;t habitable, so whether a BAL (Bushfire
-            Attack Level) rating applies comes down to what it is and how close it sits
-            to the house:
-          </p>
-          <ul className="mt-1.5 list-disc space-y-1.5 pl-4">
-            <li><strong>6&nbsp;m or more from the house</strong> — no BAL rating is required.</li>
-            <li>
-              <strong>Patios and carports within 6&nbsp;m</strong> take the{" "}
-              <em>house&apos;s</em> BAL rating, so we&apos;ll need evidence of what it was
-              when the house was built — the original BAL report or certificate, the
-              house&apos;s Certificate of Design Compliance (it states the BAL), or the
-              original house plans if it&apos;s noted on them. A house built{" "}
-              <strong>before 2016</strong> was never BAL-assessed, so its patios and
-              carports are exempt.
-            </li>
-            <li><strong>Sheds within 6&nbsp;m</strong> need their <em>own</em> new BAL report.</li>
-          </ul>
-          <p className="mt-2">
-            We don&apos;t prepare BAL reports ourselves. If you have the evidence, attach it
-            under <strong>Other Supporting Documents</strong> — otherwise lodge the job and
-            we&apos;ll tell you exactly what&apos;s needed.
-          </p>
-        </div>
-      )}
+      {bushfireProne && <BushfireAssessment onSummary={setBushfireSummary} />}
 
       <div className="mt-5">
         <JobItems items={items} onChange={setItems} />
