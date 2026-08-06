@@ -7,6 +7,9 @@ export function inWA(lat: number, lng: number): boolean;
 
 export function bushfireKey(lat: number, lng: number, source?: string): string;
 
+/** Short stable tag for the upstream URL — the cache key's source component. */
+export function sourceTag(url: string): string;
+
 /** The verdict from the service's raw answer, or null when it couldn't be
  *  read (an error object, HTML, garbage) — never guessed as "not prone". */
 export function readBushfire(raw: unknown): { prone: boolean } | null;

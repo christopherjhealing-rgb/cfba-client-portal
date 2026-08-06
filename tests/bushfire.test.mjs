@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readBushfire, bushfireKey, inWA, balVerdict, BAL_EXEMPTION } from "../lib/bushfire.mjs";
+import { readBushfire, bushfireKey, inWA, balVerdict, BAL_EXEMPTION, sourceTag } from "../lib/bushfire.mjs";
 
 // ---------------------------------------------------------------------------
 // The verdict — the one thing a coordinate can settle
@@ -39,12 +39,24 @@ test("the key rounds to about a metre, so the same address hits once", () => {
   assert.equal(bushfireKey(-31.952241, 115.861401), bushfireKey(-31.952244, 115.861404));
 });
 
-test("a layer tag keeps two layers' answers apart at the same point", () => {
-  // The layer can be repointed (BUSHFIRE_URL). An answer layer 0 gave must not
-  // be served for layer 3 — otherwise a lot layer 0 called "not prone" stays
-  // wrong after the switch until the cache ages out.
-  assert.equal(bushfireKey(-31.95, 115.86, "3"), "bushfire:-31.95000,115.86000:3");
-  assert.notEqual(bushfireKey(-31.95, 115.86, "0"), bushfireKey(-31.95, 115.86, "3"));
+test("a source tag keeps two sources' answers apart at the same point", () => {
+  // BUSHFIRE_URL can be repointed. An answer one source gave must not be
+  // served for another — otherwise a lot the wrong layer called "not prone"
+  // stays wrong after the switch until the cache ages out.
+  assert.equal(bushfireKey(-31.95, 115.86, "abc"), "bushfire:-31.95000,115.86000:abc");
+  assert.notEqual(bushfireKey(-31.95, 115.86, "a"), bushfireKey(-31.95, 115.86, "b"));
+});
+
+test("the source tag tells SLIP's two look-alike services apart", () => {
+  // Learned the hard way: both services end in /MapServer/3, and only the
+  // trailing number in the key meant a stale "not prone" from one masked the
+  // right answer from the other. The tag hashes the WHOLE URL.
+  const fs = sourceTag("https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/3");
+  const plain = sourceTag("https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas/MapServer/3");
+  assert.notEqual(fs, plain);
+  // Stable and short enough to live in a settings key.
+  assert.equal(fs, sourceTag("https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/3"));
+  assert.match(fs, /^[0-9a-z]{1,8}$/);
 });
 
 test("bushfire and cadastre keep separate keys for the same point", () => {

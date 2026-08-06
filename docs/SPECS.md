@@ -298,12 +298,17 @@ SLIP feature service:
 https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/3
 ```
 
-Layer 3 carries **both** designation categories — Area 1 and Area 2 — and is the
-map CFBA checks an address against. Layer 0 (OBRM-001) was tried first and holds
-Area 2 but not Area 1, so it missed genuinely prone lots (a Tapping address in
-Area 1 didn't flag; a Carmel address in Area 2 did). The cache key includes the
-layer number, so repointing `BUSHFIRE_URL` re-queries rather than serving the
-old layer's verdict for a point already looked up.
+Layer 3 (OBRM-023) carries **both** designation categories — Area 1 and Area 2
+— and is the map CFBA checks an address against. Verified against a known
+Area 1 lot in Tapping: layers 0, 2 and 3 of this service all contain it.
+**Beware the look-alike service**: SLIP also hosts
+`SLIP_Public_Services/Bush_Fire_Prone_Areas` (no `_FS`) whose layer numbers
+mean different, older things — a `BUSHFIRE_URL` pointing there answers a clean
+"no features" for lots that are genuinely designated. Prefer deleting the
+Vercel `BUSHFIRE_URL` variable so the baked-in default above is what runs. The
+cache key includes a hash of the whole upstream URL, so any repoint — layer,
+service or host — re-queries rather than serving the old source's verdict for
+a point already looked up.
 
 It is baked in but **unverified from CI** (SLIP is unreachable from the build —
 every call 403s at the egress proxy), and it stays an env override, so a wrong
