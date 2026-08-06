@@ -33,6 +33,14 @@ export default async function AdminHome() {
     String(a.issuedAt || "").localeCompare(String(b.issuedAt || "")));
   const firJobs = allJobs.filter(needsClientInfo).sort((a, b) =>
     String(a.receivedAt || "").localeCompare(String(b.receivedAt || "")));
+  // Collected in the last fortnight — the reassurance list: who's actually got
+  // their certificate lately. Calendar days, not business days, so "2 weeks"
+  // means two weeks; newest first, because the question is "what just went
+  // out", not "what's been sitting longest".
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86_400_000).toISOString();
+  const recentlyDownloaded = allJobs
+    .filter((j) => j.firstDownloadedAt && String(j.firstDownloadedAt) >= twoWeeksAgo)
+    .sort((a, b) => String(b.firstDownloadedAt || "").localeCompare(String(a.firstDownloadedAt || "")));
   // Enquiries have no card and no sync — the notification email is the only
   // thing that tells anyone one arrived. This count is the backstop for the
   // day that email doesn't send.
@@ -106,6 +114,11 @@ export default async function AdminHome() {
           title="In for FIR" tone="brass" mode="fir"
           blurb="No jobs are waiting on a client's answer."
           jobs={firJobs} names={names}
+        />
+        <AdminSnapshot
+          title="Recently Downloaded — last 2 weeks" tone="seal" mode="downloaded"
+          blurb="No packages have been collected in the last two weeks."
+          jobs={recentlyDownloaded} names={names}
         />
 
         <section>

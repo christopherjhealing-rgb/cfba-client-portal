@@ -3,8 +3,9 @@ import type { Job } from "@/lib/repo";
 
 /**
  * A staff at-a-glance list of jobs sitting in one state — waiting on a client
- * to download, or waiting on a client to answer an FIR. The office asked for
- * these on the Queue page so the day starts with "who do I need to chase"
+ * to download, waiting on a client to answer an FIR, or (the reassurance one)
+ * collected recently. The office asked for these on the Queue page so the day
+ * starts with "who do I need to chase", and "who's actually got theirs",
  * without opening the board.
  *
  * Read-only: staff have no client-side job page to link to, so each row is
@@ -26,9 +27,9 @@ export function AdminSnapshot({
 }: {
   title: string;
   blurb: string;
-  /** "seal" for ready-to-collect, "brass" for waiting-on-the-client. */
+  /** "seal" for ready-to-collect / done, "brass" for waiting-on-the-client. */
   tone: "seal" | "brass";
-  mode: "ready" | "fir";
+  mode: "ready" | "fir" | "downloaded";
   jobs: Job[];
   names: Record<string, string>;
 }) {
@@ -53,8 +54,8 @@ export function AdminSnapshot({
       ) : (
         <div className={`card divide-y divide-rule border ${rule}`}>
           {shown.map((j) => {
-            const when = mode === "ready"
-              ? ago(j.issuedAt as string, "issued")
+            const when = mode === "ready" ? ago(j.issuedAt as string, "issued")
+              : mode === "downloaded" ? ago(j.firstDownloadedAt as string, "downloaded")
               : ago(j.receivedAt as string, "lodged");
             return (
               <div key={j.ref as string} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3">
@@ -77,7 +78,9 @@ export function AdminSnapshot({
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <span className={chip}>
-                    {mode === "ready" ? "Ready — not collected" : "With the client"}
+                    {mode === "ready" ? "Ready — not collected"
+                      : mode === "downloaded" ? "Collected"
+                      : "With the client"}
                   </span>
                   {when && <span className="text-[11.5px] text-ink/50">{when}</span>}
                 </div>
@@ -86,7 +89,7 @@ export function AdminSnapshot({
           })}
           {jobs.length > CAP && (
             <div className="px-4 py-2.5 text-center text-[12px] text-ink/50">
-              and {jobs.length - CAP} more — oldest {CAP} shown
+              and {jobs.length - CAP} more — {mode === "downloaded" ? "newest" : "oldest"} {CAP} shown
             </div>
           )}
         </div>
