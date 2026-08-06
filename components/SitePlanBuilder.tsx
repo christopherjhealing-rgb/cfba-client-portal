@@ -431,13 +431,17 @@ export interface DesignStore {
 }
 
 export function SitePlanBuilder(
-  { companyId, cadastre = false, store, patioTools = false, underlayKey }:
+  { companyId, cadastre = false, store, patioTools = false, underlayKey, chrome = false }:
   { companyId: string; cadastre?: boolean; store?: DesignStore;
-    patioTools?: boolean; underlayKey?: string },
+    patioTools?: boolean; underlayKey?: string; chrome?: boolean },
 ) {
   const [design, setDesign] = useState<Design>(BLANK);
   const [selected, setSelected] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  /** Studio chrome: which toolbar menu is open (a Word-style drop-down that
+   *  reveals one group of controls at a time). Null is the resting state — the
+   *  canvas has the screen to itself. Only ever used when `chrome` is on. */
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [today, setToday] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
@@ -729,6 +733,12 @@ export function SitePlanBuilder(
     return () => { dead = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once the design has loaded; underlayKey is stable per mount
   }, [planOn, loaded]);
+
+  // Picking a structure opens its editor — the one panel that's contextual, so
+  // it comes to the front the moment there's something to edit. Studio only.
+  useEffect(() => {
+    if (chrome && selected) setOpenMenu("selected");
+  }, [chrome, selected]);
 
   /** Read an image file to a data URL and its natural pixel size. */
   function readImage(file: File): Promise<{ dataUrl: string; w: number; h: number }> {
@@ -2958,9 +2968,10 @@ export function SitePlanBuilder(
   const sheetWmm = mToMmOnPaper(vbW, denom) * fitFactor;
   const sheetHmm = mToMmOnPaper(vbH, denom) * fitFactor;
 
-  return (
-    <div>
-      {/* lot setup */}
+  /** The lot's address, street, size and the lookup buttons — the top card in
+   *  the classic layout, and the contents of the "Lot" menu in studio chrome. */
+  function lotSetup() {
+    return (
       <div className="card mb-5 p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
@@ -2985,7 +2996,6 @@ export function SitePlanBuilder(
                 setDesign((p) => ({ ...p, street: v }));
               }}
               onBlur={() => {
-                // Cleared by hand: fall back to deriving from the address.
                 if (!street.trim()) {
                   streetEditedRef.current = false;
                   setDesign((p) => ({ ...p, street: deriveStreet(p.address) }));
@@ -3028,9 +3038,6 @@ export function SitePlanBuilder(
               className="btn-ghost min-h-[40px] !py-2">
               {finding ? "Looking…" : sited ? "Find This Site Again" : "Show the Aerial Photo"}
             </button>
-            {/* With the photo down, matching the boundary to it is the whole
-                job — so the way in sits right here rather than three cards
-                further down the page. */}
             {sited && (
               <button type="button" onClick={startTrace}
                 className={`min-h-[40px] rounded-md border px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
@@ -3061,13 +3068,56 @@ export function SitePlanBuilder(
           in this browser, per address.
         </p>
       </div>
+    );
+  }
 
-      <div className="grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]">
+  /** The studio's top toolbar: one drop-down per group of controls, canvas
+   *  underneath. A second tap on an open menu closes it, giving the drawing
+   *  the whole screen. */
+  function studioToolbar() {
+    const items: { id: string; label: string }[] = [
+      { id: "lot", label: "Lot" },
+      { id: "underlays", label: "Underlays" },
+      { id: "add", label: "Add" },
+      ...(sel ? [{ id: "selected", label: sel.label || "Selected" }] : []),
+      { id: "sheet", label: "Sheet" },
+    ];
+    return (
+      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-rule bg-white p-1.5 shadow-sm">
+        {items.map((it) => {
+          const on = openMenu === it.id;
+          return (
+            <button key={it.id} type="button" aria-pressed={on}
+              onClick={() => setOpenMenu(on ? null : it.id)}
+              className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-md px-3.5 font-display text-[13px] font-semibold transition ${
+                on ? "bg-seal text-white" : "text-ink hover:bg-wash"
+              }`}>
+              {it.label}
+              <span className={`text-[9px] transition ${on ? "rotate-180" : ""}`}>▾</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Studio chrome puts a toolbar on top and reveals one group of controls
+          at a time; the classic layout keeps the lot-setup card here and the
+          controls in a column beside the canvas. */}
+      {chrome ? studioToolbar() : lotSetup()}
+
+      <div className={chrome
+        ? (openMenu ? "grid gap-5 lg:grid-cols-[340px,minmax(0,1fr)]" : "")
+        : "grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]"}>
         {/* toolbox + selected structure */}
-        <div className="space-y-5">
+        <div className={chrome && !openMenu ? "hidden" : "space-y-5"}>
+          {chrome && openMenu === "lot" && lotSetup()}
           {/* The lot boundary. Always here now: a typed rectangle is a lot
               boundary too, and the whole point of this card is that you can
               take hold of it. */}
+          {(!chrome || openMenu === "lot") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Lot Boundary</h2>
             <dl className="space-y-1 font-mono text-[12.5px] text-ink/75">
@@ -3190,9 +3240,10 @@ export function SitePlanBuilder(
               {lotOriginNote(boundary)}
             </p>
           </div>
+          )}
 
           {/* Aerial alignment — only once there's a photo to line up. */}
-          {sited && (
+          {(!chrome || openMenu === "underlays") && sited && (
             <div className="card p-4">
               <h2 className="sectionhead !mb-2">Aerial Photo</h2>
               <div className="flex gap-2">
@@ -3284,7 +3335,7 @@ export function SitePlanBuilder(
           {/* House plan (trace) — studio only. The client's own PDF or image,
               placed behind the drawing to trace over. Kept in this browser,
               never uploaded, never printed. */}
-          {planOn && (
+          {(!chrome || openMenu === "underlays") && planOn && (
             <div className="card p-4">
               <h2 className="sectionhead !mb-2">House Plan (trace)</h2>
               {!plan0.placed ? (
@@ -3407,6 +3458,7 @@ export function SitePlanBuilder(
             </div>
           )}
 
+          {(!chrome || openMenu === "add") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Add a Structure</h2>
             <div className="grid grid-cols-2 gap-2">
@@ -3438,7 +3490,9 @@ export function SitePlanBuilder(
               </button>
             </div>
           </div>
+          )}
 
+          {(!chrome || openMenu === "selected") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Selected Structure</h2>
             {sel ? (
@@ -3604,7 +3658,9 @@ export function SitePlanBuilder(
               </p>
             )}
           </div>
+          )}
 
+          {(!chrome || openMenu === "sheet") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Sheet</h2>
             <div className="space-y-2">
@@ -3649,6 +3705,7 @@ export function SitePlanBuilder(
               })()}
             </p>
           </div>
+          )}
         </div>
 
         {/* The canvas. Sticky from lg up: the options column is long, and

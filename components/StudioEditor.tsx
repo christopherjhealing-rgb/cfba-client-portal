@@ -48,9 +48,12 @@ export function StudioEditor(
   // not be seen to help design what they certify. `underlayKey` (the design's
   // own id) turns on the house-plan trace underlay and keys its browser-local
   // picture, one per design.
+  // `chrome` gives the studio its Word-style toolbar layout (a top bar of
+  // drop-down menus with the canvas underneath); the certifier's portal keeps
+  // the classic column-beside-canvas layout.
   return (
     <SitePlanBuilder
-      companyId={owner} cadastre={cadastre} store={store} patioTools underlayKey={id}
+      companyId={owner} cadastre={cadastre} store={store} patioTools underlayKey={id} chrome
     />
   );
 }
