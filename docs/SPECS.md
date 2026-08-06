@@ -263,6 +263,49 @@ A miss is kept for **14 days** and then re-tried, because a new estate does
 eventually reach the cadastre. A failed cache write costs another lookup later
 and never costs the client the boundary just found.
 
+### Bush fire prone flag (same source, different layer)
+
+The Lodge a Job form flags when a site sits in a designated **Bush Fire Prone
+Area** — the trigger for a BAL assessment. It is the cadastre pattern reused
+end to end, and it flags the **zone only**: whether a BAL assessment is on the
+table. It can never give the BAL *rating* (BAL-12.5/19/29/40/FZ) — that is a
+site assessment of slope, vegetation and separation distances, not something an
+address decides.
+
+- **Pure + tested:** `lib/bushfire.mjs` (`readBushfire`, `bushfireKey`, WA guard
+  reused from the cadastre) over synthetic fixtures in `tests/bushfire.test.mjs`.
+  A returned feature means "inside a prone-area polygon"; an ArcGIS `{ error }`
+  body reads as "couldn't tell", never "not prone".
+- **The one socket:** `lib/bushfire-source.ts`, same ArcGIS point-intersect
+  query as the cadastre but `returnGeometry=false` (we only need whether a
+  polygon exists). Host pinned; never caller-supplied.
+- **The route:** `app/api/bushfire/route.ts`, GET `?lat=&lng=`, signed-in
+  clients only, WA-bounds guarded. Hard-whitelisted to `{ checked, prone }` —
+  none of the service's own fields leave the server. Cached under
+  `bushfire:<lat>,<lng>` for **120 days** (a designation changes only when DFES
+  revises the map). Every not-found outcome is a 200 with `checked: false`.
+- **The coordinate** comes from geocoding the typed address in the browser
+  (`geocodeAddress`, Google Maps), so the flag needs `NEXT_PUBLIC_GOOGLE_MAPS_KEY`
+  — the same key the address autocomplete and the studio already use. No key, no
+  geocode, the feature off, or any error: no flag, and the form is unchanged. It
+  never blocks a lodgement.
+
+**OFF until configured, and there is NO default URL** — a wrong bushfire answer
+is worse than none, so nothing is guessed in code. To switch it on:
+
+1. Browse `https://services.slip.wa.gov.au/public/rest/services` for the DFES
+   **Bush Fire Prone Areas** layer (an ArcGIS MapServer/FeatureServer layer of
+   prone-area polygons, under an emergency/DFES service).
+2. Confirm it by pasting the built query with a known bushfire-prone WA point
+   and checking a feature comes back.
+3. Set `BUSHFIRE_URL` to the layer URL, then `BUSHFIRE_ENABLED=1`, and redeploy.
+   If the live service returns every point tiled with a prone Y/N attribute
+   rather than prone-only polygons, `readBushfire` in `lib/bushfire.mjs` is the
+   only function that changes.
+
+Next step once proven: persist the flag onto the lodgement so the office sees it
+in the review queue and on the job, not only the client at lodgement.
+
 ### Frontage, north and the aerial
 
 The cadastre records parcels, not frontages, so the street boundary is

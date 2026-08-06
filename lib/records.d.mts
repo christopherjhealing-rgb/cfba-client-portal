@@ -57,6 +57,9 @@ export function transcript(input: {
   companyName?: string;
   exportedAt: string;
   tz?: string;
+  /** The documents supplied at lodgement, by name — from the original
+   *  submission. Listed, not embedded (the files are filed separately). */
+  lodgedDocuments?: readonly { name: string; category?: string }[];
 }): Transcript;
 export function asText(t: Transcript): string;
 export function chooseAttachment(input: {

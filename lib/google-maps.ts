@@ -75,3 +75,43 @@ export async function loadMapsLibrary<T>(name: string): Promise<T | null> {
     return null;
   }
 }
+
+// The slice of the geocoding library we call — the full @types/google.maps is a
+// heavy dependency for one method, so the shape is declared here.
+interface GeocodingLibrary {
+  Geocoder: new () => {
+    geocode(req: Record<string, unknown>): Promise<{
+      results?: Array<{ geometry?: { location?: { lat(): number; lng(): number } } }>;
+    }>;
+  };
+}
+
+/**
+ * Turn a typed address into a coordinate, biased to Western Australia, or null
+ * when there's no key, Google can't be reached, or nothing matched.
+ *
+ * Deliberately forgiving: a geocode lands on a rooftop, not a lot corner, and a
+ * brand-new lot may not geocode at all. Every caller treats null as "carry on
+ * without a coordinate" — it must never block anything a client is doing.
+ */
+export async function geocodeAddress(
+  address: string,
+): Promise<{ lat: number; lng: number } | null> {
+  const text = address.trim();
+  if (!text) return null;
+  try {
+    const lib = await loadMapsLibrary<GeocodingLibrary>("geocoding");
+    if (!lib?.Geocoder) return null;
+    const { results } = await new lib.Geocoder().geocode({
+      address: text,
+      componentRestrictions: { country: "AU" },
+      region: "au",
+    });
+    const loc = results?.[0]?.geometry?.location;
+    if (!loc) return null;
+    const lat = loc.lat(), lng = loc.lng();
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  } catch {
+    return null;
+  }
+}

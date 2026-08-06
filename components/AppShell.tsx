@@ -301,7 +301,12 @@ export function AppShell({
             Staff view — you are seeing this portal exactly as {company} sees it
           </div>
         )}
-        <main className={`mx-auto px-5 py-7 lg:px-9 lg:py-9 ${wide ? "max-w-none" : "shell-main max-w-[1100px]"}`}>
+        {/* Full width, tight to the menu — the content spreads across the whole
+            area right of the sidebar (which is also what lets the hero header
+            run all the way across). Reading-heavy blocks keep their own
+            max-width where it matters. `wide` is now the default and kept only
+            so existing callers don't break. */}
+        <main className="mx-auto max-w-none px-4 py-6 lg:px-6 lg:py-7">
           {children}
         </main>
       </div>
@@ -332,7 +337,7 @@ export function PageHead({
     // text layout are identical at every size.
     const heroM = hero.replace(/\.jpg$/, "-m.jpg");
     return (
-      <div className="relative -mx-5 -mt-7 mb-7 overflow-hidden px-5 pb-5 pt-7 md:pb-7 md:pt-10 lg:-mx-9 lg:-mt-9 lg:px-9 lg:pt-12">
+      <div className="relative -mx-4 -mt-6 mb-6 overflow-hidden px-4 pb-5 pt-7 md:pb-7 md:pt-10 lg:-mx-6 lg:-mt-7 lg:px-6 lg:pt-12">
         <div aria-hidden="true" className="hero-photo absolute inset-0 -z-20 saturate-[0.75]"
           style={{ "--hero": `url(${hero})`, "--hero-m": `url(${heroM})` } as React.CSSProperties} />
         <div aria-hidden="true"

@@ -389,6 +389,36 @@ export async function jobFiles(ref: string): Promise<JobFile[]> {
   }));
 }
 
+/**
+ * Remove a single job from the portal — its row, its files (from storage too)
+ * and its messages. Monday is untouched: this is portal-side cleanup for a job
+ * whose card has been deleted or cancelled on the board, or a test job.
+ *
+ * If the Monday card still exists, the next sync will simply bring the job
+ * back — so this is for jobs the board no longer has. Returns false if there
+ * was no such job.
+ */
+export async function deleteJob(ref: string): Promise<boolean> {
+  const job = await getJob(ref);
+  if (!job) return false;
+  try {
+    await purgeJobFiles(ref, job.storagePrefix || `issued/${ref}`);
+  } catch (e) {
+    console.warn(`deleteJob: couldn't purge files for ${ref}:`, (e as Error).message);
+  }
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    delete db.jobs[ref];
+    db.messages = (db.messages || []).filter((m) => m.ref !== ref);
+    await demo.save(db);
+    return true;
+  }
+  must(await sb().from("job_files").delete().eq("ref", ref));
+  await sb().from("messages").delete().eq("ref", ref);
+  must(await sb().from("jobs").delete().eq("ref", ref));
+  return true;
+}
+
 export async function markDownloaded(ref: string, at: string) {
   if (DEMO_MODE) {
     const db = await demo.load();

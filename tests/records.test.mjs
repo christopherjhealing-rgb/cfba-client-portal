@@ -108,8 +108,33 @@ test("attachments are listed against their message and indexed at the end", () =
   assert.equal(t.files.length, 1);
   assert.equal(t.files[0].path, "attachments/01 soil.pdf");
   assert.equal(t.files[0].messageIndex, 2);
+  assert.equal(t.files[0].sentAt, "2026-08-02T03:00:00.000Z");
   const notes = t.blocks.filter((b) => b.type === "note").map((b) => b.text);
-  assert.ok(notes.some((n) => n === "attachments/01 soil.pdf — sent with message 2"));
+  assert.ok(notes.some((n) =>
+    n === "• soil.pdf — submitted 2 August 2026 with message 2 (filed in this record as attachments/01 soil.pdf)"));
+});
+
+test("the documents lodged at the start are listed, with the lodged date", () => {
+  const t = transcript({
+    job: JOB, messages: MSGS, companyName: "CFBA Test Client",
+    exportedAt: "2026-08-04T06:00:00.000Z",
+    lodgedDocuments: [
+      { name: "site-plan.pdf", category: "drawings" },
+      { name: "engineering.pdf", category: "engineering" },
+    ],
+  });
+  const notes = t.blocks.filter((b) => b.type === "note").map((b) => b.text);
+  const headings = t.blocks.filter((b) => b.type === "heading").map((b) => b.text);
+  assert.ok(headings.includes("Documents lodged at the start"));
+  assert.ok(notes.includes("Lodged 31 July 2026:"));
+  assert.ok(notes.includes("• site-plan.pdf — drawings"));
+  assert.ok(notes.includes("• engineering.pdf — engineering"));
+  assert.ok(headings.includes("Documents submitted since, with each message"));
+});
+
+test("a job with no recorded lodgement documents says so plainly", () => {
+  const notes = build().blocks.filter((b) => b.type === "note").map((b) => b.text);
+  assert.ok(notes.some((n) => /aren't recorded in the portal/.test(n)));
 });
 
 test("a message with no text still appears", () => {
@@ -123,7 +148,7 @@ test("an empty thread says so instead of rendering nothing", () => {
   assert.equal(t.count, 0);
   const notes = t.blocks.filter((b) => b.type === "note").map((b) => b.text);
   assert.ok(notes.includes("No messages were sent through the portal on this job."));
-  assert.ok(notes.includes("No documents were attached to any message on this job."));
+  assert.ok(notes.includes("No further documents were submitted through the portal after lodgement."));
 });
 
 test("a job with nothing but a ref still produces a record", () => {

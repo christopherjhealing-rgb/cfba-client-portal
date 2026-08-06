@@ -2,6 +2,7 @@ import { env } from "./env";
 import { token as graphToken } from "./graph";
 import { resolveAppUrl } from "./appurl";
 import { rewriteLinks } from "./url.mjs";
+import type { DayActivity } from "./report.mjs";
 
 const MAIL_READY = Boolean(
   env.graphTenantId && env.graphClientId && env.graphClientSecret && env.mailFrom
@@ -256,6 +257,7 @@ export function dailyReportEmail(r: {
   stuckOlder: number; unopenedOlder: number;
   enquiriesWaiting: number;
   syncProblem: string | null;
+  activity: DayActivity;
 }): { subject: string; html: string } {
   const nice = new Date(`${r.date}T00:00:00`).toLocaleDateString("en-AU", {
     weekday: "long", day: "numeric", month: "long",
@@ -326,11 +328,50 @@ export function dailyReportEmail(r: {
           : "",
       ].join("");
 
+  // The day's activity — the other half of the report. Everything above is an
+  // exception to act on; this is a plain digest of what happened and what's in
+  // flight, so the email answers "what went on today?" and not only "what's
+  // wrong?". Neutral by design — green and grey, no red or amber — so the eye
+  // goes to the problems first.
+  const a = r.activity;
+  const actRows = (rows: ReportRow[], age: boolean) => rows.map((x) => `
+      <tr>
+        <td style="padding:5px 12px 5px 0;font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:nowrap;vertical-align:top">${esc(x.ref)}</td>
+        <td style="padding:5px 12px 5px 0;font-size:13px;vertical-align:top">
+          ${esc(x.address || "—")}${x.company ? `<br><span style="color:#5B6660;font-size:12px">${esc(x.company)}</span>` : ""}
+        </td>
+        <td style="padding:5px 0;font-size:12px;color:#5B6660;vertical-align:top">
+          ${esc(x.detail)}${age && x.days > 0 ? ` · ${x.days} day${x.days === 1 ? "" : "s"}` : ""}
+        </td>
+      </tr>`).join("");
+  const actGroup = (title: string, rows: ReportRow[], age = false) =>
+    rows.length
+      ? `<p style="margin:12px 0 4px;font-size:13px;font-weight:600;color:#1E5B3C">${esc(title)} (${rows.length})</p>
+         <table style="border-collapse:collapse;width:100%">${actRows(rows, age)}</table>`
+      : "";
+  const anyActivity =
+    a.lodged.length + a.amended.length + a.issued.length +
+    a.downloaded.length + a.awaiting.length + a.atFir.length > 0;
+  const activitySection = `
+  <div style="border:1px solid #E3E7E3;border-radius:8px;padding:6px 18px 16px;margin:18px 0 0">
+    <p style="margin:12px 0 0;font-size:13px;color:#5B6660;text-transform:uppercase;letter-spacing:.06em">What happened today</p>
+    ${anyActivity ? [
+      actGroup("Lodged", a.lodged),
+      actGroup("Amendments lodged", a.amended),
+      actGroup("Issued and sent back", a.issued),
+      actGroup("Downloaded", a.downloaded),
+      actGroup("Ready and waiting to be downloaded", a.awaiting, true),
+      actGroup("With the client for further information", a.atFir, true),
+    ].join("")
+    : `<p style="margin:8px 0 0;font-size:13px;color:#5B6660">Nothing lodged, issued or downloaded today, and nothing waiting on a client.</p>`}
+  </div>`;
+
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:680px">
   <p style="margin:0 0 4px;font-size:13px;color:#5B6660;text-transform:uppercase;letter-spacing:.08em">CFBA Client Portal</p>
   <p style="margin:0 0 16px;font-size:19px;font-weight:600">${esc(nice)}</p>
   ${body}
+  ${activitySection}
   <p style="margin:18px 0 0;padding-top:14px;border-top:1px solid #E3E7E3;font-size:13px;color:#5B6660">
     Today: <strong>${r.issuedToday}</strong> issued · <strong>${r.readyToday}</strong> reached the portal · <strong>${r.downloadedToday}</strong> downloaded.
   </p>

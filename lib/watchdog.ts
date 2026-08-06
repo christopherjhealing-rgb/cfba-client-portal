@@ -9,7 +9,8 @@
 
 import * as repo from "./repo";
 import { env } from "./env";
-import { ISSUED_STATUSES, COLLECT_STATUS_SET, GENERAL_REF, AMENDMENT_OPEN } from "./core.mjs";
+import { ISSUED_STATUSES, COLLECT_STATUS_SET, GENERAL_REF, AMENDMENT_OPEN, AMENDMENT_DONE } from "./core.mjs";
+import { dayActivity, type DayActivity } from "./report.mjs";
 
 export interface ReportLine {
   ref: string;
@@ -59,6 +60,10 @@ export interface DailyReport {
   /** Set when the sync itself is the problem — everything above is only as
    *  current as the last run, so a stale sync is said first, not last. */
   syncProblem: string | null;
+  /** The plain other half of the report: what actually happened today —
+   *  lodged, issued, downloaded, amended — and what's still waiting on
+   *  someone. Everything above is an exception; this is the day's work. */
+  activity: DayActivity;
 }
 
 const DAY = 86_400_000;
@@ -90,7 +95,7 @@ function stuckDays(
 
 export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
   const today = perthDate(now);
-  const [jobs, companies, watch, lastSync, enquiries, pending, openAmendments] = await Promise.all([
+  const [jobs, companies, watch, lastSync, enquiries, pending, openAmendments, doneAmendments] = await Promise.all([
     repo.listAllJobs().catch(() => []),
     repo.listCompanies().catch(() => []),
     repo.getWatch().catch(() => repo.EMPTY_WATCH),
@@ -99,6 +104,9 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
     repo.listMessagesByRef(GENERAL_REF).catch(() => []),
     repo.listSubmissions("pending").catch(() => []),
     repo.listSubmissions(AMENDMENT_OPEN).catch(() => []),
+    // Done today too, so an amendment lodged and sent back the same day still
+    // shows in the day's activity rather than vanishing between the lists.
+    repo.listSubmissions(AMENDMENT_DONE).catch(() => []),
   ]);
 
   const nameOf = new Map(companies.map((c) => [c.id, c.name]));
@@ -222,6 +230,17 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
   unopened.sort(sortByAge);
   boardFails.sort(sortByAge);
 
+  // The day's activity — what happened, not what went wrong. Same threshold as
+  // `unopened` above, so a ready package is either fresh backlog here or a
+  // chase there, never both.
+  const activity = dayActivity({
+    jobs,
+    submissions: [...openAmendments, ...doneAmendments],
+    companies,
+    now,
+    unopenedAfterDays: env.unopenedAfterDays,
+  });
+
   return {
     date: today,
     allClear: !syncProblem && !stuck.length && !untold.length && !unopened.length
@@ -232,5 +251,6 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
     issuedToday, readyToday, downloadedToday,
     stuck, untold, unopened, boardFails, stuckOlder, unopenedOlder,
     queued, amendments, noCertificate, enquiriesWaiting, syncProblem,
+    activity,
   };
 }

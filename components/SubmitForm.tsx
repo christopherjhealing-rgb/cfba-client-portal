@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { AddressField } from "./AddressField";
+import { Icon } from "./Icon";
 import { FileBucket, type Bucket } from "./FileBucket";
 import { uploadDirect } from "@/lib/upload-client";
+import { GOOGLE_MAPS_KEY, geocodeAddress } from "@/lib/google-maps";
 import type { LibraryDoc } from "@/lib/library";
 import { JobItems, blankItem, type Item } from "./JobItems";
 import { describeJob } from "@/lib/jobdesc.mjs";
@@ -11,10 +13,7 @@ import { describeJob } from "@/lib/jobdesc.mjs";
 // without them, and a job lodged short of them only comes straight back.
 const BUCKETS: Bucket[] = [
   { key: "drawings", label: "Drawings", required: true,
-    hint: <>Site plan and elevations. Guidance notes 01 and 05 list what they
-      need to show. Need a site plan?{" "}
-      <a href="/site-plan" className="font-medium text-seal underline underline-offset-2">
-        Draw one here</a>.</> },
+    hint: "Site plan and elevations. Guidance notes 01 and 05 list what they need to show." },
   { key: "engineering", label: "Engineering", required: true,
     hint: "Signed and dated structural certification. Guidance note 02 lists what we look for." },
   { key: "other", label: "Other Supporting Documents",
@@ -42,6 +41,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   const [ticked, setTicked] = useState<Set<string>>(new Set());
   const [saveEng, setSaveEng] = useState(false);
   const [saveLabel, setSaveLabel] = useState("");
+  const [bushfireProne, setBushfireProne] = useState(false);
 
   // The company's saved documents (see My details). A failed fetch just means
   // no tick-list — the form works exactly as before.
@@ -51,6 +51,32 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       .then((d) => { if (Array.isArray(d?.docs)) setLibrary(d.docs); })
       .catch(() => {});
   }, []);
+
+  // Bush fire prone flag. When the address settles, geocode it and ask whether
+  // the lot falls in a designated Bush Fire Prone Area — if it does, a BAL
+  // assessment is usually needed and we say so here, at lodgement, instead of
+  // it surfacing weeks later. Entirely additive and best-effort: no Maps key,
+  // no geocode, the check switched off, or any error at all, and the form is
+  // exactly as it was. It never blocks a lodgement and never shows an error.
+  useEffect(() => {
+    setBushfireProne(false);
+    if (!GOOGLE_MAPS_KEY) return;
+    const text = address.trim();
+    // Enough to be worth geocoding: a number and a street, not a half-typed
+    // word. Keeps the geocode to roughly one per finished address.
+    if (text.length < 8 || !/\s/.test(text)) return;
+    let alive = true;
+    const timer = setTimeout(async () => {
+      const at = await geocodeAddress(text);
+      if (!alive || !at) return;
+      try {
+        const r = await fetch(`/api/bushfire?lat=${at.lat}&lng=${at.lng}`);
+        const d = await r.json().catch(() => ({}));
+        if (alive && d?.checked && d.prone) setBushfireProne(true);
+      } catch { /* best-effort — a missing flag is a non-event */ }
+    }, 800);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [address]);
 
   const tickedDocs = library.filter((d) => ticked.has(d.id));
 
@@ -192,6 +218,19 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <label className="label" htmlFor="address">Site Address</label>
       <AddressField id="address" required autoFocus value={address}
         onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
+
+      {bushfireProne && (
+        <div className="mt-2 flex gap-2.5 rounded-lg border-l-[3px] border-brass bg-[#FBF4E6] px-3.5 py-2.5 text-[13px] leading-relaxed text-ink/80">
+          <span className="mt-0.5 shrink-0 text-brass"><Icon name="alert" size={15} /></span>
+          <span>
+            <strong>This lot looks bushfire prone.</strong> It appears to fall in a
+            designated Bush Fire Prone Area, so a BAL (Bushfire Attack Level)
+            assessment is usually required for habitable buildings — and it&apos;s
+            something CFBA can prepare for you. You can still lodge now; if you
+            already have a BAL report, attach it under Other Supporting Documents.
+          </span>
+        </div>
+      )}
 
       <div className="mt-5">
         <JobItems items={items} onChange={setItems} />

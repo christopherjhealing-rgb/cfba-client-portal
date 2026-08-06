@@ -6,6 +6,7 @@ import * as repo from "@/lib/repo";
 import * as graph from "@/lib/graph";
 import { clientStatusLabel, jobBucket, COLLECT_STATUS_SET } from "@/lib/core.mjs";
 import { StaffShell } from "@/components/StaffShell";
+import { RemoveJob } from "@/components/RemoveJob";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,14 @@ function kb(n: number) {
   return n >= 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`;
 }
 
-export default async function ClientCheckPage({ params }: { params: { id: string } }) {
+export default async function ClientCheckPage({ params }: { params: Promise<{ id: string }> }) {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const company = await repo.companyById(params.id);
+  // Next 16 hands params as a Promise — reading .id without awaiting gave
+  // undefined, so companyById missed and the page 404'd (the "Check Folders"
+  // button looked broken). Every other route here already awaits it.
+  const { id } = await params;
+  const company = await repo.companyById(id);
   if (!company) notFound();
 
   const jobs = await repo.listJobsForCompany(company.id);
@@ -78,6 +83,9 @@ export default async function ClientCheckPage({ params }: { params: { id: string
                     <span className="chip">{job.mondayStatus || "no status"}</span>
                     <span className="text-[12px] text-ink/45">
                       client sees: “{clientStatusLabel(job.mondayStatus, job.fileCount)}” · {bucket.replace("_", " ")}
+                    </span>
+                    <span className="ml-auto">
+                      <RemoveJob jobRef={job.ref} address={job.address} />
                     </span>
                   </div>
 
