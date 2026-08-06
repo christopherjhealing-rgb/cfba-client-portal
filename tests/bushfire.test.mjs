@@ -39,6 +39,14 @@ test("the key rounds to about a metre, so the same address hits once", () => {
   assert.equal(bushfireKey(-31.952241, 115.861401), bushfireKey(-31.952244, 115.861404));
 });
 
+test("a layer tag keeps two layers' answers apart at the same point", () => {
+  // The layer can be repointed (BUSHFIRE_URL). An answer layer 0 gave must not
+  // be served for layer 3 — otherwise a lot layer 0 called "not prone" stays
+  // wrong after the switch until the cache ages out.
+  assert.equal(bushfireKey(-31.95, 115.86, "3"), "bushfire:-31.95000,115.86000:3");
+  assert.notEqual(bushfireKey(-31.95, 115.86, "0"), bushfireKey(-31.95, 115.86, "3"));
+});
+
 test("bushfire and cadastre keep separate keys for the same point", () => {
   // Same coordinate, different questions — the answers must never collide in
   // portal_settings.

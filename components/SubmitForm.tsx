@@ -220,15 +220,34 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
 
       {bushfireProne && (
-        <div className="mt-2 flex gap-2.5 rounded-lg border-l-[3px] border-brass bg-[#FBF4E6] px-3.5 py-2.5 text-[13px] leading-relaxed text-ink/80">
-          <span className="mt-0.5 shrink-0 text-brass"><Icon name="alert" size={15} /></span>
-          <span>
-            <strong>This lot looks bushfire prone.</strong> It appears to fall in a
-            designated Bush Fire Prone Area, so a BAL (Bushfire Attack Level)
-            assessment is usually required for habitable buildings — and it&apos;s
-            something CFBA can prepare for you. You can still lodge now; if you
-            already have a BAL report, attach it under Other Supporting Documents.
-          </span>
+        <div className="mt-2 rounded-lg border-l-[3px] border-brass bg-[#FBF4E6] px-4 py-3 text-[13px] leading-relaxed text-ink/80">
+          <div className="flex items-center gap-2 font-semibold text-ink">
+            <span className="text-brass"><Icon name="alert" size={15} /></span>
+            This lot is in a designated Bush Fire Prone Area
+          </div>
+          <p className="mt-1.5">
+            A Class&nbsp;10 structure isn&apos;t habitable, so whether a BAL (Bushfire
+            Attack Level) rating applies comes down to what it is and how close it sits
+            to the house:
+          </p>
+          <ul className="mt-1.5 list-disc space-y-1.5 pl-4">
+            <li><strong>6&nbsp;m or more from the house</strong> — no BAL rating is required.</li>
+            <li>
+              <strong>Patios and carports within 6&nbsp;m</strong> take the{" "}
+              <em>house&apos;s</em> BAL rating, so we&apos;ll need evidence of what it was
+              when the house was built — the original BAL report or certificate, the
+              house&apos;s Certificate of Design Compliance (it states the BAL), or the
+              original house plans if it&apos;s noted on them. A house built{" "}
+              <strong>before 2016</strong> was never BAL-assessed, so its patios and
+              carports are exempt.
+            </li>
+            <li><strong>Sheds within 6&nbsp;m</strong> need their <em>own</em> new BAL report.</li>
+          </ul>
+          <p className="mt-2">
+            We don&apos;t prepare BAL reports ourselves. If you have the evidence, attach it
+            under <strong>Other Supporting Documents</strong> — otherwise lodge the job and
+            we&apos;ll tell you exactly what&apos;s needed.
+          </p>
         </div>
       )}
 
