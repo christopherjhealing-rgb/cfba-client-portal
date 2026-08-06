@@ -20,6 +20,12 @@ export const BAL_RATINGS: readonly string[];
 export const BAL_EXEMPTION: string;
 export const BAL_LABELS: readonly string[];
 
+/** Which BAL-relevant structures a job's item rows contain. Only Class 10a
+ *  buildings trigger; 10b, CBC and commercial rows never do. */
+export function balKinds(
+  items: readonly { classKey?: string; type?: string; text?: string }[] | null | undefined,
+): { patio: boolean; shed: boolean };
+
 export interface BalVerdict {
   /** clear = nothing needed; action = evidence/report needed; info = to confirm. */
   tone: "clear" | "action" | "info";
@@ -35,10 +41,10 @@ export interface BalVerdict {
  *  can give. Null until enough is answered to decide. */
 export function balVerdict(input: {
   /** "near" = within 6 m of the house; "far" = 6 m or more. */
-  distance: "near" | "far" | null;
-  /** "patio" = patio or carport; "shed" = shed. */
-  kind: "patio" | "shed" | null;
-  age: "pre2016" | "post2016" | "unsure" | null;
+  distance?: "near" | "far" | null;
+  /** "patio" = patio or carport; "shed" = shed. Irrelevant once far. */
+  kind?: "patio" | "shed" | null;
+  age?: "pre2016" | "post2016" | "unsure" | null;
   /** The house's BAL rating, when known (post-2016 patio/carport only). */
   rating?: string | null;
 }): BalVerdict | null;

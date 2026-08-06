@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readBushfire, bushfireKey, inWA, balVerdict, BAL_EXEMPTION, sourceTag } from "../lib/bushfire.mjs";
+import {
+  readBushfire, bushfireKey, inWA, balVerdict, balKinds, BAL_EXEMPTION, sourceTag,
+} from "../lib/bushfire.mjs";
 
 // ---------------------------------------------------------------------------
 // The verdict — the one thing a coordinate can settle
@@ -72,6 +74,53 @@ test("only Western Australian coordinates are in bounds", () => {
   assert.ok(inWA(-31.95, 115.86));   // Perth
   assert.ok(!inWA(-33.87, 151.21));  // Sydney
   assert.ok(!inWA(NaN, NaN));
+});
+
+// ---------------------------------------------------------------------------
+// Which structures trigger the questions — read off the job's own rows
+// ---------------------------------------------------------------------------
+test("the form's own rows say what's being built — patios and sheds trigger", () => {
+  assert.deepEqual(balKinds([{ classKey: "10a", type: "Steel Patio", text: "", qty: 1 }]),
+    { patio: true, shed: false });
+  assert.deepEqual(balKinds([{ classKey: "10a", type: "Steel Carport", text: "" }]),
+    { patio: true, shed: false });
+  assert.deepEqual(balKinds([{ classKey: "10a", type: "Steel Shed", text: "" }]),
+    { patio: false, shed: true });
+  assert.deepEqual(balKinds([
+    { classKey: "10a", type: "Steel Patio", text: "" },
+    { classKey: "10a", type: "Steel Shed", text: "" },
+  ]), { patio: true, shed: true });
+});
+
+test("10b never triggers — a retaining wall isn't a bushfire question", () => {
+  assert.deepEqual(balKinds([
+    { classKey: "10b", type: "Retaining Wall", text: "" },
+    { classKey: "10b", type: "Swimming Pool", text: "" },
+  ]), { patio: false, shed: false });
+});
+
+test("CBC and commercial rows never trigger, even when the words match", () => {
+  // The exemption rule turns on the dwelling the structure serves; these
+  // lodgements aren't a structure beside a house.
+  assert.deepEqual(balKinds([{ classKey: "cbc", type: "Other", text: "existing patio" }]),
+    { patio: false, shed: false });
+  assert.deepEqual(balKinds([{ classKey: "commercial", type: "Other", text: "shed" }]),
+    { patio: false, shed: false });
+});
+
+test("a 10a free-text row is matched by word; an unmatched one stays quiet", () => {
+  assert.deepEqual(balKinds([{ classKey: "10a", type: "Other", text: "Gable pergola" }]),
+    { patio: true, shed: false });
+  assert.deepEqual(balKinds([{ classKey: "10a", type: "Other", text: "Garage extension" }]),
+    { patio: false, shed: true });
+  // A flagpole is 10a and none of our business here.
+  assert.deepEqual(balKinds([{ classKey: "10a", type: "Other", text: "Flagpole" }]),
+    { patio: false, shed: false });
+});
+
+test("garbage rows don't throw and trigger nothing", () => {
+  assert.deepEqual(balKinds(null), { patio: false, shed: false });
+  assert.deepEqual(balKinds([null, 42, {}, { classKey: "10a" }]), { patio: false, shed: false });
 });
 
 // ---------------------------------------------------------------------------
