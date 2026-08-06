@@ -1575,18 +1575,17 @@ test("an extra post on a side lands at its midpoint, corners shared not doubled"
   assert.ok(posts.some((q) => q.x === 3 && q.y === 0), "midpoint of the top edge");
 });
 
-test("an attached patio carries a wall, not posts, on the side it attaches", () => {
-  const posts = patioColumns(P({ mount: "attached", attach: 0, cols: [2, 2, 2, 2] }));
-  // Side 0 (the top) is the wall — no posts along y === 0 except where a
-  // remaining side's corner reaches it... side 3 and side 1 still own the top
-  // corners, so those corners stay. But no post is added FOR side 0 itself.
-  // With only corner posts everywhere, the four corners remain (each also
-  // belongs to a standing side), so this checks the wall doesn't remove them.
-  assert.ok(posts.length >= 2);
-  // A mid-wall post on side 0 must not appear even when side 0 asks for it.
-  const wall = patioColumns(P({ mount: "attached", attach: 0, cols: [5, 2, 2, 2] }));
-  assert.ok(!wall.some((q) => q.y === 0 && q.x > 0 && q.x < 6),
-    "no intermediate posts along the attached wall");
+test("an attached patio has no posts on the wall side — not even its corners", () => {
+  // Attach on side 0 (the top, y === 0). Nothing sits on that edge at all:
+  // the outer beams meet the dwelling there, so both corners go too.
+  const posts = patioColumns(P({ mount: "attached", attach: 0, cols: [5, 2, 2, 2] }));
+  assert.ok(!posts.some((q) => q.y === 0), "no posts anywhere along the attached wall");
+  // The three standing sides keep their corners: the two far corners at y === 4
+  // remain, so a freestanding 2/2/2/2 patio (4 posts) loses the two wall
+  // corners and keeps two.
+  const corners = patioColumns(P({ mount: "attached", attach: 0, cols: [2, 2, 2, 2] }));
+  assert.equal(corners.length, 2);
+  assert.ok(corners.every((q) => q.y === 4));
 });
 
 test("posts turn with the patio", () => {

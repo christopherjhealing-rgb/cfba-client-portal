@@ -2375,10 +2375,38 @@ export function SitePlanBuilder(
       );
     }
 
+    // The dwelling the patio attaches to: a heavy wall line along the attached
+    // side, and a light strip just outside it standing in for the building, so
+    // the plan shows plainly that this side isn't open — it butts a wall.
+    let wallNode: React.ReactNode = null;
+    if (p.mount === "attached") {
+      const [wa, wb] = SIDE_PAIRS[p.attach];
+      const a = fp[wa], b = fp[wb];
+      const mid = sideMid(p.attach);
+      const out = unit(mid.x - cx, mid.y - cy);
+      const d = 0.5;
+      const strip = [a, b,
+        { x: b.x + out.x * d, y: b.y + out.y * d },
+        { x: a.x + out.x * d, y: a.y + out.y * d }];
+      wallNode = (
+        <g>
+          <polygon points={strip.map((pt) => `${pt.x},${pt.y}`).join(" ")}
+            fill="#ECE8DD" fillOpacity={0.9} stroke={INK} strokeOpacity={0.3} strokeWidth={mm(0.2)} />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={SEAL} strokeWidth={mm(0.9)} strokeLinecap="round" />
+          <text x={mid.x + out.x * (d / 2)} y={mid.y + out.y * (d / 2) + mm(0.8)}
+            textAnchor="middle" fontFamily={FONT_LAB} fontWeight={600} fontSize={mm(1.9)}
+            letterSpacing={mm(0.2)} fill={INK} fillOpacity={0.55} style={halo}>
+            DWELLING
+          </text>
+        </g>
+      );
+    }
+
     const roofWord = p.roof === "skillion" ? "Skillion" : p.roof === "gable" ? "Gable" : "Flat";
     const postSize = Math.max(mm(0.95), 0.08);
     return (
       <g pointerEvents="none">
+        {wallNode}
         {roofGeom}
         {soakNode}
         {dpMarks.map((q, i) => (
@@ -2973,8 +3001,8 @@ export function SitePlanBuilder(
   function lotSetup() {
     return (
       <div className="card mb-5 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="sm:col-span-2 lg:col-span-1">
+        <div className={chrome ? "grid grid-cols-2 gap-3" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
+          <div className={chrome ? "col-span-2" : "sm:col-span-2 lg:col-span-1"}>
             <label className="label">Site Address</label>
             <input className="field" value={design.address} placeholder="e.g. 12 Wandoo Rise, Baldivis"
               onChange={(e) => {
@@ -2987,7 +3015,7 @@ export function SitePlanBuilder(
               onBlur={commitAddress}
               onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
           </div>
-          <div>
+          <div className={chrome ? "col-span-2" : undefined}>
             <label className="label">Street Name (frontage)</label>
             <input className="field" value={street} placeholder="e.g. Wandoo Rise"
               onChange={(e) => {
@@ -3003,7 +3031,7 @@ export function SitePlanBuilder(
               }} />
           </div>
           {isPoly ? (
-            <div className="sm:col-span-2 grid grid-cols-2 gap-2">
+            <div className={chrome ? "col-span-2 grid grid-cols-2 gap-2" : "sm:col-span-2 grid grid-cols-2 gap-2"}>
               <div>
                 <span className="label">Lot Area</span>
                 <p className="font-mono text-[15px] leading-[38px] text-ink">{fmtM(lotArea)} m²</p>
@@ -3109,7 +3137,7 @@ export function SitePlanBuilder(
       {chrome ? studioToolbar() : lotSetup()}
 
       <div className={chrome
-        ? (openMenu ? "grid gap-5 lg:grid-cols-[340px,minmax(0,1fr)]" : "")
+        ? (openMenu ? "grid gap-5 lg:grid-cols-[380px,minmax(0,1fr)]" : "")
         : "grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]"}>
         {/* toolbox + selected structure */}
         <div className={chrome && !openMenu ? "hidden" : "space-y-5"}>
