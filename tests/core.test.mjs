@@ -6,7 +6,7 @@ import {
   stageIndex, stageStates, businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
   canCancel, portalColumnWrite, portalLadder, portalRank,
-  PORTAL_ISSUED, PORTAL_READY, PORTAL_DOWNLOADED, PORTAL_STUCK,
+  PORTAL_LODGED, PORTAL_ISSUED, PORTAL_READY, PORTAL_DOWNLOADED, PORTAL_STUCK,
   isGeneralRef, GENERAL_REF, HIDDEN_STATUSES, hasCertificate,
   INFO_RECEIVED_STATUS, AWAITING_REPLY_STATUSES,
   checkWebhook, teamsPrefersLegacy, teamsTrim, teamsAdaptiveCard, teamsMessageCard,
@@ -119,11 +119,28 @@ test("every label the live board carries reaches the client as words", () => {
 });
 
 test("the PORTAL ladder runs in the order a job travels", () => {
-  assert.deepEqual(portalLadder(), ["ISSUED", "READY", "DOWNLOADED"]);
+  // LODGED is the lowest rung — stamped at lodgement, before anything else.
+  assert.deepEqual(portalLadder(), ["LODGED", "ISSUED", "READY", "DOWNLOADED"]);
   // The office types these onto the board, so the spelling is settable.
   assert.deepEqual(
-    portalLadder("Issued", "Ready to download", "Downloaded"),
-    ["Issued", "Ready to download", "Downloaded"]);
+    portalLadder("Issued", "Ready to download", "Downloaded", "Lodged"),
+    ["Lodged", "Issued", "Ready to download", "Downloaded"]);
+});
+
+test("a portal job is stamped LODGED at creation, then climbs off it normally", () => {
+  // The bug this pins: if LODGED weren't a recognised rung, the forward-only
+  // write would refuse to move a LODGED job and it would sit there for ever.
+  assert.equal(portalColumnWrite("", PORTAL_LODGED), "write");        // stamped at creation
+  assert.equal(portalColumnWrite("LODGED", PORTAL_LODGED), "already"); // idempotent re-stamp
+  assert.equal(portalColumnWrite("LODGED", PORTAL_ISSUED), "write");  // climbs to issued
+  assert.equal(portalColumnWrite("LODGED", PORTAL_READY), "write");   // …and beyond
+  // …and never slides back to LODGED once it has moved on.
+  assert.equal(portalColumnWrite("ISSUED", PORTAL_LODGED), "already");
+  assert.equal(portalColumnWrite("DOWNLOADED", PORTAL_LODGED), "already");
+  // An email/manual job is blank here, never LODGED — that's the whole point:
+  // during assessment, LODGED vs blank is portal vs email. A blank job still
+  // issues straight to ISSUED.
+  assert.equal(portalColumnWrite("", PORTAL_ISSUED), "write");
 });
 
 test("portalColumnWrite moves a card forward along the ladder", () => {
@@ -188,9 +205,10 @@ test("portalColumnWrite honours a board that spells the rungs differently", () =
 });
 
 test("portalRank places every rung and nothing else", () => {
-  assert.equal(portalRank("ISSUED"), 0);
-  assert.equal(portalRank("READY"), 1);
-  assert.equal(portalRank("DOWNLOADED"), 2);
+  assert.equal(portalRank("LODGED"), 0);   // lowest rung — stamped at lodgement
+  assert.equal(portalRank("ISSUED"), 1);
+  assert.equal(portalRank("READY"), 2);
+  assert.equal(portalRank("DOWNLOADED"), 3);
   assert.equal(portalRank(""), -1);
   assert.equal(portalRank("STUCK"), -1);   // deliberately not a rung
   assert.equal(portalRank("ON HOLD"), -1);

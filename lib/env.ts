@@ -23,6 +23,10 @@ export const env = {
   // labels are typed onto the board by a person, so their spelling lives here
   // rather than in code: a renamed label is a Vercel setting, not a deploy.
   portalColumnId: process.env.PORTAL_COLUMN_ID || "color_mm5w73hm",
+  // The rung the portal stamps a card with the moment it creates it, so a
+  // portal-lodged job is visible on the board as LODGED before anything else
+  // happens to it. It's the LOWEST rung — a job climbs off it to ISSUED and on.
+  portalLodgedLabel: process.env.PORTAL_LODGED_LABEL || "LODGED",
   portalIssuedLabel: process.env.PORTAL_ISSUED_LABEL || "ISSUED",
   portalReadyLabel: process.env.PORTAL_READY_LABEL || "READY",
   portalDownloadedLabel: process.env.PORTAL_DOWNLOADED_LABEL || "DOWNLOADED",

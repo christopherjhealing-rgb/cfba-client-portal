@@ -37,11 +37,12 @@ export interface StatusSet { has(s: string | null | undefined): boolean; values(
 export const HIDDEN_STATUSES: StatusSet;
 export function clientStatusLabel(mondayStatus: string | null | undefined, fileCount?: number): string;
 export function isClientVisible(job: PortalJob): boolean;
+export const PORTAL_LODGED: string;
 export const PORTAL_ISSUED: string;
 export const PORTAL_READY: string;
 export const PORTAL_DOWNLOADED: string;
 export const PORTAL_STUCK: string;
-export function portalLadder(issued?: string, ready?: string, downloaded?: string): string[];
+export function portalLadder(issued?: string, ready?: string, downloaded?: string, lodged?: string): string[];
 export function portalRank(label: string | null | undefined, ladder?: string[]): number;
 export type PortalWriteDecision = "write" | "already" | "unknown" | "unknown-target";
 export function portalColumnWrite(

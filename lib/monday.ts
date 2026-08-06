@@ -286,6 +286,12 @@ export async function createCard(input: {
     [COL.client]: input.clientName,
     [COL.email]: input.email ? { email: input.email, text: input.email } : "",
     [COL.description]: input.description,
+    // Stamp the PORTAL column LODGED at creation, so the board shows which
+    // jobs came through the portal from the moment they land — the thing the
+    // office needs to know before a job is issued (a portal client can be sent
+    // an FIR through the portal; an email/manual job can't). It's the lowest
+    // rung of the delivery ladder, so the job climbs off it to ISSUED normally.
+    [COL.portal]: { label: env.portalLodgedLabel },
   };
   // Set the Class column from the client's selection. create_labels_if_missing
   // means an unseen label (e.g. a new CBC variant) is added rather than erroring.
@@ -541,7 +547,8 @@ export type PortalWrite =
 
 /** The ladder as this deployment's board spells it. See lib/core.mjs. */
 const LADDER = portalLadder(
-  env.portalIssuedLabel, env.portalReadyLabel, env.portalDownloadedLabel
+  env.portalIssuedLabel, env.portalReadyLabel, env.portalDownloadedLabel,
+  env.portalLodgedLabel
 );
 
 /**
@@ -593,6 +600,10 @@ async function markPortal(itemId: string, target: string): Promise<PortalWrite> 
 }
 
 /** The portal has seen the card at Issued and is working on it. */
+/** Stamp a portal-lodged card LODGED. Normally set at creation (see
+ *  createCard); exposed so an existing portal job can be back-stamped too. */
+export const markLodged = (itemId: string) => markPortal(itemId, env.portalLodgedLabel);
+
 export const markIssued = (itemId: string) => markPortal(itemId, env.portalIssuedLabel);
 
 /** The portal has the files and the client has been told. */
