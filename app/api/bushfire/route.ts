@@ -19,7 +19,7 @@ import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import { env } from "@/lib/env";
 import { inWA, bushfireKey, readBushfire, sourceTag } from "@/lib/bushfire.mjs";
-import { BUSHFIRE_READY, fetchBushfire } from "@/lib/bushfire-source";
+import { BUSHFIRE_READY, BUSHFIRE_QUERY_VERSION, fetchBushfire } from "@/lib/bushfire-source";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,10 +60,11 @@ export async function GET(req: Request) {
     }
 
     // Cache first, always — one lookup per lot, whoever asks. Keyed by the
-    // point AND the whole upstream URL (hashed), so ANY repoint of
-    // BUSHFIRE_URL — layer number, service, host — re-queries rather than
-    // serving the old source's answer for a point already looked up.
-    const key = bushfireKey(lat, lng, sourceTag(env.bushfireUrl));
+    // point, the whole upstream URL (hashed) AND the query-shape version, so
+    // any repoint of BUSHFIRE_URL — layer, service, host — or any change to
+    // how the question is asked re-queries rather than serving an answer a
+    // different question produced.
+    const key = bushfireKey(lat, lng, sourceTag(`${BUSHFIRE_QUERY_VERSION}|${env.bushfireUrl}`));
     const hit = await repo.getSetting<Cached>(key).catch(() => null);
     if (hit && typeof hit.prone === "boolean" && fresh(hit)) {
       return NextResponse.json({ checked: true, prone: hit.prone, cached: true });
