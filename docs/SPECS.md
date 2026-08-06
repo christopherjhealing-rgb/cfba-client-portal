@@ -290,16 +290,29 @@ address decides.
   geocode, the feature off, or any error: no flag, and the form is unchanged. It
   never blocks a lodgement.
 
-**OFF until configured, and there is NO default URL** — a wrong bushfire answer
-is worse than none, so nothing is guessed in code. To switch it on:
+**OFF until `BUSHFIRE_ENABLED=1` — the one switch.** The default `BUSHFIRE_URL`
+is the DFES Bush Fire Prone Areas feature service on SLIP:
 
-1. Browse `https://services.slip.wa.gov.au/public/rest/services` for the DFES
-   **Bush Fire Prone Areas** layer (an ArcGIS MapServer/FeatureServer layer of
-   prone-area polygons, under an emergency/DFES service).
-2. Confirm it by pasting the built query with a known bushfire-prone WA point
-   and checking a feature comes back.
-3. Set `BUSHFIRE_URL` to the layer URL, then `BUSHFIRE_ENABLED=1`, and redeploy.
-   If the live service returns every point tiled with a prone Y/N attribute
+```
+https://services.slip.wa.gov.au/public/rest/services/SLIP_Public_Services/Bush_Fire_Prone_Areas_FS/MapServer/0
+```
+
+It is baked in but **unverified from CI** (SLIP is unreachable from the build —
+every call 403s at the egress proxy), and it stays an env override, so a wrong
+layer is a Vercel setting away from right rather than a code change. To bring it
+up on Vercel:
+
+1. Set `BUSHFIRE_ENABLED=1` and redeploy (env changes never apply to an existing
+   deployment). The Google Maps key that powers the address autocomplete must
+   also be present — no geocode, no flag.
+2. Confirm live: lodge a known bushfire-prone address (Perth hills — Kalamunda,
+   Roleystone) and a known flat coastal one, and check the notice appears on the
+   first and not the second.
+3. The `Bush_Fire_Prone_Areas_FS` service stacks several dated designations as
+   separate layers (layer 2 is the superseded 2017 edition, for instance). If
+   layer 0 isn't the current designation, point `BUSHFIRE_URL` at the right
+   layer number in Vercel — no redeploy of code needed.
+4. If the live service returns every point tiled with a prone Y/N attribute
    rather than prone-only polygons, `readBushfire` in `lib/bushfire.mjs` is the
    only function that changes.
 
