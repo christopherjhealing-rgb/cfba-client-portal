@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readBushfire, bushfireKey, inWA } from "../lib/bushfire.mjs";
+import { readBushfire, bushfireKey, inWA, balVerdict } from "../lib/bushfire.mjs";
 
 // ---------------------------------------------------------------------------
 // The verdict — the one thing a coordinate can settle
@@ -60,4 +60,46 @@ test("only Western Australian coordinates are in bounds", () => {
   assert.ok(inWA(-31.95, 115.86));   // Perth
   assert.ok(!inWA(-33.87, 151.21));  // Sydney
   assert.ok(!inWA(NaN, NaN));
+});
+
+// ---------------------------------------------------------------------------
+// The BAL verdict — CFBA's rule, encoded
+// ---------------------------------------------------------------------------
+test("distance decides first: 6 m or more needs nothing", () => {
+  // Type and age don't matter once it's far enough away.
+  const v = balVerdict({ distance: "far", kind: null, age: null });
+  assert.equal(v.tone, "clear");
+  assert.match(v.summary, /not required/);
+});
+
+test("a shed within 6 m needs its own report, whatever the house's age", () => {
+  const v = balVerdict({ distance: "near", kind: "shed", age: "pre2016" });
+  assert.equal(v.tone, "action");
+  assert.match(v.headline, /own new BAL report/);
+});
+
+test("a patio on a pre-2016 house is exempt", () => {
+  const v = balVerdict({ distance: "near", kind: "patio", age: "pre2016" });
+  assert.equal(v.tone, "clear");
+  assert.match(v.summary, /exempt/);
+});
+
+test("a patio on a 2016-or-later house needs the house's BAL evidence", () => {
+  const v = balVerdict({ distance: "near", kind: "patio", age: "post2016" });
+  assert.equal(v.tone, "action");
+  assert.match(v.detail, /Certificate of Design Compliance/);
+  // CFBA never offers to prepare the report.
+  assert.match(v.detail, /don't prepare BAL reports/);
+});
+
+test("a patio with the house age unknown defers to assessment", () => {
+  const v = balVerdict({ distance: "near", kind: "patio", age: "unsure" });
+  assert.equal(v.tone, "info");
+});
+
+test("no verdict until enough is answered", () => {
+  assert.equal(balVerdict({ distance: null, kind: null, age: null }), null);
+  assert.equal(balVerdict({ distance: "near", kind: null, age: null }), null);
+  assert.equal(balVerdict({ distance: "near", kind: "patio", age: null }), null);
+  assert.equal(balVerdict({}), null);
 });
