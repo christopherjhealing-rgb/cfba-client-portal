@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
-import { isClientVisible, READY_STATUS } from "@/lib/core.mjs";
+import { isClientVisible, ISSUED_STATUSES } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { getPastJobs } from "@/lib/history";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -38,7 +38,7 @@ export default async function Amend({
       address: j.address as string,
       description: j.description as string,
       status: (j.mondayStatus as string) || "",
-      issued: j.mondayStatus === READY_STATUS || !!j.firstDownloadedAt,
+      issued: ISSUED_STATUSES.has(j.mondayStatus) || !!j.firstDownloadedAt,
     }));
 
   // Jobs we've finished, from the past-jobs index rather than the jobs table —

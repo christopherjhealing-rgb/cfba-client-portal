@@ -71,34 +71,40 @@ export async function GET(
   await repo.markDownloaded(ref, now.toISOString());
   await repo.logAudit("certificate.download", ref, session.companyName, session.username || "client");
 
-  // Download receipt on the Monday card, once, so the office can see the client
-  // has the CDC Package — kills the "did you get it?" call. Also starts the
-  // retention clock (markDownloaded), which is why it fires on first download.
-  if (firstDownload && job.mondayItemId) {
-    try {
-      await monday.postUpdate(
-        job.mondayItemId,
-        `The client downloaded the CDC Package via the portal on ` +
-        `${now.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}.`
-      );
-    } catch (e) {
-      console.warn(`download: could not post receipt for ${ref}:`, (e as Error).message);
-    }
+  // Everything below fires once, on first download — and none of it may cost
+  // the client their files. The zip is already built; a board or mailbox
+  // that's down is the office's problem to read in the log and the evening
+  // report, never the client's to meet at the Download button.
+  if (firstDownload) {
+    // The board-side receipt and PORTAL move need the card; the record copy
+    // below deliberately doesn't — a job without its item id must still be
+    // filed. (Found live: the record email sat inside this card check, so any
+    // job that skipped it also skipped the seven-year copy.)
+    if (job.mondayItemId) {
+      // Download receipt on the card, so the office can see the client has
+      // the CDC Package — kills the "did you get it?" call.
+      try {
+        await monday.postUpdate(
+          job.mondayItemId,
+          `The client downloaded the CDC Package via the portal on ` +
+          `${now.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}.`
+        );
+      } catch (e) {
+        console.warn(`download: could not post receipt for ${ref}:`, (e as Error).message);
+      }
 
-    // …and move PORTAL to DOWNLOADED — the last rung, and the only one
-    // nobody but the portal can see. The board now reads the whole journey
-    // without anyone opening the updates: ISSUED when the portal picks the
-    // card up, READY when it has the files and the client's been told,
-    // DOWNLOADED here.
-    //
-    // Nothing here may cost the client their files. The zip is already built;
-    // a board that is down, slow or shaped differently than we expect is the
-    // office's problem to hear about in the log and the evening report, not
-    // the client's to be told about at the moment they click Download.
-    const r = await monday.markDownloaded(job.mondayItemId);
-    if (!r.ok && r.reason === "failed") {
-      console.warn(`download ${ref}: PORTAL not moved to DOWNLOADED — ${r.detail}`);
-      await repo.noteBoardWriteFail(ref, r.detail || "unknown").catch(() => {});
+      // …and move PORTAL to DOWNLOADED — the last rung, and the only one
+      // nobody but the portal can see. The board now reads the whole journey
+      // without anyone opening the updates: ISSUED when the portal picks the
+      // card up, READY when it has the files and the client's been told,
+      // DOWNLOADED here.
+      const r = await monday.markDownloaded(job.mondayItemId);
+      if (!r.ok && r.reason === "failed") {
+        console.warn(`download ${ref}: PORTAL not moved to DOWNLOADED — ${r.detail}`);
+        await repo.noteBoardWriteFail(ref, r.detail || "unknown").catch(() => {});
+      }
+    } else {
+      console.warn(`download ${ref}: job has no Monday item id — no receipt, PORTAL not moved`);
     }
 
     // The file copy. A client collecting their package is the moment a job is

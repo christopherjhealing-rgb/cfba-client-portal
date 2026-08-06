@@ -9,7 +9,7 @@
 
 import * as repo from "./repo";
 import { env } from "./env";
-import { ISSUED_STATUSES, READY_STATUS, GENERAL_REF, AMENDMENT_OPEN } from "./core.mjs";
+import { ISSUED_STATUSES, COLLECT_STATUS_SET, GENERAL_REF, AMENDMENT_OPEN } from "./core.mjs";
 
 export interface ReportLine {
   ref: string;
@@ -128,17 +128,18 @@ export async function buildDailyReport(now = new Date()): Promise<DailyReport> {
   }
 
   // --- issued, but the portal has nothing ----------------------------------
-  // Exactly "Issued", not the whole issued family: a card the office has moved
-  // on to To Invoice or Invoiced / Completed is one they've dealt with, and
-  // the pre-portal backlog sits in those two with no files by definition.
+  // The two statuses the sync collects files for (Issued and To Invoice) — a
+  // card invoiced minutes after issue must not vanish from this check before
+  // its files arrived. NOT Invoiced / Completed: that's where closed jobs sit
+  // after their files purge, and every one would false-alarm here.
   const stuck: ReportLine[] = [];
   let stuckOlder = 0;
   for (const j of jobs) {
-    if (j.mondayStatus !== READY_STATUS) continue;
+    if (!COLLECT_STATUS_SET.has(j.mondayStatus)) continue;
     if (j.fileCount > 0) continue;
     const days = stuckDays(watch, j.ref, j.lastSyncedAt, now);
     if (days > WINDOW_DAYS) { stuckOlder++; continue; }
-    stuck.push(line(j.ref, "at Issued on the board, no files in the portal", days));
+    stuck.push(line(j.ref, "issued on the board, no files in the portal", days));
   }
 
   // --- in the portal, but the client was never told ------------------------

@@ -80,8 +80,8 @@ function readCard(it: Record<string, unknown>): MondayCard {
 
 const CARD_FIELDS = `id name created_at column_values(ids:["${COL.status}","${COL.client}","${COL.email}","${COL.ref}","${COL.description}","${COL.people}"]){ id text }`;
 
-/** Cards currently sitting at a given status label (default: Issued). */
-export async function listByStatus(label: string): Promise<MondayCard[]> {
+/** Cards currently sitting at the given status label(s). */
+export async function listByStatus(labels: string | string[]): Promise<MondayCard[]> {
   if (!MONDAY_READY) return [];
   const q = `
     query ($board: ID!, $col: String!, $vals: [String]!) {
@@ -91,7 +91,8 @@ export async function listByStatus(label: string): Promise<MondayCard[]> {
       }
     }`;
   const d = await gql<{ items_page_by_column_values: { items: Record<string, unknown>[] } }>(
-    q, { board: env.mondayBoardId, col: COL.status, vals: [label] });
+    q, { board: env.mondayBoardId, col: COL.status,
+         vals: Array.isArray(labels) ? labels : [labels] });
   return (d.items_page_by_column_values?.items || []).map(readCard);
 }
 

@@ -10,7 +10,7 @@
 // Monday later moves it to Invoiced / Completed.
 import { DEMO_MODE, MONDAY_READY, GRAPH_READY, env } from "./env";
 import {
-  matchCompany, READY_STATUS, CLIENT_ACTION_STATUSES, retention, surveyorFor,
+  matchCompany, COLLECT_STATUSES, COLLECT_STATUS_SET, CLIENT_ACTION_STATUSES, retention, surveyorFor,
   nextClientPause, hasCertificate,
 } from "./core.mjs";
 import * as monday from "./monday";
@@ -104,8 +104,11 @@ export async function runSync(): Promise<SyncResult> {
   // read instead of one per card.
   const seen: { ref: string; status: string }[] = [];
 
-  // 1. Issued -> copy files
-  const issued = await monday.listByStatus(READY_STATUS);
+  // 1. Issued family -> copy files. Both working statuses, not just "Issued":
+  // the office invoices a card minutes after issuing it, and a card that moved
+  // to To Invoice before the sync reached it used to fall out of this scan
+  // with its files never collected.
+  const issued = await monday.listByStatus(COLLECT_STATUSES);
   res.issuedSeen = issued.length;
   for (const card of issued) {
     const companyId = matchCompany({ clientName: card.clientName, email: card.email }, companies);
@@ -460,7 +463,7 @@ async function refreshActiveCard(
 ) {
   const companyId = matchCompany({ clientName: card.clientName, email: card.email }, companies);
   if (!companyId) return;
-  if (card.status === READY_STATUS) return; // handled in step 1
+  if (COLLECT_STATUS_SET.has(card.status)) return; // handled in step 1
   const existing = await repo.getJob(card.ref);
   seen.push({ ref: card.ref, status: card.status });
   const clientRef = existing

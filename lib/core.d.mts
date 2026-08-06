@@ -55,6 +55,8 @@ export const GENERAL_REF: string;
 export function isGeneralRef(ref: string | null | undefined): boolean;
 export const CANCELLED_STATUS: string;
 export const ISSUED_STATUSES: StatusSet;
+export const COLLECT_STATUSES: string[];
+export const COLLECT_STATUS_SET: StatusSet;
 /** All canCancel needs. Both repo.Job and PortalJob satisfy it. */
 export interface CancellableJob {
   mondayStatus?: string | null;

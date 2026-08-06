@@ -4,7 +4,7 @@ import { isStaff } from "@/lib/session";
 import { GRAPH_READY, env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import * as graph from "@/lib/graph";
-import { clientStatusLabel, jobBucket, READY_STATUS } from "@/lib/core.mjs";
+import { clientStatusLabel, jobBucket, COLLECT_STATUS_SET } from "@/lib/core.mjs";
 import { StaffShell } from "@/components/StaffShell";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export default async function ClientCheckPage({ params }: { params: { id: string
       // mismatch between the portal copy and the live folder is visible.
       let live: { name: string; size: number }[] | null = null;
       let liveError: string | null = null;
-      if (GRAPH_READY && j.mondayStatus === READY_STATUS) {
+      if (GRAPH_READY && COLLECT_STATUS_SET.has(j.mondayStatus)) {
         try {
           live = (await graph.findIssuedFiles(j.ref)).map((f) => ({ name: f.name, size: f.size }));
         } catch (e) {

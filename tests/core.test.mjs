@@ -315,6 +315,22 @@ test("jobBucket routes jobs to the right section", () => {
   assert.equal(jobBucket({ mondayStatus: "Issued", fileCount: 3, firstDownloadedAt: "2025-01-01T00:00:00Z" }, now), "expired");
 });
 
+test("invoicing a card never takes the Download button off an uncollected job", () => {
+  // Found live: two jobs were issued and invoiced the same day. "To Invoice"
+  // wasn't counted as issued, so they fell into Current with no download
+  // action, and the client couldn't collect the certificate at all.
+  const now = new Date("2026-08-06T00:00:00.000Z");
+  for (const s of ["To Invoice", "Invoiced / Completed", "to invoice"]) {
+    assert.equal(jobBucket({ mondayStatus: s, fileCount: 3 }, now), "ready",
+      `${s} with files and no download must stay downloadable`);
+  }
+  // …and one whose files never arrived is still quietly in progress, saying
+  // "Being finalised" rather than pretending something is downloadable.
+  assert.equal(jobBucket({ mondayStatus: "To Invoice", fileCount: 0 }, now), "in_progress");
+  assert.equal(clientStatusLabel("To Invoice", 0), "Being finalised");
+  assert.equal(clientStatusLabel("Invoiced / Completed", 0), "Being finalised");
+});
+
 test("groupJobs partitions a mixed list", () => {
   const now = new Date("2026-07-25T00:00:00.000Z");
   const g = groupJobs([
