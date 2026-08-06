@@ -137,6 +137,23 @@ export const env = {
   // Development seam, demo mode only: a JSON file to answer lookups from
   // instead of calling Landgate, so the success path can be walked offline.
   cadastreFixture: process.env.CADASTRE_FIXTURE || "",
+
+  // DFES Bush Fire Prone Areas (via Landgate SLIP), for the flag shown when a
+  // job is lodged at an address inside a designated bushfire-prone area.
+  //
+  // OFF until BUSHFIRE_ENABLED=1 AND BUSHFIRE_URL is set. There is NO default
+  // URL on purpose: a wrong bushfire answer is worse than none, so nothing is
+  // guessed in code — the confirmed DFES "Bush Fire Prone Areas" layer goes in
+  // a Vercel variable. This flags the ZONE only (is a BAL assessment needed at
+  // all); it can never give the BAL rating, which is a site assessment.
+  bushfireEnabled: process.env.BUSHFIRE_ENABLED === "1",
+  bushfireUrl: process.env.BUSHFIRE_URL || "",
+  // Server-side only, like the cadastre token. Never NEXT_PUBLIC_.
+  bushfireToken: process.env.BUSHFIRE_TOKEN || "",
+  bushfireSource: process.env.BUSHFIRE_SOURCE_NAME || "DFES Bush Fire Prone Areas (SLIP)",
+  bushfireTimeoutMs: Number(process.env.BUSHFIRE_TIMEOUT_MS || "6000"),
+  // Development seam, demo mode only: a JSON file to answer lookups from.
+  bushfireFixture: process.env.BUSHFIRE_FIXTURE || "",
 };
 
 export const DEMO_MODE =
