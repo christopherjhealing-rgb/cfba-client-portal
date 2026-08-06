@@ -12,10 +12,12 @@ export const dynamic = "force-dynamic";
 export default async function ClientsPage() {
   if (!(await isStaff())) redirect("/admin/login");
 
-  const [companies, logins, ] = await Promise.all([
+  const [companies, logins, lastSync] = await Promise.all([
     repo.listCompanies(),
     repo.listLogins(),
+    repo.getSetting<{ unmatched?: { client: string }[] }>("last_sync").catch(() => null),
   ]);
+  const unmatchedCount = new Set((lastSync?.unmatched || []).map((u) => u.client)).size;
   const byCompany: Record<string, repo.Login[]> = {};
   for (const l of logins) (byCompany[l.companyId] ||= []).push(l);
 
@@ -26,7 +28,15 @@ export default async function ClientsPage() {
 
   return (
     <StaffShell title="Clients" sub="Every company with a portal login." active="/admin/clients">
-        <Link href="/admin" className="text-[13px] text-seal underline">← Back to Admin</Link>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Link href="/admin" className="text-[13px] text-seal underline">← Back to Admin</Link>
+          <Link
+            href="/admin/unmatched"
+            className={`text-[13px] underline ${unmatchedCount > 0 ? "font-semibold text-flag" : "text-seal"}`}
+          >
+            Unmatched Monday clients{unmatchedCount > 0 ? ` (${unmatchedCount})` : ""} →
+          </Link>
+        </div>
         <p className="eyebrow mt-4">Clients</p>
         <h1 className="mb-1 mt-1 font-display text-[26px] font-semibold">Clients &amp; Logins</h1>
         <p className="mb-6 max-w-2xl text-[14px] leading-relaxed text-ink/65">

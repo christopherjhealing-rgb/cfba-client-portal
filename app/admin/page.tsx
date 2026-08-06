@@ -98,10 +98,7 @@ export default async function AdminHome() {
           </Link>
         )}
 
-        <SyncHealth
-          last={lastSync as never}
-          companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-        />
+        <SyncHealth last={lastSync as never} />
 
         {/* Ready above FIR, as asked: what a client could collect right now,
             then what a client still owes us. Both from the last sync. */}
