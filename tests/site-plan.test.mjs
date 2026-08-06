@@ -1643,15 +1643,21 @@ test("an elevation shows the slope as a rake in one view, into the page in the o
   assert.deepEqual(front.postXs, [0, 3, 6]);
 });
 
-test("an attached elevation knows the dwelling meets it, and drops that side's posts", () => {
+test("the dwelling shows in the elevation perpendicular to the attached edge", () => {
+  // Attach along the top (side 0, a horizontal/long edge). The wall is seen
+  // end-on in the DEPTH (side) view, not the width (front) view.
   const s = P({ mount: "attached", attach: 0, roof: "skillion", fall: 2, cols: [4, 2, 4, 2] });
-  const front = patioElevationProfile(s, "w");   // sides 0 & 2; 0 is the wall
-  assert.equal(front.attachHere, true);
-  assert.equal(front.attachAtStart, true);
-  // Side 0 is the wall (no posts); side 2 still has 4 → 4 across the face.
+  const front = patioElevationProfile(s, "w");
+  const side = patioElevationProfile(s, "d");
+  assert.equal(side.attachHere, true, "side elevation carries the dwelling for a long-edge attach");
+  assert.equal(front.attachHere, false, "front elevation does not");
+  // Posts are unaffected by which view shows the wall: the front reads the
+  // busier of the horizontal sides (0 is the wall → 0 posts, 2 → 4) = 4.
   assert.equal(front.postXs.length, 4);
-  const side = patioElevationProfile(s, "d");     // sides 1 & 3; neither is 0
-  assert.equal(side.attachHere, false);
+  // Attaching on a short edge (side 3, vertical) flips which view shows it.
+  const s2 = P({ mount: "attached", attach: 3, roof: "skillion", fall: 2 });
+  assert.equal(patioElevationProfile(s2, "w").attachHere, true);
+  assert.equal(patioElevationProfile(s2, "d").attachHere, false);
 });
 
 test("roof heights: skillion rises over the full run, gable over half", () => {
