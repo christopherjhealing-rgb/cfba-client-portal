@@ -51,20 +51,50 @@ surface** — both use it.
 - Full CoI separation (portal-login door removed, all CFBA branding stripped).
 - Own-domain support via `STUDIO_HOST` + `proxy.ts` (serves the studio at
   clean paths on its own host).
+- **Stage C — parametric patio.** A patio takes a roof (flat / skillion /
+  gable) with a pitch and a fall direction, posts per side at a set height,
+  downpipes (with a one-per-12 m-of-gutter guide), and a soakwell sized off
+  its roof area (`lib/soakwell.mjs`, City of Bayswater figures). All drawn on
+  the plan and the sheet. Geometry is pure and tested in `lib/site-plan.mjs`
+  (`sanitisePatio`, `patioColumns`, `patioGutter`, `downpipesNeeded`,
+  `patioRoofHeights`).
+- **Stage D — generated elevations.** Each configured patio prints an extra
+  A4 sheet after the plan: front + side elevations, dimensioned, the slope
+  shown as a rake in the view it runs across and the dwelling wall drawn where
+  it attaches (`patioElevationProfile`, tested). The print set is now a
+  `#site-plan-print` wrapper of `.cfba-sheet` pages.
 
-## Next (stages B–D, agreed with Chris)
+- **Stage B — house-plan trace underlay.** Upload a PDF (rendered client-side
+  with `pdfjs-dist`) or an image and place / turn / scale / opacity it as a
+  second trace-over underlay beside the aerial. Scale is set by drawing a line
+  along a known length and typing that length (`rescalePlanUnderlay`). The
+  picture stays **in the browser (IndexedDB, `lib/underlay-store.ts`), never
+  uploaded** — see the CoI/privacy note below. Placement is a handful of
+  numbers on the design (`sanitisePlanUnderlay`, tested). Never printed (it
+  carries the same `.cfba-underlay` strip as the aerial).
 
-- **B — house-plan trace underlay.** Let the user upload a PDF or image of
-  their house plans and place/scale/rotate/pin it as a second trace-over
-  underlay beside the aerial. Render PDFs with `pdfjs-dist`. The aerial
-  underlay plumbing in `SitePlanBuilder` (`Underlay`, `underlay*` helpers) is
-  the pattern to extend.
-- **C — parametric patio.** Type the patio dimensions and the footprint
-  resizes; a **flat vs attached** switch; **columns per side** and **column
-  height** captured on the plan.
-- **D — generated elevations.** Produce patio elevation views (columns at
-  their spacing and height, flat roof profile, the attached side drawn as a
-  dwelling outline, dimensioned) as extra A4 sheets.
+### The CoI / privacy line on B–D (important)
+
+- The patio tooling and its elevations are **studio only**, behind a
+  `patioTools` prop on `SitePlanBuilder` that **only `StudioEditor` passes**.
+  The certifier's client portal (`app/site-plan/page.tsx`) must never turn it
+  on — that page's own rule is "no compliance wording in the builder", and
+  soakwell sizing / a downpipe rule is design help a surveyor must not be seen
+  to give for what they certify. The tool still only measures and offers.
+- The house-plan underlay is studio-only too (the `underlayKey` prop, = the
+  design id, both enables it and keys its browser-local picture). The picture
+  is the client's private drawing, so it is deliberately **kept in their
+  browser and never sent to a server** — the same way the aerial is a guide
+  that never lodges. The trade-off is that it's device-local: open a design on
+  another machine and the traced result is there, but the picture behind it is
+  re-added. That's by design, and the card says so.
+- The pdf.js worker is copied into `public/` by `scripts/copy-pdf-worker.mjs`
+  (a `predev`/`prebuild` hook), gitignored, and always matches the installed
+  `pdfjs-dist` so it can't drift.
+
+## Next
+
+Stages B–D are done. What's left is the pre-launch list below.
 
 ## Open follow-ups
 

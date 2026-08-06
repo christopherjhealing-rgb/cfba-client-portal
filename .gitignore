@@ -4,3 +4,6 @@ node_modules
 .env.local
 *.log
 *.tsbuildinfo
+
+# pdf.js worker, copied from node_modules by scripts/copy-pdf-worker.mjs
+/public/pdf.worker.min.mjs

@@ -25,8 +25,15 @@ import {
   structureArea, structureGap, structureState, togglePin, toggleState,
   underlayAnchor, underlayCentre, underlayMapSize,
   underlayScale, underlayZoom,
-  type Lot, type LotOrigin, type Pin, type StructureState, type Underlay,
+  GUTTER_M_PER_DOWNPIPE, PATIO_MAX_COLS, PATIO_MAX_PITCH,
+  downpipesNeeded, patioColumns, patioElevationProfile, patioGutter,
+  patioRoofHeights, sanitisePatio,
+  sanitisePlanUnderlay, rescalePlanUnderlay,
+  type Lot, type LotOrigin, type PatioParams, type Pin, type PlanUnderlay,
+  type StructureState, type Underlay,
 } from "@/lib/site-plan.mjs";
+import { findSize, sizeKey, sizeLabel, sizeNew, SOAKWELLS, SOAKWELL_CAVEAT } from "@/lib/soakwell.mjs";
+import { getUnderlay, putUnderlay, delUnderlay } from "@/lib/underlay-store";
 import { buildLot, reorientLot } from "@/lib/cadastre.mjs";
 import { WA_BOUNDS } from "@/lib/address.mjs";
 import { GOOGLE_MAPS_KEY, loadMapsLibrary } from "@/lib/google-maps";
@@ -140,6 +147,10 @@ interface Structure {
   notchW?: number;
   notchD?: number;
   pts?: Pt[];
+  /** Patio roof / posts / drainage. Only meaningful on a `patio`, only ever
+   *  set by the studio (the certifier's portal never turns the tooling on),
+   *  and absent on every patio saved before this existed. */
+  patio?: PatioParams;
   /** Already there, or being applied for. Every design saved before this
    *  existed loads as proposed and draws exactly as it did. */
   state: StructureState;
@@ -166,6 +177,10 @@ interface Design {
    *  is a screen aid; a pinned one is part of the drawing and prints. Every
    *  design saved before pinning existed has none. */
   pins: Pin[];
+  /** Where the client's own house plan sits behind the drawing, if they've
+   *  added one. Screen-only tracing guide, never printed; the picture itself
+   *  lives in the browser, so only this placement is saved. Studio only. */
+  planUnderlay: PlanUnderlay;
 }
 
 interface Guide {
@@ -213,6 +228,7 @@ const BLANK: Design = {
   underlay: sanitiseUnderlay(undefined),
   lot: sanitiseLot(undefined),
   pins: [],
+  planUnderlay: sanitisePlanUnderlay(undefined),
 };
 
 const INK = "#101A15";
@@ -322,6 +338,13 @@ function sanitise(raw: unknown): Design {
               base.shape = "rect";
             }
           }
+          // Patio parameters, on a patio that has them — every studio patio
+          // saved since this build. A patio saved before it (or one drawn in
+          // the certifier's portal, which never sets them) carries none and
+          // stays the plain rectangle it always was.
+          if (base.kind === "patio" && s.patio && typeof s.patio === "object") {
+            base.patio = sanitisePatio(s.patio);
+          }
           return base;
         })
     : [];
@@ -342,6 +365,7 @@ function sanitise(raw: unknown): Design {
     lot: sanitiseLot(d.lot),
     // A pin naming a structure that is no longer on the plan goes with it.
     pins: sanitisePins(d.pins, structures.map((s) => s.id)),
+    planUnderlay: sanitisePlanUnderlay(d.planUnderlay),
   };
 }
 
@@ -371,6 +395,33 @@ function MetresField({ label, value, onCommit }: {
   );
 }
 
+/** The one question the set-scale line asks: this span is so-many metres now,
+ *  what is it really? Its own tiny component so the field's half-typed text
+ *  never lives in the builder's state. */
+function PlanScaleAsk({ drawn, onApply, onCancel }: {
+  drawn: number; onApply: (n: number) => void; onCancel: () => void;
+}) {
+  const [text, setText] = useState("");
+  const val = parseMetres(text);
+  return (
+    <div className="flex flex-1 flex-wrap items-center gap-2">
+      <span className="text-[12.5px] leading-snug text-ink/70">
+        That line is <span className="font-mono">{fmtM(drawn)} m</span> at the moment. How long is it really?
+      </span>
+      <input className="field !h-9 w-24" inputMode="decimal" autoFocus placeholder="metres"
+        aria-label="The line's real length in metres"
+        value={text} onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && val) onApply(val);
+          if (e.key === "Escape") onCancel();
+        }} />
+      <button type="button" className="btn min-h-[40px] !px-3 !py-1.5" disabled={!val}
+        onClick={() => val && onApply(val)}>Set the scale</button>
+      <button type="button" className="btn-ghost min-h-[40px] !px-3 !py-1.5" onClick={onCancel}>Cancel</button>
+    </div>
+  );
+}
+
 /** Somewhere other than localStorage to keep the drawing — the studio passes
  *  its API here. load() runs once; save() is already debounced by the
  *  builder, so it can go straight to the network. */
@@ -380,12 +431,17 @@ export interface DesignStore {
 }
 
 export function SitePlanBuilder(
-  { companyId, cadastre = false, store }:
-  { companyId: string; cadastre?: boolean; store?: DesignStore },
+  { companyId, cadastre = false, store, patioTools = false, underlayKey, chrome = false }:
+  { companyId: string; cadastre?: boolean; store?: DesignStore;
+    patioTools?: boolean; underlayKey?: string; chrome?: boolean },
 ) {
   const [design, setDesign] = useState<Design>(BLANK);
   const [selected, setSelected] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  /** Studio chrome: which toolbar menu is open (a Word-style drop-down that
+   *  reveals one group of controls at a time). Null is the resting state — the
+   *  canvas has the screen to itself. Only ever used when `chrome` is on. */
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [today, setToday] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [draw, setDraw] = useState<{ pts: Pt[]; hint: string } | null>(null);
@@ -431,6 +487,21 @@ export function SitePlanBuilder(
    *  land. A blank note is the ordinary state — this never nags. */
   const [findingLot, setFindingLot] = useState(false);
   const [lotNote, setLotNote] = useState("");
+  /** House-plan underlay (studio only). The picture in the browser right now,
+   *  how many pages a PDF had, whether one is being read in, a message when a
+   *  saved plan's picture isn't on this device, and the two points of a
+   *  set-scale line waiting for a real length. */
+  const planOn = !!underlayKey;
+  const [planImg, setPlanImg] = useState<string | null>(null);
+  const [planPages, setPlanPages] = useState(1);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [planMissing, setPlanMissing] = useState(false);
+  const [planScaling, setPlanScaling] = useState(false);
+  const [planScale, setPlanScale] = useState<{ pts: Pt[]; metres: number | null }>({ pts: [], metres: null });
+  const planDragRef = useRef<{ cx: number; cy: number; start: Pt; frame: Frame } | null>(null);
+  /** The file the house plan came from, kept for this session so a multi-page
+   *  PDF can switch page. Not persisted — a reload asks for it again. */
+  const planFileRef = useRef<File | null>(null);
   const keyRef = useRef(designKey(companyId, ""));
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -625,6 +696,201 @@ export function SitePlanBuilder(
       ...p,
       underlay: { ...p.underlay, ...(typeof patch === "function" ? patch(p.underlay) : patch) },
     }));
+
+  // ---- the house-plan underlay (studio only) ------------------------------
+
+  const plan0 = design.planUnderlay;
+  /** A house plan is placed AND its picture is here to draw. */
+  const planShowing = planOn && plan0.placed && !!planImg && plan0.visible;
+  /** Lining the house plan up: it's placed, visible, unlocked, and no other
+   *  gesture owns the canvas. */
+  const planAligning = planShowing && !plan0.locked && !draw && !trace && !lotEdit && !planScaling;
+
+  const patchPlan = (patch: Partial<PlanUnderlay> | ((u: PlanUnderlay) => Partial<PlanUnderlay>)) =>
+    setDesign((p) => ({
+      ...p,
+      planUnderlay: sanitisePlanUnderlay({
+        ...p.planUnderlay,
+        ...(typeof patch === "function" ? patch(p.planUnderlay) : patch),
+      }),
+    }));
+
+  // Bring the saved picture back from this browser when a design that has one
+  // loads. Not on the server — if it isn't on this device, say so and offer to
+  // re-add it, keeping the placement so a same-size picture lands back true.
+  // Keyed on the load, not on `placed`: a design that arrives with a house
+  // plan fetches its picture once; adding one later sets the picture in hand
+  // and must not be clobbered by a re-fetch (which, with no IndexedDB, would
+  // read back null and wrongly report it missing).
+  useEffect(() => {
+    if (!planOn || !loaded || !plan0.placed) return;
+    let dead = false;
+    void getUnderlay(underlayKey!).then((data) => {
+      if (dead) return;
+      if (data) { setPlanImg(data); setPlanMissing(false); }
+      else setPlanMissing(true);
+    });
+    return () => { dead = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once the design has loaded; underlayKey is stable per mount
+  }, [planOn, loaded]);
+
+  // Picking a structure opens its editor — the one panel that's contextual, so
+  // it comes to the front the moment there's something to edit. Studio only.
+  useEffect(() => {
+    if (chrome && selected) setOpenMenu("selected");
+  }, [chrome, selected]);
+
+  /** Read an image file to a data URL and its natural pixel size. */
+  function readImage(file: File): Promise<{ dataUrl: string; w: number; h: number }> {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => {
+        const dataUrl = String(fr.result || "");
+        const img = new Image();
+        img.onload = () => resolve({ dataUrl, w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => reject(new Error("image"));
+        img.src = dataUrl;
+      };
+      fr.onerror = () => reject(new Error("read"));
+      fr.readAsDataURL(file);
+    });
+  }
+
+  /** Render one page of a PDF to a data URL, big enough to trace over without
+   *  going soft, capped so a huge sheet doesn't blow the browser's memory. */
+  async function renderPdf(file: File, page: number): Promise<{ dataUrl: string; w: number; h: number; pages: number }> {
+    const pdfjs = await import("pdfjs-dist");
+    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjs.getDocument({ data: buf }).promise;
+    const pg = await doc.getPage(Math.min(Math.max(page, 1), doc.numPages));
+    const base = pg.getViewport({ scale: 1 });
+    const target = 2000;                              // long edge, in pixels
+    const scale = Math.min(target / Math.max(base.width, base.height), 4);
+    const viewport = pg.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await pg.render({ canvasContext: ctx, viewport }).promise;
+    const pages = doc.numPages;
+    await doc.destroy();
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.85), w: canvas.width, h: canvas.height, pages };
+  }
+
+  /** Take the picture on: read or render it, drop it behind the plan roughly
+   *  fitting the lot width, and go straight into lining it up. The picture
+   *  stays in this browser; only the placement is saved. */
+  async function addPlan(file: File, page = 1, keepPlacement = false) {
+    if (!planOn || !file) return;
+    planFileRef.current = file;
+    setPlanBusy(true);
+    setPlanMissing(false);
+    try {
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const r = isPdf ? await renderPdf(file, page) : { ...(await readImage(file)), pages: 1 };
+      if (!(r.w > 0) || !(r.h > 0)) throw new Error("empty");
+      await putUnderlay(underlayKey!, r.dataUrl);
+      setPlanImg(r.dataUrl);
+      setPlanPages(r.pages);
+      if (keepPlacement && plan0.placed) {
+        // Just a different page of the same plan — leave it where it sits.
+        patchPlan({ w: r.w, h: r.h, page });
+      } else {
+        setSelected(null);
+        setDraw(null);
+        // Fit the picture's width to about three-quarters of the lot, centred,
+        // so there's something sensible on screen before the scale is even set.
+        patchPlan({
+          placed: true, w: r.w, h: r.h, page,
+          cx: lotW / 2, cy: lotD / 2, mpp: (lotW * 0.75) / r.w, rot: 0,
+          visible: true, locked: false,
+        });
+      }
+    } catch {
+      setPlanMissing(true);
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  const removePlan = () => {
+    if (underlayKey) void delUnderlay(underlayKey);
+    setPlanImg(null);
+    setPlanPages(1);
+    setPlanMissing(false);
+    setPlanScaling(false);
+    setPlanScale({ pts: [], metres: null });
+    patchPlan(sanitisePlanUnderlay(undefined));
+  };
+
+  // Set the scale by drawing a line along something of a known length. The
+  // line is measured in the drawing's own metres at the current size; telling
+  // the tool what it really is resizes the picture to match, about the line.
+  function startPlanScale() {
+    setPlanScaling(true);
+    setPlanScale({ pts: [], metres: null });
+    patchPlan({ locked: true });
+    setSelected(null);
+    setDraw(null);
+    canvasRef.current?.focus({ preventScroll: true });
+  }
+  function addPlanScalePoint(e: { clientX: number; clientY: number }) {
+    const p = toM(e);
+    setPlanScale((s) => {
+      if (s.metres !== null) return s;
+      const pts = [...s.pts, { x: snap(p.x, 0.01), y: snap(p.y, 0.01) }];
+      if (pts.length >= 2) {
+        return { pts: [pts[0], pts[1]], metres: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) };
+      }
+      return { pts, metres: null };
+    });
+  }
+  function applyPlanScale(realM: number) {
+    const now = planScale.metres;
+    const [a, b] = planScale.pts;
+    if (now && now > 0 && realM > 0 && a && b) {
+      const k = realM / now;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      patchPlan((u) => ({
+        mpp: rescalePlanUnderlay(u.mpp, now, realM),
+        cx: mx + k * (u.cx - mx),
+        cy: my + k * (u.cy - my),
+      }));
+    }
+    setPlanScaling(false);
+    setPlanScale({ pts: [], metres: null });
+  }
+  const cancelPlanScale = () => { setPlanScaling(false); setPlanScale({ pts: [], metres: null }); };
+
+  // Dragging the house plan to line it up — one finger moves it; rotation and
+  // scale are set from the card, so the drag only ever translates.
+  function planDown(e: React.PointerEvent) {
+    e.preventDefault();
+    canvasRef.current?.focus({ preventScroll: true });
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    const frame = frameNow();
+    planDragRef.current = { cx: plan0.cx, cy: plan0.cy, start: toMIn(e, frame), frame };
+  }
+  function planMove(e: React.PointerEvent) {
+    const g = planDragRef.current;
+    if (!g) return;
+    const p = toMIn(e, g.frame);
+    patchPlan({ cx: g.cx + (p.x - g.start.x), cy: g.cy + (p.y - g.start.y) });
+  }
+  const planUp = () => { planDragRef.current = null; };
+
+  /** The house plan's box on the canvas, in CSS pixels — where the picture
+   *  sits behind the drawing, before its own rotation. */
+  function planBox() {
+    const u = plan0;
+    const wPx = u.w * u.mpp * pxPerM, hPx = u.h * u.mpp * pxPerM;
+    const cxPx = (u.cx + mL) * pxPerM, cyPx = (u.cy + mT) * pxPerM;
+    return { left: cxPx - wPx / 2, top: cyPx - hPx / 2, w: wPx, h: hPx };
+  }
 
   // Taking the photo off throws the map element away with it, so let the map
   // go too — the next one has to build into the element that's really there.
@@ -935,6 +1201,7 @@ export function SitePlanBuilder(
     setSelected(null);
     setLotSel(null);
     setLotNudge("");
+    cancelPlanScale();
     // Handles get grabbed on the plan, so the photo has to stop taking drags.
     if (aligning) patchUnderlay({ locked: true });
     canvasRef.current?.focus({ preventScroll: true });
@@ -992,6 +1259,7 @@ export function SitePlanBuilder(
     setDraw(null);
     setSelected(null);
     setLotNudge("");
+    cancelPlanScale();
     if (aligning) patchUnderlay({ locked: true });
     canvasRef.current?.focus({ preventScroll: true });
   }
@@ -1102,6 +1370,17 @@ export function SitePlanBuilder(
       }),
     }));
 
+  /** Patch a patio's parameters, normalised through sanitisePatio so a stray
+   *  value out of the panel can never reach the drawing or the saved design.
+   *  Starts from the current params (defaulted) so the first touch of any
+   *  control gives the patio a full, sensible record. */
+  const patchPatio = (id: string, patch: Partial<PatioParams>) =>
+    patchStructure(id, {
+      patio: sanitisePatio({ ...sanitisePatio(
+        design.structures.find((s) => s.id === id)?.patio,
+      ), ...patch }),
+    });
+
   const setLot = (patch: Partial<Pick<Design, "lotW" | "lotD">>) =>
     setDesign((prev) => {
       const lot = { lotW: prev.lotW, lotD: prev.lotD, ...patch };
@@ -1194,6 +1473,7 @@ export function SitePlanBuilder(
   function startDraw() {
     setDraw({ pts: [], hint: "" });
     setSelected(null);
+    cancelPlanScale();
     // Corners get tapped on the plan, so the photo has to stop taking taps.
     if (aligning) patchUnderlay({ locked: true });
     canvasRef.current?.focus({ preventScroll: true });
@@ -1243,6 +1523,11 @@ export function SitePlanBuilder(
   };
 
   function onKeyDown(e: React.KeyboardEvent) {
+    // Setting the house-plan scale owns Escape while it's on.
+    if (planScaling) {
+      if (e.key === "Escape") { e.preventDefault(); cancelPlanScale(); }
+      return;
+    }
     // Undo is the way back from a boundary drag, wherever you are.
     if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
       e.preventDefault();
@@ -1953,6 +2238,9 @@ export function SitePlanBuilder(
         {layer("line", {
           fill: "none", stroke, strokeWidth: strokeW, strokeDasharray: dash,
         })}
+        {/* Patio roof, posts and drainage, over the footprint and under the
+            name. Studio only — the certifier's portal never turns it on. */}
+        {patioTools && s.kind === "patio" && patioMarks(s)}
         {isSel && (
           <rect x={s.x - marg} y={s.y - marg} width={b.w + marg * 2} height={b.d + marg * 2}
             fill="none" stroke={BRASS} strokeWidth={mm(0.25)}
@@ -1974,6 +2262,501 @@ export function SitePlanBuilder(
         </text>
         {isSel && !draw && handleNodes(s)}
       </g>
+    );
+  }
+
+  // ---- the parametric patio (studio only) ---------------------------------
+
+  const SIDE_PAIRS = [[0, 1], [1, 2], [2, 3], [3, 0]];
+  const ROOF_INK = "#5B6B61";
+  const POST_INK = "#12332A";
+  const WELL_INK = "#3E7C8C";
+  const SCREEN_LABELS = ["Top", "Right", "Bottom", "Left"];
+  const SCREEN_ARROWS = ["↑", "→", "↓", "←"];
+
+  /** The posts, roof geometry, downpipes and soakwells drawn on the plan for
+   *  a patio — the studio's parametric patio made visible. Screen and sheet
+   *  both, so the printed plan carries every figure the client set. */
+  function patioMarks(s: Structure) {
+    const fp = footprint(s);
+    if (fp.length !== 4) return null;
+    const p = sanitisePatio(s.patio);
+    const cx = (fp[0].x + fp[1].x + fp[2].x + fp[3].x) / 4;
+    const cy = (fp[0].y + fp[1].y + fp[2].y + fp[3].y) / 4;
+    const sideMid = (k: number) => {
+      const [a, b] = SIDE_PAIRS[k];
+      return { x: (fp[a].x + fp[b].x) / 2, y: (fp[a].y + fp[b].y) / 2 };
+    };
+    const sideLen = (k: number) => {
+      const [a, b] = SIDE_PAIRS[k];
+      return Math.hypot(fp[b].x - fp[a].x, fp[b].y - fp[a].y);
+    };
+    const unit = (dx: number, dy: number) => {
+      const l = Math.hypot(dx, dy) || 1;
+      return { x: dx / l, y: dy / l };
+    };
+
+    const gutter = patioGutter(s);
+    const posts = patioColumns(s);
+    const bb = polyBounds(fp);
+
+    // Roof geometry: a gable draws its ridge; anything else draws a fall arrow
+    // pointing the way the water runs, toward its low (gutter) side.
+    let roofGeom: React.ReactNode = null;
+    if (p.roof === "gable") {
+      const e1 = sideMid((p.fall + 1) % 4), e2 = sideMid((p.fall + 3) % 4);
+      roofGeom = (
+        <line x1={e1.x} y1={e1.y} x2={e2.x} y2={e2.y} stroke={ROOF_INK}
+          strokeWidth={mm(0.45)} strokeDasharray={`${mm(2)} ${mm(1.1)}`} />
+      );
+    } else {
+      const to = sideMid(p.fall);
+      const hx = cx + (to.x - cx) * 0.72, hy = cy + (to.y - cy) * 0.72;
+      const u = unit(to.x - cx, to.y - cy);
+      const perp = { x: -u.y, y: u.x };
+      const hw = mm(1.5), hl = mm(2.3);
+      const head = `${hx},${hy} ` +
+        `${hx - u.x * hl + perp.x * hw},${hy - u.y * hl + perp.y * hw} ` +
+        `${hx - u.x * hl - perp.x * hw},${hy - u.y * hl - perp.y * hw}`;
+      roofGeom = (
+        <>
+          <line x1={cx - (to.x - cx) * 0.55} y1={cy - (to.y - cy) * 0.55} x2={hx} y2={hy}
+            stroke={ROOF_INK} strokeWidth={mm(0.4)} />
+          <polygon points={head} fill={ROOF_INK} />
+        </>
+      );
+    }
+
+    // Downpipes, spread along the gutter side(s) in proportion to their length.
+    const dpMarks: Pt[] = [];
+    if (gutter.sides.length && p.downpipes > 0) {
+      const total = gutter.length || 1;
+      let left = p.downpipes;
+      gutter.sides.forEach((k, idx) => {
+        const n = idx === gutter.sides.length - 1
+          ? left : Math.min(left, Math.round((p.downpipes * sideLen(k)) / total));
+        left -= n;
+        const [ai, bi] = SIDE_PAIRS[k];
+        const a = fp[ai], b = fp[bi];
+        for (let i = 0; i < n; i++) {
+          const t = (i + 0.5) / Math.max(n, 1);
+          dpMarks.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+        }
+      });
+    }
+
+    // Soakwell(s), to scale, set out just beyond the gutter side. Indicative:
+    // the sheet shows the size the sizing asked for, in about the right place.
+    const size = p.soak ? findSize(p.soak.key) : null;
+    let soakNode: React.ReactNode = null;
+    if (size && p.soak) {
+      const rad = size.dia / 2000;
+      const k = gutter.sides[0] ?? p.fall;
+      const m = sideMid(k);
+      const out = unit(m.x - cx, m.y - cy);
+      const tan = { x: -out.y, y: out.x };
+      const step = rad * 2 + 0.3;
+      const start = { x: m.x + out.x * (rad + 0.6), y: m.y + out.y * (rad + 0.6) };
+      const wells = Array.from({ length: p.soak.count }, (_, i) => ({
+        x: start.x + tan.x * (i - (p.soak!.count - 1) / 2) * step,
+        y: start.y + tan.y * (i - (p.soak!.count - 1) / 2) * step,
+      }));
+      soakNode = (
+        <g>
+          {wells.map((w, i) => (
+            <circle key={i} cx={w.x} cy={w.y} r={rad} fill="#D3E4EA" fillOpacity={0.55}
+              stroke={WELL_INK} strokeWidth={mm(0.35)} strokeDasharray={`${mm(1.4)} ${mm(0.8)}`} />
+          ))}
+          <text x={start.x} y={start.y + rad + mm(3)} textAnchor="middle"
+            fontFamily={FONT_NUM} fontSize={mm(2.3)} fill={INK} fillOpacity={0.8} style={halo}>
+            {p.soak.count > 1 ? `${p.soak.count} × ` : ""}{sizeLabel(size)}
+          </text>
+        </g>
+      );
+    }
+
+    const roofWord = p.roof === "skillion" ? "Skillion" : p.roof === "gable" ? "Gable" : "Flat";
+    const postSize = Math.max(mm(0.95), 0.08);
+    return (
+      <g pointerEvents="none">
+        {roofGeom}
+        {soakNode}
+        {dpMarks.map((q, i) => (
+          <g key={i}>
+            <circle cx={q.x} cy={q.y} r={mm(1.1)} fill="#fff" stroke={BRASS} strokeWidth={mm(0.3)} />
+            <circle cx={q.x} cy={q.y} r={mm(0.45)} fill={BRASS} />
+          </g>
+        ))}
+        {posts.map((q, i) => (
+          <rect key={i} x={q.x - postSize} y={q.y - postSize}
+            width={postSize * 2} height={postSize * 2} fill={POST_INK} />
+        ))}
+        <text x={cx} y={bb.minY - mm(1.6)} textAnchor="middle" fontFamily={FONT_LAB}
+          fontWeight={600} fontSize={mm(2.3)} fill={ROOF_INK} style={halo}>
+          {roofWord} · {fmtM(p.pitch)}° · {fmtM(p.colHeight)} m
+        </text>
+      </g>
+    );
+  }
+
+  /** The patio panel: roof, posts and drainage, shown only in the studio and
+   *  only for a patio. The tool measures and offers sizing help; whether any
+   *  of it satisfies a council is never decided here. */
+  function patioControls(s: Structure) {
+    const p = sanitisePatio(s.patio);
+    const q = ((((s.rot ?? 0) / 90) % 4) + 4) % 4;
+    const screenToLocal = (sd: number) => (sd - q + 4) % 4;
+    const gutter = patioGutter(s);
+    const need = downpipesNeeded(gutter.length);
+    const sizing = sizeNew({ roofM2: structureArea(s) });
+    const best = sizing.ok ? sizing.best : null;
+
+    /** A four-way pad that maps a screen direction to the patio's own side,
+     *  so "this way on the plan" always means what it looks like whichever way
+     *  the patio is turned. */
+    const sidePad = (
+      active: Set<number>, onPick: (local: number) => void,
+      dim?: (local: number) => boolean,
+    ) => {
+      const cell = (sd: number) => {
+        const local = screenToLocal(sd);
+        const on = active.has(local);
+        const off = dim ? dim(local) : false;
+        return (
+          <button type="button" aria-pressed={on} disabled={off}
+            onClick={() => onPick(local)}
+            className={`${NUDGE} ${on ? "!border-brass !bg-[#F6EEDA] !text-brass-deep" : ""} disabled:opacity-30`}>
+            {SCREEN_ARROWS[sd]}
+          </button>
+        );
+      };
+      return (
+        <div className="mx-auto grid w-[132px] grid-cols-3 gap-1">
+          <span />{cell(0)}<span />
+          {cell(3)}
+          <span className="flex items-center justify-center text-[9px] uppercase tracking-wide text-ink/35">plan</span>
+          {cell(1)}
+          <span />{cell(2)}<span />
+        </div>
+      );
+    };
+
+    const setCols = (local: number, n: number) => {
+      const cols = [...p.cols];
+      cols[local] = Math.min(Math.max(Math.round(n) || 0, 0), PATIO_MAX_COLS);
+      patchPatio(s.id, { cols });
+    };
+    const stepDown = () => patchPatio(s.id, { downpipes: Math.max(0, p.downpipes - 1) });
+    const stepUp = () => patchPatio(s.id, { downpipes: Math.min(20, p.downpipes + 1) });
+
+    return (
+      <div className="space-y-3 rounded-md border border-seal/25 bg-wash/60 p-3">
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-seal">
+          Patio roof &amp; drainage
+        </p>
+
+        {/* Freestanding, or attached to the dwelling */}
+        <div>
+          <span className="label">Standing</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(["free", "attached"] as const).map((mt) => (
+              <button key={mt} type="button" aria-pressed={p.mount === mt}
+                onClick={() => patchPatio(s.id, { mount: mt })}
+                className={`min-h-[40px] rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.08em] transition ${
+                  p.mount === mt ? "border-seal bg-white text-seal" : "border-rule bg-white text-ink/60 hover:bg-white"
+                }`}>
+                {mt === "free" ? "Freestanding" : "Attached"}
+              </button>
+            ))}
+          </div>
+          {p.mount === "attached" && (
+            <div className="mt-2">
+              <span className="label">Attaches to the dwelling on the…</span>
+              {sidePad(new Set([p.attach]), (local) => patchPatio(s.id, { attach: local }))}
+            </div>
+          )}
+        </div>
+
+        {/* Roof shape */}
+        <div>
+          <span className="label">Roof</span>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(["flat", "skillion", "gable"] as const).map((rf) => (
+              <button key={rf} type="button" aria-pressed={p.roof === rf}
+                onClick={() => patchPatio(s.id, { roof: rf })}
+                className={`min-h-[40px] rounded-md border px-1 py-2 font-display text-[11.5px] font-semibold capitalize transition ${
+                  p.roof === rf ? "border-seal bg-white text-seal" : "border-rule bg-white text-ink/60 hover:bg-white"
+                }`}>
+                {rf}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Pitch */}
+        <div>
+          <div className="flex items-baseline justify-between">
+            <span className="label !mb-0">Roof pitch</span>
+            <span className="font-mono text-[11.5px] text-ink/55">{fmtM(p.pitch)}°</span>
+          </div>
+          <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
+            min={0} max={PATIO_MAX_PITCH} step={0.5} value={p.pitch}
+            aria-label="Roof pitch in degrees"
+            onChange={(e) => patchPatio(s.id, { pitch: Number(e.target.value) })} />
+        </div>
+
+        {/* Fall / ridge direction */}
+        <div>
+          <span className="label">
+            {p.roof === "gable" ? "Ridge across the plan" : "Roof falls toward"}
+          </span>
+          {sidePad(
+            new Set(p.roof === "gable" ? [p.fall, (p.fall + 2) % 4] : [p.fall]),
+            (local) => patchPatio(s.id, { fall: local }),
+          )}
+        </div>
+
+        {/* Posts per side + height */}
+        <div>
+          <span className="label">Posts per side</span>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[0, 1, 2, 3].map((sd) => {
+              const local = screenToLocal(sd);
+              const wall = p.mount === "attached" && p.attach === local;
+              return (
+                <div key={sd}>
+                  <span className="block text-center text-[10px] uppercase tracking-wide text-ink/45">
+                    {SCREEN_LABELS[sd]}
+                  </span>
+                  <input type="number" inputMode="numeric" min={0} max={PATIO_MAX_COLS}
+                    className="field !px-1 text-center" disabled={wall}
+                    value={wall ? 0 : p.cols[local]}
+                    onChange={(e) => setCols(local, Number(e.target.value))} />
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-[12px] leading-snug text-ink/50">
+            Corners count as a post, and are shared between two sides. The side
+            against the dwelling carries a wall, not posts.
+          </p>
+        </div>
+        <MetresField label="Post / eave height (m)" value={p.colHeight}
+          onCommit={(n) => patchPatio(s.id, { colHeight: n })} />
+
+        {/* Downpipes */}
+        <div>
+          <span className="label">Downpipes</span>
+          <div className="flex items-center gap-2">
+            <button type="button" aria-label="One fewer downpipe" onClick={stepDown}
+              className={`${NUDGE} w-10 shrink-0`}>−</button>
+            <span className="min-w-[2ch] flex-1 text-center font-mono text-[15px] text-ink">{p.downpipes}</span>
+            <button type="button" aria-label="One more downpipe" onClick={stepUp}
+              className={`${NUDGE} w-10 shrink-0`}>+</button>
+            <button type="button" onClick={() => patchPatio(s.id, { downpipes: need })}
+              className="btn-ghost min-h-[40px] shrink-0 !px-3 !py-2">
+              Set {need}
+            </button>
+          </div>
+          <p className={`mt-1.5 text-[12px] leading-snug ${p.downpipes < need ? "text-brass-deep" : "text-ink/55"}`}>
+            {gutter.length > 0
+              ? `Gutter runs about ${fmtM(gutter.length)} m — that's around ${need} downpipe${need === 1 ? "" : "s"} at one per ${GUTTER_M_PER_DOWNPIPE} m. A rule of thumb, not a ruling.`
+              : "No gutter on this roof yet — set the fall direction above."}
+          </p>
+        </div>
+
+        {/* Soakwells */}
+        <div>
+          <span className="label">Soakwells</span>
+          {best ? (
+            <>
+              <p className="text-[12.5px] leading-snug text-ink/70">
+                For {fmtM(structureArea(s))} m² of roof, about{" "}
+                <span className="font-mono">{fmtM(sizing.ok ? sizing.required : 0)} m³</span> of
+                storage — <span className="font-medium text-ink">{best.label}</span>{" "}
+                (<span className="font-mono">{fmtM(best.total)} m³</span>).
+              </p>
+              {p.soak ? (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <select className="field flex-1"
+                      value={p.soak.key}
+                      onChange={(e) => patchPatio(s.id, {
+                        soak: { key: e.target.value, count: p.soak?.count ?? 1 },
+                      })}>
+                      {SOAKWELLS.map((w) => (
+                        <option key={sizeKey(w)} value={sizeKey(w)}>
+                          {sizeLabel(w)} — {fmtM(w.capacity)} m³
+                        </option>
+                      ))}
+                    </select>
+                    <input type="number" inputMode="numeric" min={1} max={10}
+                      className="field w-16 text-center" value={p.soak.count}
+                      aria-label="How many soakwells"
+                      onChange={(e) => patchPatio(s.id, {
+                        soak: {
+                          key: p.soak?.key ?? sizeKey(best.size),
+                          count: Math.min(Math.max(Math.round(Number(e.target.value)) || 1, 1), 10),
+                        },
+                      })} />
+                  </div>
+                  <button type="button" onClick={() => patchPatio(s.id, { soak: null })}
+                    className="btn-ghost min-h-[40px] w-full !py-2">
+                    Take the soakwell off the plan
+                  </button>
+                </div>
+              ) : (
+                <button type="button"
+                  onClick={() => patchPatio(s.id, {
+                    soak: { key: sizeKey(best.size), count: best.count },
+                  })}
+                  className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
+                  Put this soakwell on the plan
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="text-[12.5px] leading-snug text-ink/55">
+              Give the patio a size and a roof and we&apos;ll size the soakwells for it.
+            </p>
+          )}
+          <p className="mt-1.5 text-[11.5px] leading-snug text-ink/45">{SOAKWELL_CAVEAT}</p>
+        </div>
+      </div>
+    );
+  }
+
+  /** One patio elevation — the view of the `span` face ("w" width, "d" depth),
+   *  drawn to a scale of its own chosen to fit. Posts to their heights, the
+   *  roof as a rake where the slope shows and a flat eave with a dashed
+   *  ridge/high line where it runs into the page, the dwelling wall where the
+   *  patio attaches, and the figures that carry it all. Studio only. */
+  function elevationView(s: Structure, span: "w" | "d", title: string) {
+    const e = patioElevationProfile(s, span);
+    const W = Math.max(e.width, 0.5);
+    const dwellTop = e.attachHere ? Math.max(e.high, e.eave) + 0.9 : 0;
+    const maxH = Math.max(e.high, e.ridge ?? 0, e.eave, dwellTop, 0.5);
+    // Pick the largest standard scale that still fits the drawing in the box.
+    let dn = 500;
+    for (const c of [20, 50, 100, 200, 500]) {
+      if ((W * 1000) / c <= 150 && (maxH * 1000) / c <= 70) { dn = c; break; }
+    }
+    const M = 0.7;
+    // Room below the ground line for the width dimension and its label, and a
+    // little above for the ridge; the viewBox top sits at -M.
+    const vbW = W + M * 2.4, vbH = maxH + M * 3.4;
+    const wmm = (vbW * 1000) / dn, hmm = (vbH * 1000) / dn;
+    const gy = maxH;
+    const Y = (h: number) => gy - h;
+    const em = (v: number) => (v * dn) / 1000;  // paper mm → metres at this scale
+
+    const postHeightAt = (x: number) => {
+      if (!e.slopeInPlane) return e.eave;
+      const t = W > 0 ? x / W : 0;
+      if (e.roof === "gable") return e.eave + ((e.ridge ?? e.high) - e.eave) * (1 - Math.abs(2 * t - 1));
+      const f = e.lowAtStart ? t : 1 - t;
+      return e.eave + (e.high - e.eave) * f;
+    };
+    const roofPts: [number, number][] = e.slopeInPlane
+      ? (e.roof === "gable"
+          ? [[0, e.eave], [W / 2, e.ridge ?? e.high], [W, e.eave]]
+          : e.lowAtStart ? [[0, e.eave], [W, e.high]] : [[0, e.high], [W, e.eave]])
+      : [[0, e.eave], [W, e.eave]];
+    const topRef = e.ridge ?? e.high;   // the high/ridge line, for the into-page view
+    const wallX = e.attachAtStart ? -0.55 : W;
+
+    return (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "2.6mm", fontWeight: 600, color: INK, fontFamily: FONT_LAB }}>
+          {title}
+          <span style={{ marginLeft: "2mm", opacity: 0.5, fontSize: "2.2mm", fontFamily: FONT_NUM }}>
+            1:{dn}
+          </span>
+        </div>
+        <svg viewBox={`${-M} ${-M} ${vbW} ${vbH}`} aria-hidden="true"
+          style={{ width: `${wmm.toFixed(1)}mm`, height: `${hmm.toFixed(1)}mm`, display: "block", marginTop: "1mm" }}>
+          {/* the dwelling the patio attaches to */}
+          {e.attachHere && (
+            <g>
+              <rect x={wallX} y={Y(dwellTop)} width={0.55} height={dwellTop}
+                fill="#ECE8DD" stroke={INK} strokeWidth={em(0.3)} strokeOpacity={0.8} />
+              <text x={wallX + 0.275} y={Y(dwellTop) + em(3)} textAnchor="middle"
+                fontFamily={FONT_LAB} fontSize={em(2)} fill={INK} fillOpacity={0.6}>Dwelling</text>
+            </g>
+          )}
+          {/* ground */}
+          <line x1={-M * 0.6} y1={gy} x2={W + M * 0.6} y2={gy} stroke={INK} strokeWidth={em(0.45)} />
+          {/* the high/ridge line, when it sits behind the view rather than in it */}
+          {!e.slopeInPlane && topRef > e.eave + 0.001 && (
+            <line x1={0} y1={Y(topRef)} x2={W} y2={Y(topRef)} stroke={ROOF_INK}
+              strokeWidth={em(0.3)} strokeDasharray={`${em(1.6)} ${em(1)}`} />
+          )}
+          {/* posts */}
+          {e.postXs.map((x, i) => (
+            <line key={i} x1={x} y1={gy} x2={x} y2={Y(postHeightAt(x))}
+              stroke={SEAL} strokeWidth={em(0.5)} strokeLinecap="round" />
+          ))}
+          {/* roof */}
+          <polyline points={roofPts.map(([x, h]) => `${x},${Y(h)}`).join(" ")}
+            fill="none" stroke={SEAL} strokeWidth={em(0.6)} strokeLinejoin="round" strokeLinecap="round" />
+          {/* width dimension, under the ground line */}
+          <g fontFamily={FONT_NUM} fontSize={em(2.4)} fill={INK} fillOpacity={0.75}>
+            <line x1={0} y1={gy + M * 0.75} x2={W} y2={gy + M * 0.75} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.2)} />
+            {[0, W].map((x) => (
+              <line key={x} x1={x} y1={gy + M * 0.55} x2={x} y2={gy + M * 0.95} stroke={INK} strokeOpacity={0.5} strokeWidth={em(0.2)} />
+            ))}
+            <text x={W / 2} y={gy + M * 1.45} textAnchor="middle">{fmtM(e.width)} m</text>
+          </g>
+          {/* eave and high/ridge heights, either side */}
+          <g fontFamily={FONT_NUM} fontSize={em(2.3)} fill={INK} fillOpacity={0.7}>
+            <line x1={-M * 0.5} y1={gy} x2={-M * 0.5} y2={Y(e.eave)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
+            <text transform={`translate(${-M * 0.7} ${Y(e.eave / 2)}) rotate(-90)`} textAnchor="middle">{fmtM(e.eave)} m</text>
+            {topRef > e.eave + 0.001 && (
+              <>
+                <line x1={W + M * 0.5} y1={gy} x2={W + M * 0.5} y2={Y(topRef)} stroke={INK} strokeOpacity={0.45} strokeWidth={em(0.2)} />
+                <text transform={`translate(${W + M * 0.72} ${Y(topRef / 2)}) rotate(-90)`} textAnchor="middle">{fmtM(topRef)} m</text>
+              </>
+            )}
+          </g>
+        </svg>
+      </div>
+    );
+  }
+
+  /** A patio's own A4 sheet: its two elevations, front and side, with a header
+   *  that names it and its roof. Printed after the site plan. Studio only, and
+   *  — like every studio sheet — carrying no CFBA name. */
+  function patioElevationSheet(s: Structure) {
+    const p = sanitisePatio(s.patio);
+    const heights = patioRoofHeights(s);
+    const roofWord = p.roof === "skillion" ? "Skillion" : p.roof === "gable" ? "Gable" : "Flat";
+    const summary =
+      `${roofWord} roof at ${fmtM(p.pitch)}°, ` +
+      `${fmtM(heights.eave)} m to the eave` +
+      (heights.ridge !== null ? `, ${fmtM(heights.ridge)} m to the ridge`
+        : heights.high > heights.eave ? `, ${fmtM(heights.high)} m at the high side` : "") +
+      `. Posts ${fmtM(p.colHeight)} m` +
+      (p.mount === "attached" ? ", attached to the dwelling." : ", freestanding.");
+    return (
+      <div key={s.id} className="cfba-sheet">
+        <div style={{ border: "0.5mm solid #2B3A31", color: INK, fontFamily: FONT_LAB }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4mm", padding: "1.2mm 3mm", borderBottom: "0.3mm solid #2B3A31" }}>
+            <span style={{ fontSize: "2.8mm", fontWeight: 700, letterSpacing: "0.5mm", textTransform: "uppercase", color: SEAL }}>Patio elevations</span>
+            <strong style={{ fontSize: "3.2mm", fontWeight: 600 }}>{s.label || "Patio"}</strong>
+          </div>
+          <div style={{ padding: "1.2mm 3mm", fontSize: "2.6mm", fontFamily: FONT_NUM }}>{summary}</div>
+        </div>
+        <div style={{ display: "flex", gap: "6mm", marginTop: "4mm", alignItems: "flex-start" }}>
+          {elevationView(s, "w", "Front elevation")}
+          {elevationView(s, "d", "Side elevation")}
+        </div>
+        <p style={{ marginTop: "3mm", fontSize: "2.15mm", lineHeight: 1.3, color: INK, opacity: 0.7, fontFamily: FONT_LAB }}>
+          Indicative elevations drawn from the dimensions entered — the tool
+          sets them out and dimensions them; it does not detail the build.
+          Bracing, footings, tie-downs and the roof structure itself are the
+          engineer&apos;s and the builder&apos;s.
+        </p>
+      </div>
     );
   }
 
@@ -2141,6 +2924,20 @@ export function SitePlanBuilder(
             ))}
           </g>
         )}
+        {/* the set-scale line across the house plan */}
+        {interactive && planScaling && (
+          <g pointerEvents="none">
+            {planScale.pts.length === 2 && (
+              <line x1={planScale.pts[0].x} y1={planScale.pts[0].y}
+                x2={planScale.pts[1].x} y2={planScale.pts[1].y}
+                stroke={SEAL} strokeWidth={mm(0.6)} strokeLinecap="round" />
+            )}
+            {planScale.pts.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={mm(1.4)}
+                fill="#fff" stroke={SEAL} strokeWidth={mm(0.45)} />
+            ))}
+          </g>
+        )}
         {/* the outline being drawn */}
         {interactive && draw && (
           <g pointerEvents="none">
@@ -2171,9 +2968,10 @@ export function SitePlanBuilder(
   const sheetWmm = mToMmOnPaper(vbW, denom) * fitFactor;
   const sheetHmm = mToMmOnPaper(vbH, denom) * fitFactor;
 
-  return (
-    <div>
-      {/* lot setup */}
+  /** The lot's address, street, size and the lookup buttons — the top card in
+   *  the classic layout, and the contents of the "Lot" menu in studio chrome. */
+  function lotSetup() {
+    return (
       <div className="card mb-5 p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
@@ -2198,7 +2996,6 @@ export function SitePlanBuilder(
                 setDesign((p) => ({ ...p, street: v }));
               }}
               onBlur={() => {
-                // Cleared by hand: fall back to deriving from the address.
                 if (!street.trim()) {
                   streetEditedRef.current = false;
                   setDesign((p) => ({ ...p, street: deriveStreet(p.address) }));
@@ -2241,9 +3038,6 @@ export function SitePlanBuilder(
               className="btn-ghost min-h-[40px] !py-2">
               {finding ? "Looking…" : sited ? "Find This Site Again" : "Show the Aerial Photo"}
             </button>
-            {/* With the photo down, matching the boundary to it is the whole
-                job — so the way in sits right here rather than three cards
-                further down the page. */}
             {sited && (
               <button type="button" onClick={startTrace}
                 className={`min-h-[40px] rounded-md border px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
@@ -2274,13 +3068,56 @@ export function SitePlanBuilder(
           in this browser, per address.
         </p>
       </div>
+    );
+  }
 
-      <div className="grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]">
+  /** The studio's top toolbar: one drop-down per group of controls, canvas
+   *  underneath. A second tap on an open menu closes it, giving the drawing
+   *  the whole screen. */
+  function studioToolbar() {
+    const items: { id: string; label: string }[] = [
+      { id: "lot", label: "Lot" },
+      { id: "underlays", label: "Underlays" },
+      { id: "add", label: "Add" },
+      ...(sel ? [{ id: "selected", label: sel.label || "Selected" }] : []),
+      { id: "sheet", label: "Sheet" },
+    ];
+    return (
+      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-rule bg-white p-1.5 shadow-sm">
+        {items.map((it) => {
+          const on = openMenu === it.id;
+          return (
+            <button key={it.id} type="button" aria-pressed={on}
+              onClick={() => setOpenMenu(on ? null : it.id)}
+              className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-md px-3.5 font-display text-[13px] font-semibold transition ${
+                on ? "bg-seal text-white" : "text-ink hover:bg-wash"
+              }`}>
+              {it.label}
+              <span className={`text-[9px] transition ${on ? "rotate-180" : ""}`}>▾</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Studio chrome puts a toolbar on top and reveals one group of controls
+          at a time; the classic layout keeps the lot-setup card here and the
+          controls in a column beside the canvas. */}
+      {chrome ? studioToolbar() : lotSetup()}
+
+      <div className={chrome
+        ? (openMenu ? "grid gap-5 lg:grid-cols-[340px,minmax(0,1fr)]" : "")
+        : "grid gap-5 lg:grid-cols-[290px,minmax(0,1fr)]"}>
         {/* toolbox + selected structure */}
-        <div className="space-y-5">
+        <div className={chrome && !openMenu ? "hidden" : "space-y-5"}>
+          {chrome && openMenu === "lot" && lotSetup()}
           {/* The lot boundary. Always here now: a typed rectangle is a lot
               boundary too, and the whole point of this card is that you can
               take hold of it. */}
+          {(!chrome || openMenu === "lot") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Lot Boundary</h2>
             <dl className="space-y-1 font-mono text-[12.5px] text-ink/75">
@@ -2403,9 +3240,10 @@ export function SitePlanBuilder(
               {lotOriginNote(boundary)}
             </p>
           </div>
+          )}
 
           {/* Aerial alignment — only once there's a photo to line up. */}
-          {sited && (
+          {(!chrome || openMenu === "underlays") && sited && (
             <div className="card p-4">
               <h2 className="sectionhead !mb-2">Aerial Photo</h2>
               <div className="flex gap-2">
@@ -2494,6 +3332,133 @@ export function SitePlanBuilder(
             </div>
           )}
 
+          {/* House plan (trace) — studio only. The client's own PDF or image,
+              placed behind the drawing to trace over. Kept in this browser,
+              never uploaded, never printed. */}
+          {(!chrome || openMenu === "underlays") && planOn && (
+            <div className="card p-4">
+              <h2 className="sectionhead !mb-2">House Plan (trace)</h2>
+              {!plan0.placed ? (
+                <>
+                  <label className={`btn-ghost flex min-h-[40px] w-full cursor-pointer items-center justify-center !py-2 ${planBusy ? "opacity-60" : ""}`}>
+                    {planBusy ? "Adding…" : "Add a House Plan"}
+                    <input type="file" accept="application/pdf,image/*" className="hidden" disabled={planBusy}
+                      onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void addPlan(f); }} />
+                  </label>
+                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                    Upload a PDF or a photo of your house plans and trace over it.
+                    It stays on this device — it&apos;s never uploaded, and it
+                    never appears on the printed plan.
+                  </p>
+                </>
+              ) : planMissing || !planImg ? (
+                <>
+                  <p className="text-[12.5px] leading-snug text-brass-deep">
+                    Your house plan isn&apos;t on this device. It stays in the
+                    browser you added it in and was never uploaded — add it again
+                    here to keep tracing. What you&apos;ve already drawn is safe.
+                  </p>
+                  <label className={`btn-ghost mt-2 flex min-h-[40px] w-full cursor-pointer items-center justify-center !py-2 ${planBusy ? "opacity-60" : ""}`}>
+                    {planBusy ? "Adding…" : "Re-add the House Plan"}
+                    <input type="file" accept="application/pdf,image/*" className="hidden" disabled={planBusy}
+                      onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void addPlan(f, 1, true); }} />
+                  </label>
+                  <button type="button" onClick={removePlan}
+                    className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
+                    Forget This House Plan
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <button type="button"
+                      onClick={() => patchPlan((u) => ({ visible: !u.visible }))}
+                      className="btn-ghost min-h-[40px] flex-1 !px-2 !py-2">
+                      {plan0.visible ? "Hide Plan" : "Show Plan"}
+                    </button>
+                    <button type="button"
+                      onClick={() => {
+                        const unlocking = plan0.locked;
+                        patchPlan({ locked: !plan0.locked, visible: true });
+                        if (unlocking) patchUnderlay({ locked: true });
+                      }}
+                      className={`min-h-[40px] flex-1 rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.09em] transition ${
+                        planAligning ? "border-seal bg-wash text-seal" : "border-rule bg-white text-ink hover:bg-wash"
+                      }`}>
+                      {plan0.locked ? "Line it up" : "Lock it"}
+                    </button>
+                  </div>
+
+                  {plan0.visible && (
+                    <div className="mt-3 space-y-3">
+                      {planPages > 1 && planFileRef.current && (
+                        <div>
+                          <span className="label">Page</span>
+                          <select className="field" value={plan0.page} disabled={planBusy}
+                            onChange={(e) => {
+                              const pg = Number(e.target.value);
+                              if (planFileRef.current) void addPlan(planFileRef.current, pg, true);
+                            }}>
+                            {Array.from({ length: planPages }, (_, i) => i + 1).map((n) => (
+                              <option key={n} value={n}>Page {n} of {planPages}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Scale — the one thing a photo of a plan doesn't carry. */}
+                      <div>
+                        <span className="label">Scale</span>
+                        <button type="button" onClick={startPlanScale}
+                          className="btn-ghost min-h-[40px] w-full !py-2">
+                          Set the Scale by a Known Length
+                        </button>
+                        <div className="mt-2">
+                          <MetresField label="…or type its width on the plan (m)"
+                            value={Math.round(plan0.w * plan0.mpp * 100) / 100}
+                            onCommit={(n) => { if (plan0.w > 0) patchPlan({ mpp: n / plan0.w }); }} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="label !mb-0">Turn the plan</span>
+                          <span className="font-mono text-[11.5px] text-ink/55">{Math.round(plan0.rot)}°</span>
+                        </div>
+                        <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
+                          min={0} max={360} step={1} value={plan0.rot}
+                          aria-label="House plan rotation in degrees"
+                          onChange={(e) => patchPlan({ rot: Number(e.target.value) })} />
+                      </div>
+
+                      <div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="label !mb-0">How strong</span>
+                          <span className="font-mono text-[11.5px] text-ink/55">{Math.round(plan0.opacity * 100)}%</span>
+                        </div>
+                        <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
+                          min={UNDERLAY_MIN_OPACITY} max={1} step={0.05} value={plan0.opacity}
+                          aria-label="How strongly the house plan shows through"
+                          onChange={(e) => patchPlan({ opacity: clampUnderlayOpacity(Number(e.target.value)) })} />
+                      </div>
+                    </div>
+                  )}
+
+                  <button type="button" onClick={removePlan}
+                    className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
+                    Take the House Plan Off
+                  </button>
+                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                    {planAligning
+                      ? "Drag the plan to line it up with your drawing, then lock it. Set the scale off a length you know, and it'll sit true to the metre."
+                      : "A tracing guide only — it stays on this device, isn't uploaded, and never appears on the printed plan."}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
+          {(!chrome || openMenu === "add") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Add a Structure</h2>
             <div className="grid grid-cols-2 gap-2">
@@ -2525,7 +3490,9 @@ export function SitePlanBuilder(
               </button>
             </div>
           </div>
+          )}
 
+          {(!chrome || openMenu === "selected") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Selected Structure</h2>
             {sel ? (
@@ -2593,6 +3560,8 @@ export function SitePlanBuilder(
                       onCommit={(n) => patchStructure(sel.id, { notchD: n })} />
                   </div>
                 )}
+                {/* The parametric patio — studio only. */}
+                {patioTools && sel.kind === "patio" && sel.shape === "rect" && patioControls(sel)}
                 <div className="flex justify-between font-mono text-[12.5px] text-ink/75">
                   <span className="text-ink/50">Footprint Area</span>
                   <span>{fmtM(structureArea(sel))} m²</span>
@@ -2689,7 +3658,9 @@ export function SitePlanBuilder(
               </p>
             )}
           </div>
+          )}
 
+          {(!chrome || openMenu === "sheet") && (
           <div className="card p-4">
             <h2 className="sectionhead !mb-2">Sheet</h2>
             <div className="space-y-2">
@@ -2726,8 +3697,15 @@ export function SitePlanBuilder(
               {fits
                 ? <>Prints on A4 at <span className="font-mono">1:{denom}</span>. In the print dialog choose &ldquo;Save as PDF&rdquo; and keep the size at 100%.</>
                 : <>This lot is larger than A4 fits at 1:500 — the print is reduced to fit and says so. The scale bar stays true.</>}
+              {patioTools && (() => {
+                const n = design.structures.filter((s) => s.kind === "patio" && s.patio).length;
+                return n > 0
+                  ? ` A front and side elevation prints for each patio you've set up — ${n} extra ${n === 1 ? "sheet" : "sheets"} after the plan.`
+                  : "";
+              })()}
             </p>
           </div>
+          )}
         </div>
 
         {/* The canvas. Sticky from lg up: the options column is long, and
@@ -2793,6 +3771,29 @@ export function SitePlanBuilder(
               </div>
             </div>
           )}
+          {/* Setting the house plan's scale by a known length. */}
+          {planScaling && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-seal/30 bg-wash px-3 py-2">
+              {planScale.metres === null ? (
+                <p className="min-w-[180px] flex-1 text-[12.5px] leading-snug text-ink/70">
+                  {planScale.pts.length === 0
+                    ? "Tap the two ends of something on your plan you know the real length of — a wall, a boundary, the scale bar."
+                    : "Now tap the other end."}
+                </p>
+              ) : (
+                <PlanScaleAsk
+                  drawn={planScale.metres}
+                  onApply={applyPlanScale}
+                  onCancel={cancelPlanScale}
+                />
+              )}
+              {planScale.metres === null && (
+                <button type="button" className="btn-ghost min-h-[40px] !px-3 !py-1.5" onClick={cancelPlanScale}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
           <div ref={canvasRef} tabIndex={0} onKeyDown={onKeyDown} aria-label="Site plan drawing area"
             className="relative mx-auto select-none rounded-md" style={{ maxWidth: `${maxCanvasPx}px` }}>
             {/* The aerial, behind everything and clipped to the canvas. Marked
@@ -2818,6 +3819,25 @@ export function SitePlanBuilder(
                   }} />
               </div>
             )}
+            {/* The client's own house plan, behind the drawing and clipped to
+                the canvas. Same cfba-underlay mark as the aerial: a tracing
+                guide only, struck from the print, never part of what lodges.
+                Its picture lives in this browser; it is never uploaded. */}
+            {planShowing && (() => {
+              const box = planBox();
+              return (
+                <div className="cfba-underlay pointer-events-none absolute inset-0 overflow-hidden rounded-[3px]"
+                  aria-hidden="true" style={{ zIndex: 0, opacity: plan0.opacity, transition: "opacity 0.15s ease" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a client-local data URL, never a remote asset */}
+                  <img src={planImg!} alt=""
+                    style={{
+                      position: "absolute", left: `${box.left}px`, top: `${box.top}px`,
+                      width: `${box.w}px`, height: `${box.h}px`, maxWidth: "none",
+                      transform: `rotate(${plan0.rot}deg)`, transformOrigin: "50% 50%",
+                    }} />
+                </div>
+              );
+            })()}
             <svg ref={svgRef} viewBox={viewBox} role="img" aria-label="Site plan"
               style={{
                 width: "100%", height: "auto", aspectRatio: `${vbW} / ${vbH}`,
@@ -2825,17 +3845,18 @@ export function SitePlanBuilder(
                 cursor: draw || trace ? "crosshair" : undefined,
               }}
               onPointerDown={(e) => {
+                if (planScaling) { addPlanScalePoint(e); return; }
                 if (trace) { addTracePoint(e); return; }
                 if (draw) { addDrawPoint(e); return; }
                 if (editing) { setLotSel(null); return; }
                 setSelected(null);
               }}>
-              {plan(true, tracing)}
+              {plan(true, tracing || planShowing)}
             </svg>
             {/* Alignment only exists while it's unlocked. Locked, this is
                 gone from the tree entirely and every structure is as
                 draggable as it ever was. */}
-            {aligning && (
+            {aligning && !planAligning && (
               <div
                 className="absolute inset-0 cursor-move rounded-[3px] ring-2 ring-brass/70"
                 style={{ zIndex: 3, touchAction: "none" }}
@@ -2845,6 +3866,20 @@ export function SitePlanBuilder(
                 onPointerMove={alignMove}
                 onPointerUp={alignUp}
                 onPointerCancel={alignUp}
+              />
+            )}
+            {/* Lining the house plan up — one finger moves it; turn and scale
+                are set from its card. Only here while it's unlocked. */}
+            {planAligning && (
+              <div
+                className="absolute inset-0 cursor-move rounded-[3px] ring-2 ring-seal/60"
+                style={{ zIndex: 3, touchAction: "none" }}
+                role="application"
+                aria-label="Drag to line your house plan up with the drawing"
+                onPointerDown={planDown}
+                onPointerMove={planMove}
+                onPointerUp={planUp}
+                onPointerCancel={planUp}
               />
             )}
           </div>
@@ -2870,10 +3905,12 @@ export function SitePlanBuilder(
         </div>
       </div>
 
-      {/* The A4 sheet. Hidden on screen; the print stylesheet below shows this
-          and nothing else. Sized in real millimetres so the stated scale is
-          true on paper (print at 100%). */}
-      <div id="site-plan-sheet" className="hidden">
+      {/* The print set. Hidden on screen; the print stylesheet below shows this
+          and nothing else. The site plan first, then a patio elevation sheet
+          per configured patio (studio only). Each sheet is sized in real
+          millimetres so the stated scale is true on paper (print at 100%). */}
+      <div id="site-plan-print" className="hidden">
+      <div id="site-plan-sheet" className="cfba-sheet">
         <svg viewBox={viewBox} aria-hidden="true"
           style={{ width: `${sheetWmm.toFixed(2)}mm`, height: `${sheetHmm.toFixed(2)}mm`, display: "block", margin: "0 auto" }}>
           {plan(false)}
@@ -2925,6 +3962,10 @@ export function SitePlanBuilder(
           {boundaryFooter(boundary)}
         </p>
       </div>
+        {patioTools && design.structures
+          .filter((s) => s.kind === "patio" && s.patio)
+          .map((s) => patioElevationSheet(s))}
+      </div>
 
       <style>{`
         @media print {
@@ -2937,10 +3978,10 @@ export function SitePlanBuilder(
              which silently became the containing block for the previous
              position:absolute approach and pushed the sheet down the page —
              blank first page, plan on page two.) */
-          body *:not(:has(#site-plan-sheet)):not(#site-plan-sheet):not(#site-plan-sheet *) {
+          body *:not(:has(#site-plan-print)):not(#site-plan-print):not(#site-plan-print *) {
             display: none !important;
           }
-          body *:has(#site-plan-sheet) {
+          body *:has(#site-plan-print) {
             display: block !important;
             position: static !important;
             margin: 0 !important;
@@ -2954,7 +3995,12 @@ export function SitePlanBuilder(
             transform: none !important;
             opacity: 1 !important;
           }
-          #site-plan-sheet { display: block !important; }
+          #site-plan-print { display: block !important; }
+          /* One sheet per page: each patio's elevations start on a fresh page,
+             after the site plan. A single-sheet print (every certifier-portal
+             plan, and a studio plan with no configured patio) is unchanged. */
+          .cfba-sheet { break-inside: avoid; }
+          .cfba-sheet + .cfba-sheet { break-before: page; }
           html, body { background: #fff !important; }
           /* Said twice on purpose. The aerial is a tracing guide on screen and
              nothing more: licensed imagery has no place inside a lodged

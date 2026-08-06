@@ -38,6 +38,32 @@ export interface StructureShape {
   notchD?: number;
   pts?: Pt[];
   state?: StructureState;
+  kind?: string;
+  patio?: PatioParams;
+}
+
+/** A patio's parameters, held only on a structure of kind "patio". Everything
+ *  here is optional on disk and defaulted by sanitisePatio — a patio saved
+ *  before this existed draws as a plain flat rectangle until it's given a
+ *  roof. Sides are the rectangle's own edges, 0 top / 1 right / 2 bottom /
+ *  3 left, in the unrotated frame. */
+export interface PatioParams {
+  mount: "free" | "attached";
+  /** Which side abuts the dwelling (attached only). */
+  attach: number;
+  roof: "flat" | "skillion" | "gable";
+  /** Roof pitch in degrees, 0–PATIO_MAX_PITCH. */
+  pitch: number;
+  /** The low / gutter side (flat, skillion); one eave side (gable). */
+  fall: number;
+  /** Posts per side, corners included: [top, right, bottom, left]. */
+  cols: number[];
+  /** Post/eave height in metres. */
+  colHeight: number;
+  /** How many downpipes the client has placed. */
+  downpipes: number;
+  /** The chosen soakwell size and count, or null for none. */
+  soak: { key: string; count: number } | null;
 }
 
 export function setbacks(
@@ -76,6 +102,60 @@ export function polyFromFootprint(
 export function rotateStructure(
   s: StructureShape, lotW: number, lotD: number,
 ): { rot: number; x: number; y: number };
+
+// --- the parametric patio (studio only) ------------------------------------
+
+export const PATIO_ROOFS: PatioParams["roof"][];
+export const PATIO_MAX_PITCH: number;
+export const PATIO_MAX_COLS: number;
+export const GUTTER_M_PER_DOWNPIPE: number;
+
+export function sanitisePatio(raw: unknown): PatioParams;
+
+/** Post positions in lot metres, with the local side each belongs to. */
+export interface PatioColumn extends Pt {
+  side: number;
+}
+export function patioColumns(s: StructureShape): PatioColumn[];
+
+/** Which sides carry a gutter, and their total placed length in metres. */
+export function patioGutter(s: StructureShape): { sides: number[]; length: number };
+
+export function downpipesNeeded(gutterM: number, perM?: number): number;
+
+/** Eave/ridge heights in metres. `ridge` is the gable peak, or null. */
+export function patioRoofHeights(s: StructureShape): {
+  type: "flat" | "skillion" | "gable";
+  eave: number;
+  high: number;
+  ridge: number | null;
+  rise: number;
+};
+
+/** One patio elevation, reduced to what a view needs. `span` is "w" (width
+ *  face) or "d" (depth face). */
+export interface PatioElevation {
+  span: "w" | "d";
+  width: number;
+  roof: PatioParams["roof"];
+  pitch: number;
+  eave: number;
+  high: number;
+  ridge: number | null;
+  rise: number;
+  /** The roof's slope shows as a true rake in this view (not into the page). */
+  slopeInPlane: boolean;
+  /** The low (eave) end is at x = 0 rather than x = width. */
+  lowAtStart: boolean;
+  /** The dwelling wall meets the patio in this view (attached only). */
+  attachHere: boolean;
+  attachAtStart: boolean;
+  /** Post positions across the face, in metres from x = 0. */
+  postXs: number[];
+}
+export function patioElevationProfile(
+  s: StructureShape, span: "w" | "d",
+): PatioElevation;
 
 // --- the lot, rectangle or polygon -----------------------------------------
 
@@ -306,6 +386,32 @@ export interface Underlay {
   locked: boolean;
 }
 export function sanitiseUnderlay(raw: unknown): Underlay;
+
+// --- the house-plan underlay (screen only, browser-local) ------------------
+
+export const PLAN_UNDERLAY_MIN_MPP: number;
+export const PLAN_UNDERLAY_MAX_MPP: number;
+
+/** A house-plan underlay's placement, stored on the design. The picture itself
+ *  lives in the browser (IndexedDB), never here and never on the server; this
+ *  is only where it sits, how big and how turned. `mpp` is metres of real
+ *  ground per image pixel; `cx`/`cy` the image centre in plan metres; `rot` its
+ *  own free turn in degrees; `w`/`h` the picture's natural pixel size. */
+export interface PlanUnderlay {
+  placed: boolean;
+  cx: number;
+  cy: number;
+  mpp: number;
+  rot: number;
+  opacity: number;
+  visible: boolean;
+  locked: boolean;
+  w: number;
+  h: number;
+  page: number;
+}
+export function sanitisePlanUnderlay(raw: unknown): PlanUnderlay;
+export function rescalePlanUnderlay(mpp: number, nowM: number, realM: number): number;
 
 export function parseMetres(s: string | null | undefined): number | null;
 export function fmtM(n: number): string;
