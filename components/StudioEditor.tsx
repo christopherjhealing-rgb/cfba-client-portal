@@ -43,5 +43,8 @@ export function StudioEditor(
     },
   }), [id]);
 
-  return <SitePlanBuilder companyId={owner} cadastre={cadastre} store={store} />;
+  // The studio turns on the parametric patio (roof, posts, drainage and its
+  // elevations). The certifier's client portal never does — a surveyor must
+  // not be seen to help design what they certify.
+  return <SitePlanBuilder companyId={owner} cadastre={cadastre} store={store} patioTools />;
 }

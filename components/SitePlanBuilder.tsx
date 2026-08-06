@@ -25,8 +25,11 @@ import {
   structureArea, structureGap, structureState, togglePin, toggleState,
   underlayAnchor, underlayCentre, underlayMapSize,
   underlayScale, underlayZoom,
-  type Lot, type LotOrigin, type Pin, type StructureState, type Underlay,
+  GUTTER_M_PER_DOWNPIPE, PATIO_MAX_COLS, PATIO_MAX_PITCH,
+  downpipesNeeded, patioColumns, patioGutter, patioRoofHeights, sanitisePatio,
+  type Lot, type LotOrigin, type PatioParams, type Pin, type StructureState, type Underlay,
 } from "@/lib/site-plan.mjs";
+import { findSize, sizeKey, sizeLabel, sizeNew, SOAKWELLS, SOAKWELL_CAVEAT } from "@/lib/soakwell.mjs";
 import { buildLot, reorientLot } from "@/lib/cadastre.mjs";
 import { WA_BOUNDS } from "@/lib/address.mjs";
 import { GOOGLE_MAPS_KEY, loadMapsLibrary } from "@/lib/google-maps";
@@ -140,6 +143,10 @@ interface Structure {
   notchW?: number;
   notchD?: number;
   pts?: Pt[];
+  /** Patio roof / posts / drainage. Only meaningful on a `patio`, only ever
+   *  set by the studio (the certifier's portal never turns the tooling on),
+   *  and absent on every patio saved before this existed. */
+  patio?: PatioParams;
   /** Already there, or being applied for. Every design saved before this
    *  existed loads as proposed and draws exactly as it did. */
   state: StructureState;
@@ -322,6 +329,13 @@ function sanitise(raw: unknown): Design {
               base.shape = "rect";
             }
           }
+          // Patio parameters, on a patio that has them — every studio patio
+          // saved since this build. A patio saved before it (or one drawn in
+          // the certifier's portal, which never sets them) carries none and
+          // stays the plain rectangle it always was.
+          if (base.kind === "patio" && s.patio && typeof s.patio === "object") {
+            base.patio = sanitisePatio(s.patio);
+          }
           return base;
         })
     : [];
@@ -380,8 +394,8 @@ export interface DesignStore {
 }
 
 export function SitePlanBuilder(
-  { companyId, cadastre = false, store }:
-  { companyId: string; cadastre?: boolean; store?: DesignStore },
+  { companyId, cadastre = false, store, patioTools = false }:
+  { companyId: string; cadastre?: boolean; store?: DesignStore; patioTools?: boolean },
 ) {
   const [design, setDesign] = useState<Design>(BLANK);
   const [selected, setSelected] = useState<string | null>(null);
@@ -1101,6 +1115,17 @@ export function SitePlanBuilder(
         return { ...n, ...clampToLot(n.x, n.y, b.w, b.d, prev.lotW, prev.lotD) };
       }),
     }));
+
+  /** Patch a patio's parameters, normalised through sanitisePatio so a stray
+   *  value out of the panel can never reach the drawing or the saved design.
+   *  Starts from the current params (defaulted) so the first touch of any
+   *  control gives the patio a full, sensible record. */
+  const patchPatio = (id: string, patch: Partial<PatioParams>) =>
+    patchStructure(id, {
+      patio: sanitisePatio({ ...sanitisePatio(
+        design.structures.find((s) => s.id === id)?.patio,
+      ), ...patch }),
+    });
 
   const setLot = (patch: Partial<Pick<Design, "lotW" | "lotD">>) =>
     setDesign((prev) => {
@@ -1953,6 +1978,9 @@ export function SitePlanBuilder(
         {layer("line", {
           fill: "none", stroke, strokeWidth: strokeW, strokeDasharray: dash,
         })}
+        {/* Patio roof, posts and drainage, over the footprint and under the
+            name. Studio only — the certifier's portal never turns it on. */}
+        {patioTools && s.kind === "patio" && patioMarks(s)}
         {isSel && (
           <rect x={s.x - marg} y={s.y - marg} width={b.w + marg * 2} height={b.d + marg * 2}
             fill="none" stroke={BRASS} strokeWidth={mm(0.25)}
@@ -1974,6 +2002,367 @@ export function SitePlanBuilder(
         </text>
         {isSel && !draw && handleNodes(s)}
       </g>
+    );
+  }
+
+  // ---- the parametric patio (studio only) ---------------------------------
+
+  const SIDE_PAIRS = [[0, 1], [1, 2], [2, 3], [3, 0]];
+  const ROOF_INK = "#5B6B61";
+  const POST_INK = "#12332A";
+  const WELL_INK = "#3E7C8C";
+  const SCREEN_LABELS = ["Top", "Right", "Bottom", "Left"];
+  const SCREEN_ARROWS = ["↑", "→", "↓", "←"];
+
+  /** The posts, roof geometry, downpipes and soakwells drawn on the plan for
+   *  a patio — the studio's parametric patio made visible. Screen and sheet
+   *  both, so the printed plan carries every figure the client set. */
+  function patioMarks(s: Structure) {
+    const fp = footprint(s);
+    if (fp.length !== 4) return null;
+    const p = sanitisePatio(s.patio);
+    const cx = (fp[0].x + fp[1].x + fp[2].x + fp[3].x) / 4;
+    const cy = (fp[0].y + fp[1].y + fp[2].y + fp[3].y) / 4;
+    const sideMid = (k: number) => {
+      const [a, b] = SIDE_PAIRS[k];
+      return { x: (fp[a].x + fp[b].x) / 2, y: (fp[a].y + fp[b].y) / 2 };
+    };
+    const sideLen = (k: number) => {
+      const [a, b] = SIDE_PAIRS[k];
+      return Math.hypot(fp[b].x - fp[a].x, fp[b].y - fp[a].y);
+    };
+    const unit = (dx: number, dy: number) => {
+      const l = Math.hypot(dx, dy) || 1;
+      return { x: dx / l, y: dy / l };
+    };
+
+    const gutter = patioGutter(s);
+    const posts = patioColumns(s);
+    const bb = polyBounds(fp);
+
+    // Roof geometry: a gable draws its ridge; anything else draws a fall arrow
+    // pointing the way the water runs, toward its low (gutter) side.
+    let roofGeom: React.ReactNode = null;
+    if (p.roof === "gable") {
+      const e1 = sideMid((p.fall + 1) % 4), e2 = sideMid((p.fall + 3) % 4);
+      roofGeom = (
+        <line x1={e1.x} y1={e1.y} x2={e2.x} y2={e2.y} stroke={ROOF_INK}
+          strokeWidth={mm(0.45)} strokeDasharray={`${mm(2)} ${mm(1.1)}`} />
+      );
+    } else {
+      const to = sideMid(p.fall);
+      const hx = cx + (to.x - cx) * 0.72, hy = cy + (to.y - cy) * 0.72;
+      const u = unit(to.x - cx, to.y - cy);
+      const perp = { x: -u.y, y: u.x };
+      const hw = mm(1.5), hl = mm(2.3);
+      const head = `${hx},${hy} ` +
+        `${hx - u.x * hl + perp.x * hw},${hy - u.y * hl + perp.y * hw} ` +
+        `${hx - u.x * hl - perp.x * hw},${hy - u.y * hl - perp.y * hw}`;
+      roofGeom = (
+        <>
+          <line x1={cx - (to.x - cx) * 0.55} y1={cy - (to.y - cy) * 0.55} x2={hx} y2={hy}
+            stroke={ROOF_INK} strokeWidth={mm(0.4)} />
+          <polygon points={head} fill={ROOF_INK} />
+        </>
+      );
+    }
+
+    // Downpipes, spread along the gutter side(s) in proportion to their length.
+    const dpMarks: Pt[] = [];
+    if (gutter.sides.length && p.downpipes > 0) {
+      const total = gutter.length || 1;
+      let left = p.downpipes;
+      gutter.sides.forEach((k, idx) => {
+        const n = idx === gutter.sides.length - 1
+          ? left : Math.min(left, Math.round((p.downpipes * sideLen(k)) / total));
+        left -= n;
+        const [ai, bi] = SIDE_PAIRS[k];
+        const a = fp[ai], b = fp[bi];
+        for (let i = 0; i < n; i++) {
+          const t = (i + 0.5) / Math.max(n, 1);
+          dpMarks.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+        }
+      });
+    }
+
+    // Soakwell(s), to scale, set out just beyond the gutter side. Indicative:
+    // the sheet shows the size the sizing asked for, in about the right place.
+    const size = p.soak ? findSize(p.soak.key) : null;
+    let soakNode: React.ReactNode = null;
+    if (size && p.soak) {
+      const rad = size.dia / 2000;
+      const k = gutter.sides[0] ?? p.fall;
+      const m = sideMid(k);
+      const out = unit(m.x - cx, m.y - cy);
+      const tan = { x: -out.y, y: out.x };
+      const step = rad * 2 + 0.3;
+      const start = { x: m.x + out.x * (rad + 0.6), y: m.y + out.y * (rad + 0.6) };
+      const wells = Array.from({ length: p.soak.count }, (_, i) => ({
+        x: start.x + tan.x * (i - (p.soak!.count - 1) / 2) * step,
+        y: start.y + tan.y * (i - (p.soak!.count - 1) / 2) * step,
+      }));
+      soakNode = (
+        <g>
+          {wells.map((w, i) => (
+            <circle key={i} cx={w.x} cy={w.y} r={rad} fill="#D3E4EA" fillOpacity={0.55}
+              stroke={WELL_INK} strokeWidth={mm(0.35)} strokeDasharray={`${mm(1.4)} ${mm(0.8)}`} />
+          ))}
+          <text x={start.x} y={start.y + rad + mm(3)} textAnchor="middle"
+            fontFamily={FONT_NUM} fontSize={mm(2.3)} fill={INK} fillOpacity={0.8} style={halo}>
+            {p.soak.count > 1 ? `${p.soak.count} × ` : ""}{sizeLabel(size)}
+          </text>
+        </g>
+      );
+    }
+
+    const roofWord = p.roof === "skillion" ? "Skillion" : p.roof === "gable" ? "Gable" : "Flat";
+    const postSize = Math.max(mm(0.95), 0.08);
+    return (
+      <g pointerEvents="none">
+        {roofGeom}
+        {soakNode}
+        {dpMarks.map((q, i) => (
+          <g key={i}>
+            <circle cx={q.x} cy={q.y} r={mm(1.1)} fill="#fff" stroke={BRASS} strokeWidth={mm(0.3)} />
+            <circle cx={q.x} cy={q.y} r={mm(0.45)} fill={BRASS} />
+          </g>
+        ))}
+        {posts.map((q, i) => (
+          <rect key={i} x={q.x - postSize} y={q.y - postSize}
+            width={postSize * 2} height={postSize * 2} fill={POST_INK} />
+        ))}
+        <text x={cx} y={bb.minY - mm(1.6)} textAnchor="middle" fontFamily={FONT_LAB}
+          fontWeight={600} fontSize={mm(2.3)} fill={ROOF_INK} style={halo}>
+          {roofWord} · {fmtM(p.pitch)}° · {fmtM(p.colHeight)} m
+        </text>
+      </g>
+    );
+  }
+
+  /** The patio panel: roof, posts and drainage, shown only in the studio and
+   *  only for a patio. The tool measures and offers sizing help; whether any
+   *  of it satisfies a council is never decided here. */
+  function patioControls(s: Structure) {
+    const p = sanitisePatio(s.patio);
+    const q = ((((s.rot ?? 0) / 90) % 4) + 4) % 4;
+    const screenToLocal = (sd: number) => (sd - q + 4) % 4;
+    const gutter = patioGutter(s);
+    const need = downpipesNeeded(gutter.length);
+    const sizing = sizeNew({ roofM2: structureArea(s) });
+    const best = sizing.ok ? sizing.best : null;
+
+    /** A four-way pad that maps a screen direction to the patio's own side,
+     *  so "this way on the plan" always means what it looks like whichever way
+     *  the patio is turned. */
+    const sidePad = (
+      active: Set<number>, onPick: (local: number) => void,
+      dim?: (local: number) => boolean,
+    ) => {
+      const cell = (sd: number) => {
+        const local = screenToLocal(sd);
+        const on = active.has(local);
+        const off = dim ? dim(local) : false;
+        return (
+          <button type="button" aria-pressed={on} disabled={off}
+            onClick={() => onPick(local)}
+            className={`${NUDGE} ${on ? "!border-brass !bg-[#F6EEDA] !text-brass-deep" : ""} disabled:opacity-30`}>
+            {SCREEN_ARROWS[sd]}
+          </button>
+        );
+      };
+      return (
+        <div className="mx-auto grid w-[132px] grid-cols-3 gap-1">
+          <span />{cell(0)}<span />
+          {cell(3)}
+          <span className="flex items-center justify-center text-[9px] uppercase tracking-wide text-ink/35">plan</span>
+          {cell(1)}
+          <span />{cell(2)}<span />
+        </div>
+      );
+    };
+
+    const setCols = (local: number, n: number) => {
+      const cols = [...p.cols];
+      cols[local] = Math.min(Math.max(Math.round(n) || 0, 0), PATIO_MAX_COLS);
+      patchPatio(s.id, { cols });
+    };
+    const stepDown = () => patchPatio(s.id, { downpipes: Math.max(0, p.downpipes - 1) });
+    const stepUp = () => patchPatio(s.id, { downpipes: Math.min(20, p.downpipes + 1) });
+
+    return (
+      <div className="space-y-3 rounded-md border border-seal/25 bg-wash/60 p-3">
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-seal">
+          Patio roof &amp; drainage
+        </p>
+
+        {/* Freestanding, or attached to the dwelling */}
+        <div>
+          <span className="label">Standing</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(["free", "attached"] as const).map((mt) => (
+              <button key={mt} type="button" aria-pressed={p.mount === mt}
+                onClick={() => patchPatio(s.id, { mount: mt })}
+                className={`min-h-[40px] rounded-md border px-2 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.08em] transition ${
+                  p.mount === mt ? "border-seal bg-white text-seal" : "border-rule bg-white text-ink/60 hover:bg-white"
+                }`}>
+                {mt === "free" ? "Freestanding" : "Attached"}
+              </button>
+            ))}
+          </div>
+          {p.mount === "attached" && (
+            <div className="mt-2">
+              <span className="label">Attaches to the dwelling on the…</span>
+              {sidePad(new Set([p.attach]), (local) => patchPatio(s.id, { attach: local }))}
+            </div>
+          )}
+        </div>
+
+        {/* Roof shape */}
+        <div>
+          <span className="label">Roof</span>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(["flat", "skillion", "gable"] as const).map((rf) => (
+              <button key={rf} type="button" aria-pressed={p.roof === rf}
+                onClick={() => patchPatio(s.id, { roof: rf })}
+                className={`min-h-[40px] rounded-md border px-1 py-2 font-display text-[11.5px] font-semibold capitalize transition ${
+                  p.roof === rf ? "border-seal bg-white text-seal" : "border-rule bg-white text-ink/60 hover:bg-white"
+                }`}>
+                {rf}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Pitch */}
+        <div>
+          <div className="flex items-baseline justify-between">
+            <span className="label !mb-0">Roof pitch</span>
+            <span className="font-mono text-[11.5px] text-ink/55">{fmtM(p.pitch)}°</span>
+          </div>
+          <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
+            min={0} max={PATIO_MAX_PITCH} step={0.5} value={p.pitch}
+            aria-label="Roof pitch in degrees"
+            onChange={(e) => patchPatio(s.id, { pitch: Number(e.target.value) })} />
+        </div>
+
+        {/* Fall / ridge direction */}
+        <div>
+          <span className="label">
+            {p.roof === "gable" ? "Ridge across the plan" : "Roof falls toward"}
+          </span>
+          {sidePad(
+            new Set(p.roof === "gable" ? [p.fall, (p.fall + 2) % 4] : [p.fall]),
+            (local) => patchPatio(s.id, { fall: local }),
+          )}
+        </div>
+
+        {/* Posts per side + height */}
+        <div>
+          <span className="label">Posts per side</span>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[0, 1, 2, 3].map((sd) => {
+              const local = screenToLocal(sd);
+              const wall = p.mount === "attached" && p.attach === local;
+              return (
+                <div key={sd}>
+                  <span className="block text-center text-[10px] uppercase tracking-wide text-ink/45">
+                    {SCREEN_LABELS[sd]}
+                  </span>
+                  <input type="number" inputMode="numeric" min={0} max={PATIO_MAX_COLS}
+                    className="field !px-1 text-center" disabled={wall}
+                    value={wall ? 0 : p.cols[local]}
+                    onChange={(e) => setCols(local, Number(e.target.value))} />
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-[12px] leading-snug text-ink/50">
+            Corners count as a post, and are shared between two sides. The side
+            against the dwelling carries a wall, not posts.
+          </p>
+        </div>
+        <MetresField label="Post / eave height (m)" value={p.colHeight}
+          onCommit={(n) => patchPatio(s.id, { colHeight: n })} />
+
+        {/* Downpipes */}
+        <div>
+          <span className="label">Downpipes</span>
+          <div className="flex items-center gap-2">
+            <button type="button" aria-label="One fewer downpipe" onClick={stepDown}
+              className={`${NUDGE} w-10 shrink-0`}>−</button>
+            <span className="min-w-[2ch] flex-1 text-center font-mono text-[15px] text-ink">{p.downpipes}</span>
+            <button type="button" aria-label="One more downpipe" onClick={stepUp}
+              className={`${NUDGE} w-10 shrink-0`}>+</button>
+            <button type="button" onClick={() => patchPatio(s.id, { downpipes: need })}
+              className="btn-ghost min-h-[40px] shrink-0 !px-3 !py-2">
+              Set {need}
+            </button>
+          </div>
+          <p className={`mt-1.5 text-[12px] leading-snug ${p.downpipes < need ? "text-brass-deep" : "text-ink/55"}`}>
+            {gutter.length > 0
+              ? `Gutter runs about ${fmtM(gutter.length)} m — that's around ${need} downpipe${need === 1 ? "" : "s"} at one per ${GUTTER_M_PER_DOWNPIPE} m. A rule of thumb, not a ruling.`
+              : "No gutter on this roof yet — set the fall direction above."}
+          </p>
+        </div>
+
+        {/* Soakwells */}
+        <div>
+          <span className="label">Soakwells</span>
+          {best ? (
+            <>
+              <p className="text-[12.5px] leading-snug text-ink/70">
+                For {fmtM(structureArea(s))} m² of roof, about{" "}
+                <span className="font-mono">{fmtM(sizing.ok ? sizing.required : 0)} m³</span> of
+                storage — <span className="font-medium text-ink">{best.label}</span>{" "}
+                (<span className="font-mono">{fmtM(best.total)} m³</span>).
+              </p>
+              {p.soak ? (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <select className="field flex-1"
+                      value={p.soak.key}
+                      onChange={(e) => patchPatio(s.id, {
+                        soak: { key: e.target.value, count: p.soak?.count ?? 1 },
+                      })}>
+                      {SOAKWELLS.map((w) => (
+                        <option key={sizeKey(w)} value={sizeKey(w)}>
+                          {sizeLabel(w)} — {fmtM(w.capacity)} m³
+                        </option>
+                      ))}
+                    </select>
+                    <input type="number" inputMode="numeric" min={1} max={10}
+                      className="field w-16 text-center" value={p.soak.count}
+                      aria-label="How many soakwells"
+                      onChange={(e) => patchPatio(s.id, {
+                        soak: {
+                          key: p.soak?.key ?? sizeKey(best.size),
+                          count: Math.min(Math.max(Math.round(Number(e.target.value)) || 1, 1), 10),
+                        },
+                      })} />
+                  </div>
+                  <button type="button" onClick={() => patchPatio(s.id, { soak: null })}
+                    className="btn-ghost min-h-[40px] w-full !py-2">
+                    Take the soakwell off the plan
+                  </button>
+                </div>
+              ) : (
+                <button type="button"
+                  onClick={() => patchPatio(s.id, {
+                    soak: { key: sizeKey(best.size), count: best.count },
+                  })}
+                  className="btn-ghost mt-2 min-h-[40px] w-full !py-2">
+                  Put this soakwell on the plan
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="text-[12.5px] leading-snug text-ink/55">
+              Give the patio a size and a roof and we&apos;ll size the soakwells for it.
+            </p>
+          )}
+          <p className="mt-1.5 text-[11.5px] leading-snug text-ink/45">{SOAKWELL_CAVEAT}</p>
+        </div>
+      </div>
     );
   }
 
@@ -2593,6 +2982,8 @@ export function SitePlanBuilder(
                       onCommit={(n) => patchStructure(sel.id, { notchD: n })} />
                   </div>
                 )}
+                {/* The parametric patio — studio only. */}
+                {patioTools && sel.kind === "patio" && sel.shape === "rect" && patioControls(sel)}
                 <div className="flex justify-between font-mono text-[12.5px] text-ink/75">
                   <span className="text-ink/50">Footprint Area</span>
                   <span>{fmtM(structureArea(sel))} m²</span>

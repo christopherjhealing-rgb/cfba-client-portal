@@ -23,6 +23,8 @@ import {
   rotationCoverScale, underlayMapSize, groundToPlanVector, planToGroundVector,
   offsetLatLng, metresBetween, underlayAnchor, underlayCentre,
   clampUnderlayOpacity, clampUnderlayRot, sanitiseUnderlay,
+  PATIO_ROOFS, PATIO_MAX_PITCH, GUTTER_M_PER_DOWNPIPE,
+  sanitisePatio, patioColumns, patioGutter, downpipesNeeded, patioRoofHeights,
 } from "../lib/site-plan.mjs";
 
 const close = (a, b, eps = 1e-9) =>
@@ -1475,4 +1477,122 @@ test("printed rows report 0 m for structures drawn on top of each other", () => 
   assert.equal(rows.length, 1);
   assert.equal(rows[0].d, 0);
   assert.equal(rows[0].overlap, true);
+});
+
+// ---------------------------------------------------------------------------
+// The parametric patio
+// ---------------------------------------------------------------------------
+
+// A 6 × 4 patio at the origin, unrotated, ready to hand a patio record to.
+const P = (patio) => ({ id: "p", kind: "patio", x: 0, y: 0, w: 6, d: 4, rot: 0, patio });
+
+test("a patio with no parameters reads as a flat patio with corner posts", () => {
+  const p = sanitisePatio(undefined);
+  assert.equal(p.mount, "free");
+  assert.equal(p.roof, "flat");
+  assert.deepEqual(p.cols, [2, 2, 2, 2]);
+  assert.equal(p.colHeight, 2.4);
+  assert.equal(p.downpipes, 0);
+  assert.equal(p.soak, null);
+  // Every roof type is a known one; every side index is in range.
+  assert.ok(PATIO_ROOFS.includes(p.roof));
+  assert.ok(p.fall >= 0 && p.fall <= 3);
+});
+
+test("patio parameters are clamped to sane ranges", () => {
+  const p = sanitisePatio({
+    mount: "attached", attach: 9, roof: "hip", pitch: 200,
+    cols: [99, -3, 2, 2], colHeight: 40, fall: -1, downpipes: 999,
+    soak: { key: "1200x1200", count: 99 },
+  });
+  assert.equal(p.mount, "attached");
+  assert.equal(p.attach, 3);            // 9 clamped into 0..3
+  assert.equal(p.roof, "flat");         // an unknown roof falls back to flat
+  assert.equal(p.pitch, PATIO_MAX_PITCH);
+  assert.deepEqual(p.cols, [12, 0, 2, 2]);
+  assert.equal(p.colHeight, 6);
+  assert.equal(p.fall, 0);
+  assert.equal(p.downpipes, 20);
+  assert.deepEqual(p.soak, { key: "1200x1200", count: 10 });
+});
+
+test("corner posts only means four posts at the four corners", () => {
+  const posts = patioColumns(P({ cols: [2, 2, 2, 2] }));
+  assert.equal(posts.length, 4);
+  const at = posts.map((q) => `${q.x},${q.y}`).sort();
+  assert.deepEqual(at, ["0,0", "0,4", "6,0", "6,4"].sort());
+});
+
+test("an extra post on a side lands at its midpoint, corners shared not doubled", () => {
+  // 3 posts on the top (side 0), 2 on the others: the corners are shared, so
+  // the count is 4 corners + 1 midpoint = 5, not 3 + 2 + 2 + 2.
+  const posts = patioColumns(P({ cols: [3, 2, 2, 2] }));
+  assert.equal(posts.length, 5);
+  assert.ok(posts.some((q) => q.x === 3 && q.y === 0), "midpoint of the top edge");
+});
+
+test("an attached patio carries a wall, not posts, on the side it attaches", () => {
+  const posts = patioColumns(P({ mount: "attached", attach: 0, cols: [2, 2, 2, 2] }));
+  // Side 0 (the top) is the wall — no posts along y === 0 except where a
+  // remaining side's corner reaches it... side 3 and side 1 still own the top
+  // corners, so those corners stay. But no post is added FOR side 0 itself.
+  // With only corner posts everywhere, the four corners remain (each also
+  // belongs to a standing side), so this checks the wall doesn't remove them.
+  assert.ok(posts.length >= 2);
+  // A mid-wall post on side 0 must not appear even when side 0 asks for it.
+  const wall = patioColumns(P({ mount: "attached", attach: 0, cols: [5, 2, 2, 2] }));
+  assert.ok(!wall.some((q) => q.y === 0 && q.x > 0 && q.x < 6),
+    "no intermediate posts along the attached wall");
+});
+
+test("posts turn with the patio", () => {
+  const posts = patioColumns({ ...P({ cols: [2, 2, 2, 2] }), rot: 90 });
+  // A quarter turn swaps the footprint to 4 wide × 6 deep; the four corners
+  // are still the four corners of that placed box.
+  assert.equal(posts.length, 4);
+  const xs = posts.map((q) => q.x), ys = posts.map((q) => q.y);
+  assert.equal(Math.max(...xs), 4);
+  assert.equal(Math.max(...ys), 6);
+});
+
+test("a flat/skillion gutter runs the low side; a gable has one each side", () => {
+  // Fall to side 2 (the bottom, length 6): one gutter of 6 m.
+  assert.equal(patioGutter(P({ roof: "skillion", fall: 2 })).length, 6);
+  // Gable falling on side 2: eaves on sides 2 and 0, both length 6 → 12 m.
+  const g = patioGutter(P({ roof: "gable", fall: 2 }));
+  assert.deepEqual(g.sides.sort(), [0, 2]);
+  assert.equal(g.length, 12);
+  // Fall to a vertical side (1, length 4): a 4 m gutter.
+  assert.equal(patioGutter(P({ roof: "skillion", fall: 1 })).length, 4);
+});
+
+test("the attached wall carries no gutter", () => {
+  // Gable falling on side 2, attached on side 0: the eave on 0 is a wall, so
+  // only the side-2 gutter remains.
+  const g = patioGutter(P({ roof: "gable", fall: 2, mount: "attached", attach: 0 }));
+  assert.deepEqual(g.sides, [2]);
+  assert.equal(g.length, 6);
+});
+
+test("downpipes: one per 12 m of gutter, and never none for a real roof", () => {
+  assert.equal(GUTTER_M_PER_DOWNPIPE, 12);
+  assert.equal(downpipesNeeded(0), 0);
+  assert.equal(downpipesNeeded(6), 1);
+  assert.equal(downpipesNeeded(12), 1);
+  assert.equal(downpipesNeeded(12.5), 2);
+  assert.equal(downpipesNeeded(24), 2);
+  assert.equal(downpipesNeeded(25), 3);
+});
+
+test("roof heights: skillion rises over the full run, gable over half", () => {
+  // Fall to side 2 (horizontal) → the slope runs the depth, 4 m.
+  const sk = patioRoofHeights(P({ roof: "skillion", pitch: 10, fall: 2, colHeight: 2.4 }));
+  assert.equal(sk.eave, 2.4);
+  close(sk.rise, 4 * Math.tan(10 * Math.PI / 180), 1e-3);
+  close(sk.high, 2.4 + sk.rise, 1e-9);
+  assert.equal(sk.ridge, null);
+  // A gable of the same pitch rises over half the run.
+  const ga = patioRoofHeights(P({ roof: "gable", pitch: 10, fall: 2, colHeight: 2.4 }));
+  close(ga.rise, 2 * Math.tan(10 * Math.PI / 180), 1e-3);
+  assert.equal(ga.ridge, ga.high);
 });
