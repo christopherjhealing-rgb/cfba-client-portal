@@ -41,8 +41,11 @@ export async function mailJobRecord(
   // storage twice.
   const built = opts.prebuilt ?? (await buildRecord(ref));
   if (!built) return "failed";
-  // Nothing was ever said on this job. Nothing to file.
-  if (built.transcript.count === 0) return "no-messages";
+  // A downloaded job gets its record even with no messages on it: the record
+  // is more than the thread — it carries the job's details, the documents
+  // lodged, and confirmation the package was collected, which is the seven-year
+  // record whether or not a word was exchanged. (Was skipped before, so a job
+  // with no portal chat — most trial and straight-through jobs — sent nothing.)
 
   const job = await repo.getJob(ref);
   const company = job?.companyId

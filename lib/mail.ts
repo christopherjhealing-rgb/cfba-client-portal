@@ -661,8 +661,9 @@ export function recordEmail(opts: {
   <p style="margin:0 0 14px;font-size:19px;font-weight:600">${esc(ref)}${address ? ` — ${esc(address)}` : ""}</p>
 
   <p style="margin:0 0 14px"><strong>${esc(companyName)}</strong> has downloaded their CDC Package, so the
-    correspondence on this job is attached for filing — ${messages} message${messages === 1 ? "" : "s"}
-    through the portal, both directions.</p>
+    record for this job is attached for filing${messages > 0
+      ? ` — ${messages} message${messages === 1 ? "" : "s"} through the portal, both directions.`
+      : `. No messages were exchanged through the portal on this job; the record carries its details and the documents lodged.`}</p>
 
   <div style="border-left:3px solid #1E5B3C;background:#F1F5F1;padding:14px 18px;margin:0 0 14px">
     <p style="margin:0;font-size:14px">Attached: <strong>${esc(attached)}</strong></p>

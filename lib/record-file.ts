@@ -35,7 +35,8 @@ export async function fileJobRecord(
 
   const built = opts.prebuilt ?? (await buildRecord(ref));
   if (!built) return "failed";
-  if (built.transcript.count === 0) return "no-messages";
+  // Filed for every downloaded job, thread or not — see mailJobRecord: the
+  // record is the job's documents and the collection, not only the messages.
 
   try {
     await uploadFile(job.sourceFolder, built.filename, built.zip);
