@@ -9,6 +9,7 @@ import type { LibraryDoc } from "@/lib/library";
 import { JobItems, blankItem, type Item } from "./JobItems";
 import { describeJob } from "@/lib/jobdesc.mjs";
 import { balKinds } from "@/lib/bushfire.mjs";
+import { plannedName } from "@/lib/uploads.mjs";
 
 // Drawings and engineering are both required: an assessment cannot start
 // without them, and a job lodged short of them only comes straight back.
@@ -269,7 +270,8 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
           {BUCKETS.map((b) => (
             <div key={b.key}>
               <FileBucket bucket={b} files={files[b.key] || []}
-                onChange={(f) => setFiles((prev) => ({ ...prev, [b.key]: f }))} />
+                onChange={(f) => setFiles((prev) => ({ ...prev, [b.key]: f }))}
+                combinedAs={plannedName(b.key, address)} />
 
               {/* The company's saved documents ride along under Engineering:
                   tick to attach, no re-upload. Saved on the My details page.

@@ -11,6 +11,7 @@ import { listLibrary, libraryPath, type LibraryDoc } from "@/lib/library";
 import { notifyTeams } from "@/lib/teams";
 import { lodgeAmendment, AMENDMENT_OPEN } from "@/lib/amendments";
 import { BAL_LABELS } from "@/lib/bushfire.mjs";
+import { combineUploads } from "@/lib/combine-uploads";
 
 const OFFLINE = {
   error: "This section is temporarily offline while we make updates — please try again shortly.",
@@ -332,6 +333,12 @@ async function handle(req: Request) {
   }
   await storeLibraryDocs(id, libDocs, stored);
 
+  // Combine and rename the drawings and engineering into one tidy, site-named
+  // PDF each (see lib/combine-uploads), so that's what lands on the card. An
+  // amendment keeps the client's own file names — the point of one is which
+  // drawing changed, not a fresh set.
+  const filed = amendmentOf ? stored : await combineUploads(id, address, stored);
+
   await repo.addSubmission({
     clientRef: clientRef || null,
     companyId: session.companyId,
@@ -340,7 +347,7 @@ async function handle(req: Request) {
     jobClass,
     description,
     notes,
-    files: stored,
+    files: filed,
     createdAt: new Date().toISOString(),
     amendmentOf,
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
@@ -454,6 +461,11 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   }
   await storeLibraryDocs(id, libDocs, claimed);
 
+  // Combine and rename the drawings and engineering into one tidy, site-named
+  // PDF each (see lib/combine-uploads) — same as the multipart path above.
+  // Lodgements only; an amendment keeps the client's own file names.
+  const filed = amendmentOf ? claimed : await combineUploads(id, address, claimed);
+
   await repo.addSubmission({
     clientRef: clientRef || null,
     companyId: session.companyId,
@@ -462,7 +474,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     jobClass,
     description,
     notes,
-    files: claimed,
+    files: filed,
     createdAt: new Date().toISOString(),
     amendmentOf,
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
