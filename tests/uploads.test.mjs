@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   COMBINE, combinable, addressForName, safeForFilename, combinedName, plannedName,
-  formatStamp,
+  formatStamp, nameStem, supersededBy,
 } from "../lib/uploads.mjs";
 
 // ---------------------------------------------------------------------------
@@ -139,6 +139,44 @@ test("no date means no stamp (a first lodgement)", () => {
   );
   assert.equal(combinedName("drawings", "12 Smith Street", null),
     "Site Plan and Elevations - 12 Smith Street.pdf");
+});
+
+// ---------------------------------------------------------------------------
+// nameStem + supersededBy — the replace-and-supersede matching
+// ---------------------------------------------------------------------------
+test("nameStem is the dateless stem shared by every version", () => {
+  assert.equal(
+    nameStem("drawings", "3 Test Street, Greenwood WA 6024"),
+    "Site Plan and Elevations - 3 Test Street Greenwood"
+  );
+  assert.equal(nameStem("other", "x"), null);
+  // The stem is a prefix of both a dated and an undated combined name.
+  const stem = nameStem("engineering", "3 Test Street");
+  assert.ok(combinedName("engineering", "3 Test Street", "2026-08-07T02:00:00Z").startsWith(stem));
+  assert.ok(combinedName("engineering", "3 Test Street").startsWith(stem));
+});
+
+test("supersededBy matches prior versions of the same document only", () => {
+  const stem = "Site Plan and Elevations - 3 Test Street Greenwood";
+  const newName = `${stem} - 12 Aug 2026.pdf`;
+  const existing = [
+    `${stem} - 7 Aug 2026.pdf`,     // an earlier dated version → superseded
+    `${stem}.pdf`,                  // an undated version → superseded
+    newName,                        // the new file itself → never
+    "Engineering - 3 Test Street Greenwood - 7 Aug 2026.pdf", // a different doc → never
+    "CDC - 3 Test Street.pdf",      // the certificate → never
+    "Site Plan.pdf",                // an office working file → never
+  ];
+  assert.deepEqual(supersededBy(existing, stem, newName), [
+    `${stem} - 7 Aug 2026.pdf`,
+    `${stem}.pdf`,
+  ]);
+});
+
+test("supersededBy is empty when there's nothing prior or no stem", () => {
+  const stem = "Engineering - 12 Smith Street";
+  assert.deepEqual(supersededBy([`${stem} - 7 Aug 2026.pdf`], stem, `${stem} - 7 Aug 2026.pdf`), []);
+  assert.deepEqual(supersededBy(["anything.pdf"], null, "x.pdf"), []);
 });
 
 // ---------------------------------------------------------------------------
