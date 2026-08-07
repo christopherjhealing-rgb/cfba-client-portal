@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Icon } from "./Icon";
 import { fmtDate } from "@/lib/when.mjs";
 
@@ -30,13 +31,32 @@ export function LodgedLine({
   const when = fmtDate(receivedAt);
   if (!when) return null;
   return (
-    <div className={`text-[12px] text-ink/50 ${className}`}>
+    <div className={`text-[12px] text-ink/60 ${className}`}>
       Lodged {when}
       {typeof days === "number" && days >= 0 && (
-        <> · <span className="text-ink/65">
+        <> · <span className="text-ink/70">
           {days === 0 ? "today" : `${days} business day${days === 1 ? "" : "s"} ago`}
         </span></>
       )}
+    </div>
+  );
+}
+
+/** A job's description and the client's own reference, one line, at a single
+ *  readable weight. One component so the four job lists on the dashboard can't
+ *  drift into four slightly different greys — the reason this exists. */
+export function JobDesc({
+  description, clientRef, children,
+}: {
+  description?: string | null;
+  clientRef?: string | null;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="mt-0.5 break-words text-[13px] text-ink/60">
+      {description}
+      {clientRef ? <> · your ref {clientRef}</> : null}
+      {children}
     </div>
   );
 }
@@ -45,19 +65,31 @@ export function SectionHead({
   title,
   count,
   tone = "plain",
+  action,
 }: {
   title: string;
   count?: number;
   tone?: "plain" | "amber";
+  /** An optional "view all" link on the right — so the two section styles the
+   *  dashboard used (one with a count, one with a link) are one component. */
+  action?: { href: string; label: string };
 }) {
   return (
     <div className="sectionhead">
       <span className={tone === "amber" ? "text-brass-deep" : undefined}>{title}</span>
       <span className="h-px flex-1 bg-rule" />
       {count !== undefined && (
-        <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/45"}`}>
+        <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/55"}`}>
           {count}
         </span>
+      )}
+      {action && (
+        <Link href={action.href} prefetch={false}
+          className="group flex shrink-0 items-center gap-1.5 text-[13px] font-medium normal-case tracking-normal text-seal">
+          {action.label}
+          <Icon name="arrowRight" size={13}
+            className="transition-transform duration-150 group-hover:translate-x-0.5" />
+        </Link>
       )}
     </div>
   );
@@ -88,7 +120,7 @@ export function ReadyRow({
           <span className="font-mono text-[12px] text-ink/55">{refNo}</span>
           <span className="truncate font-medium text-ink">{address}</span>
         </div>
-        <div className="mt-0.5 truncate text-[13px] text-ink/55">{meta}</div>
+        <div className="mt-0.5 truncate text-[13px] text-ink/60">{meta}</div>
       </div>
       <div className="shrink-0">{action}</div>
     </div>
@@ -110,7 +142,7 @@ export function EmptyState({
         <Icon name="folder" size={22} />
       </div>
       <p className="font-display text-[16px] font-semibold">{title}</p>
-      <p className="mx-auto mt-1 max-w-sm text-[13px] text-ink/55">{body}</p>
+      <p className="mx-auto mt-1 max-w-sm text-[13px] text-ink/60">{body}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>
   );

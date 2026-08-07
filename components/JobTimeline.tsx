@@ -12,13 +12,18 @@ const DOT: Record<State, string> = {
   pending: "bg-white border-rule text-ink/25",
 };
 
+// State reads first from the dot (tick / ring / empty); the label weight and
+// tone are the second cue. Kept legible — the whole point of the stepper is to
+// see what's coming — with the hierarchy carried by current's weight rather
+// than by fading the future past readability. current (bold ink) > done (/60) >
+// pending (/50, still to come) > skipped (/45, not required for this job).
 const LABEL: Record<State, string> = {
-  done: "text-ink/55",
+  done: "text-ink/60",
   current: "text-ink font-semibold",
   waiting: "text-brass-deep font-semibold",
-  paused: "text-ink/50 font-semibold",
-  skipped: "text-ink/30",
-  pending: "text-ink/35",
+  paused: "text-ink/60 font-semibold",
+  skipped: "text-ink/45",
+  pending: "text-ink/50",
 };
 
 /** Progress across the five client-facing stages. No dates by design: the

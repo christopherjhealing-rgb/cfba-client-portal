@@ -37,11 +37,13 @@ const paths: Record<Name, React.ReactNode> = {
   chevronsLeft: <><path d="m11 17-5-5 5-5" /><path d="m18 17-5-5 5-5" /></>,
 };
 
-export function Icon({ name, size = 15 }: { name: Name; size?: number }) {
+export function Icon({ name, size = 15, className }: {
+  name: Name; size?: number; className?: string;
+}) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden="true">
+      aria-hidden="true" className={className}>
       {paths[name]}
     </svg>
   );

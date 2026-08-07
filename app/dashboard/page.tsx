@@ -14,7 +14,7 @@ import { DownloadButton } from "@/components/DownloadButton";
 import { JobArt } from "@/components/JobArt";
 import { JobTimeline } from "@/components/JobTimeline";
 import { Icon, type IconName } from "@/components/Icon";
-import { SectionHead, EmptyState, fmtDate, LodgedLine } from "@/components/JobBits";
+import { SectionHead, EmptyState, fmtDate, LodgedLine, JobDesc } from "@/components/JobBits";
 
 export const dynamic = "force-dynamic";
 
@@ -144,14 +144,11 @@ export default async function Dashboard() {
                         button wraps below instead of crushing the words. */}
                     <div className="min-w-[170px] max-w-full flex-1">
                       <JobLink refNo={j.ref as string} address={j.address as string} />
-                      <div className="mt-0.5 break-words text-[13px] text-ink/55">
-                        {j.description}
-                        {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
-                      </div>
+                      <JobDesc description={j.description as string} clientRef={j.clientRef as string} />
                       <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-seal">
                         <Icon name="check" size={13} />
                         <span className="font-medium">CDC Package Issued</span>
-                        <span className="text-ink/55">{fmtDate(j.issuedAt)}</span>
+                        <span className="text-ink/60">{fmtDate(j.issuedAt)}</span>
                       </div>
                     </div>
                     <DownloadButton href={`/api/jobs/${encodeURIComponent(j.ref)}/download`} />
@@ -171,10 +168,7 @@ export default async function Dashboard() {
                       <JobArt description={j.description as string} tone="amber" />
                       <div className="min-w-[170px] max-w-full flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} tone="amber" />
-                        <div className="mt-0.5 break-words text-[13px] text-ink/55">
-                        {j.description}
-                        {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
-                      </div>
+                        <JobDesc description={j.description as string} clientRef={j.clientRef as string} />
                         <LodgedLine className="mt-1" receivedAt={j.receivedAt as string}
                           days={lodgedDays(j)} />
                         {(() => {
@@ -209,16 +203,8 @@ export default async function Dashboard() {
           )}
 
           <section className="mb-8">
-            <div className="mb-2.5 flex items-center gap-3">
-              <span className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
-                Jobs in Progress
-              </span>
-              <span className="h-px flex-1 bg-rule" />
-              <Link href="/jobs?show=progress"
-                className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-seal">
-                View All in Progress <Icon name="arrowRight" size={13} />
-              </Link>
-            </div>
+            <SectionHead title="Jobs in Progress"
+              action={{ href: "/jobs?show=progress", label: "View All in Progress" }} />
             {running.length === 0 ? (
               <p className="empty">Nothing in progress right now.</p>
             ) : (
@@ -229,10 +215,7 @@ export default async function Dashboard() {
                       <JobArt description={j.description as string} />
                       <div className="min-w-0 flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} />
-                        <div className="mt-0.5 break-words text-[13px] text-ink/55">
-                        {j.description}
-                        {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
-                      </div>
+                        <JobDesc description={j.description as string} clientRef={j.clientRef as string} />
                         <LodgedLine className="mt-1" receivedAt={j.receivedAt as string}
                           days={lodgedDays(j)} />
                         <span className="chip mt-1.5 inline-block">
@@ -251,16 +234,8 @@ export default async function Dashboard() {
 
           {g.downloaded.length > 0 && (
             <section className="mb-8">
-              <div className="mb-2.5 flex items-center gap-3">
-                <span className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
-                  Past Jobs — Issued
-                </span>
-                <span className="h-px flex-1 bg-rule" />
-                <Link href="/downloads"
-                  className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-seal">
-                  View All Past Jobs <Icon name="arrowRight" size={13} />
-                </Link>
-              </div>
+              <SectionHead title="Past Jobs — Issued"
+                action={{ href: "/downloads", label: "View All Past Jobs" }} />
               <div className="card divide-y divide-rule overflow-hidden">
                 {g.downloaded.slice(0, 4).map((j) => {
                   const r = retention(j.firstDownloadedAt as string, new Date(), env.retentionMonths);
@@ -269,11 +244,9 @@ export default async function Dashboard() {
                       <JobArt description={j.description as string} />
                       <div className="min-w-[170px] max-w-full flex-1">
                         <JobLink refNo={j.ref as string} address={j.address as string} muted />
-                        <div className="mt-0.5 break-words text-[13px] text-ink/50">
-                          {j.description}
-                          {j.clientRef ? <> · your ref {String(j.clientRef)}</> : null}
+                        <JobDesc description={j.description as string} clientRef={j.clientRef as string}>
                           {" "}· available {r.daysLeft} more day{r.daysLeft === 1 ? "" : "s"}
-                        </div>
+                        </JobDesc>
                       </div>
                       <span className="chip chip-seal shrink-0">Issued</span>
                     </div>
@@ -294,7 +267,7 @@ export default async function Dashboard() {
                   </span>
                   <span className="min-w-0">
                     <span className="block text-[14px] font-medium text-ink">{q.title}</span>
-                    <span className="block truncate text-[12px] text-ink/50">{q.sub}</span>
+                    <span className="block truncate text-[12px] text-ink/60">{q.sub}</span>
                   </span>
                 </Link>
               ))}
@@ -334,7 +307,7 @@ function Stat({ href, icon, n, label, note, cta, tone = "plain" }: {
 }) {
   return (
     <Link href={href}
-      className={`stat flex-col transition hover:border-seal/40 ${
+      className={`stat group flex-col transition hover:border-seal/40 ${
         tone === "amber" && n > 0 ? "border-[#E4C98A] bg-[#FCF7EC]" : ""}`}>
       <span className={`grid h-10 w-10 place-items-center rounded-lg ${
         tone === "amber" && n > 0 ? "bg-white text-brass" : "bg-wash text-seal"}`}>
@@ -343,11 +316,12 @@ function Stat({ href, icon, n, label, note, cta, tone = "plain" }: {
       <span className="mt-3 block">
         <span className="stat-num block">{n}</span>
         <span className="mt-1 block text-[14px] font-medium text-ink">{label}</span>
-        <span className="mt-0.5 block text-[12px] leading-snug text-ink/50">{note}</span>
+        <span className="mt-0.5 block text-[12px] leading-snug text-ink/60">{note}</span>
       </span>
       <span className={`mt-3 flex items-center gap-1.5 text-[13px] font-medium ${
         tone === "amber" && n > 0 ? "text-brass-deep" : "text-seal"}`}>
-        {cta} <Icon name="arrowRight" size={13} />
+        {cta} <Icon name="arrowRight" size={13}
+          className="transition-transform duration-150 group-hover:translate-x-0.5" />
       </span>
     </Link>
   );
