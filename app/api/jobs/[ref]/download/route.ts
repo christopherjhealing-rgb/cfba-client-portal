@@ -71,15 +71,31 @@ export async function GET(
   await repo.markDownloaded(ref, now.toISOString());
   await repo.logAudit("certificate.download", ref, session.companyName, session.username || "client");
 
-  // Everything below fires once, on first download — and none of it may cost
-  // the client their files. The zip is already built; a board or mailbox
-  // that's down is the office's problem to read in the log and the evening
-  // report, never the client's to meet at the Download button.
+  // The correspondence record goes to the office on EVERY download — a record
+  // of each time the package is collected, not only the first (Chris's call).
+  // The seven-year copy is emailed to the office, and (when RECORD_TO_FOLDER is
+  // on) filed back into the job's own Issued folder beside the certified
+  // documents. Built once, handed to both, and now sent for every job whether
+  // or not a word was exchanged on it.
+  //
+  // Wrapped, and none of it may cost the client their files: the zip is already
+  // built and the client is mid-download, so a mailbox or library that's down
+  // is the office's problem to read in the send log, never the client's to meet
+  // at the Download button.
+  try {
+    const built = await buildRecord(ref);
+    const r = await mailJobRecord(ref, { prebuilt: built });
+    if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
+    const f = await fileJobRecord(ref, { prebuilt: built });
+    if (f === "failed") console.warn(`download ${ref}: correspondence record not filed to SharePoint`);
+  } catch (e) {
+    console.warn(`download ${ref}: correspondence record not kept —`, (e as Error).message);
+  }
+
+  // The rest are one-time state events, so they stay on the first download: the
+  // board receipt (posting it every time would spam the card), the PORTAL move
+  // to DOWNLOADED (already there after the first), and the Teams ping.
   if (firstDownload) {
-    // The board-side receipt and PORTAL move need the card; the record copy
-    // below deliberately doesn't — a job without its item id must still be
-    // filed. (Found live: the record email sat inside this card check, so any
-    // job that skipped it also skipped the seven-year copy.)
     if (job.mondayItemId) {
       // Download receipt on the card, so the office can see the client has
       // the CDC Package — kills the "did you get it?" call.
@@ -107,30 +123,7 @@ export async function GET(
       console.warn(`download ${ref}: job has no Monday item id — no receipt, PORTAL not moved`);
     }
 
-    // The file copy. A client collecting their package is the moment a job is
-    // finished in every sense that matters, so the seven-year record of the
-    // correspondence goes to the office now rather than waiting for somebody
-    // to remember — emailed to the office, and (when RECORD_TO_FOLDER is on)
-    // filed back into the job's own Issued folder beside the certified
-    // documents. Built once, handed to both. A job with nothing said on it
-    // sends and files nothing.
-    //
-    // Wrapped, like everything else below: the zip is already built and the
-    // client is mid-download. A mailbox or library that's down is the office's
-    // problem to read in the log, never the client's to meet at the Download
-    // button.
-    try {
-      const built = await buildRecord(ref);
-      const r = await mailJobRecord(ref, { prebuilt: built });
-      if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
-      const f = await fileJobRecord(ref, { prebuilt: built });
-      if (f === "failed") console.warn(`download ${ref}: correspondence record not filed to SharePoint`);
-    } catch (e) {
-      console.warn(`download ${ref}: correspondence record not kept —`, (e as Error).message);
-    }
-
-    // First download only. Off by default: it's the one notification here that
-    // asks nothing of anybody, and one per job is a lot of nothing.
+    // Off by default: the one notification here that asks nothing of anybody.
     await notifyTeams("downloaded", {
       title: `${session.companyName} downloaded ${ref}`,
       facts: [["Job", ref], ["Site", job.address || ""]],
