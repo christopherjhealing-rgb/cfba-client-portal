@@ -40,17 +40,15 @@ export function AdminSnapshot({
   return (
     <section className="mb-6">
       <div className="mb-2.5 flex items-center gap-3">
-        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
           {title}
         </h2>
         <span className="h-px flex-1 bg-rule" />
-        <span className="font-mono text-[12px] text-ink/45">{jobs.length}</span>
+        <span className="font-mono text-[12px] text-ink/60">{jobs.length}</span>
       </div>
 
       {jobs.length === 0 ? (
-        <p className="rounded-md border border-dashed border-rule bg-wash px-4 py-6 text-center text-[13px] text-ink/50">
-          {blurb}
-        </p>
+        <p className="empty">{blurb}</p>
       ) : (
         <div className={`card divide-y divide-rule border ${rule}`}>
           {shown.map((j) => {
@@ -61,7 +59,7 @@ export function AdminSnapshot({
               <div key={j.ref as string} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[12px] text-ink/50">{j.ref as string}</span>
+                    <span className="font-mono text-[12px] text-ink/60">{j.ref as string}</span>
                     <span className="text-[14px] font-medium">{j.address as string}</span>
                   </div>
                   <div className="mt-0.5 text-[12.5px] text-ink/60">
@@ -71,7 +69,7 @@ export function AdminSnapshot({
                   {/* On an FIR job, what we actually asked for — so the chase is
                       specific, not "you've got something outstanding". */}
                   {mode === "fir" && j.firRequest ? (
-                    <div className="mt-1 line-clamp-2 max-w-2xl text-[12.5px] text-ink/55">
+                    <div className="mt-1 line-clamp-2 max-w-2xl text-[12.5px] text-ink/60">
                       {String(j.firRequest)}
                     </div>
                   ) : null}
@@ -82,13 +80,13 @@ export function AdminSnapshot({
                       : mode === "downloaded" ? "Collected"
                       : "With the client"}
                   </span>
-                  {when && <span className="text-[11.5px] text-ink/50">{when}</span>}
+                  {when && <span className="text-[11.5px] text-ink/60">{when}</span>}
                 </div>
               </div>
             );
           })}
           {jobs.length > CAP && (
-            <div className="px-4 py-2.5 text-center text-[12px] text-ink/50">
+            <div className="px-4 py-2.5 text-center text-[12px] text-ink/60">
               and {jobs.length - CAP} more — {mode === "downloaded" ? "newest" : "oldest"} {CAP} shown
             </div>
           )}

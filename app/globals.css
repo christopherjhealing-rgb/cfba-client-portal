@@ -75,8 +75,9 @@ body {
     @apply rounded-xl border border-[#E4C98A] bg-[#FCF7EC];
   }
   .empty {
+    /* ink/50 read at ~3.4:1; ink/60 clears the 4.5:1 floor for this body copy. */
     @apply rounded-xl border border-dashed border-rule bg-wash px-4 py-8 text-center
-      text-[13px] text-ink/50;
+      text-[13px] text-ink/60;
   }
   .eyebrow {
     @apply font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-seal/70;
