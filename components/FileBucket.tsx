@@ -12,11 +12,14 @@ export interface Bucket {
 }
 
 export function FileBucket({
-  bucket, files, onChange,
+  bucket, files, onChange, combinedAs,
 }: {
   bucket: Bucket;
   files: File[];
   onChange: (files: File[]) => void;
+  /** For drawings/engineering: the single name these will be filed under. When
+   *  set and files are attached, the box shows what the office will receive. */
+  combinedAs?: string | null;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -67,6 +70,20 @@ export function FileBucket({
             </li>
           ))}
         </ul>
+      )}
+
+      {/* What the office actually receives: one tidy, site-named PDF. Shown the
+          moment a file is attached so there's no surprise at the far end. */}
+      {combinedAs && files.length > 0 && (
+        <p className="mt-2.5 flex items-start gap-1.5 border-t border-rule/70 pt-2.5 text-[12px] leading-snug text-ink/60">
+          <span className="mt-px shrink-0 text-seal"><Icon name="check" size={12} /></span>
+          <span>
+            {files.length > 1
+              ? <>These will be combined and filed as </>
+              : <>Filed as </>}
+            <span className="font-medium text-ink/80">{combinedAs}</span>
+          </span>
+        </p>
       )}
     </div>
   );
