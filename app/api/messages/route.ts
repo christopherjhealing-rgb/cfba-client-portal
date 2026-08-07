@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
@@ -12,6 +12,7 @@ import { notifyTeams } from "@/lib/teams";
 import { isGeneralRef, GENERAL_REF } from "@/lib/core.mjs";
 import { combineUploads } from "@/lib/combine-uploads";
 import { combinable } from "@/lib/uploads.mjs";
+import { fileNewInfo } from "@/lib/new-info";
 
 /**
  * Turn a message's raw uploads into the files stored against it. On a job reply
@@ -25,17 +26,21 @@ async function messageFiles(
   dir: string,
   job: { address?: string | null } | undefined,
   raw: { name: string; category?: string }[]
-): Promise<repo.MessageFile[]> {
-  const entries = job && raw.some((e) => e.category && combinable(e.category))
-    ? await combineUploads(dir, job.address || "", raw, { date: new Date() })
+): Promise<{ files: repo.MessageFile[]; combined: { name: string; category?: string }[] }> {
+  const isFir = !!job && raw.some((e) => e.category && combinable(e.category));
+  const entries = isFir
+    ? await combineUploads(dir, job!.address || "", raw, { date: new Date() })
     : raw;
   const sizes = new Map((await repo.listFiles(dir)).map((f) => [f.name, f.size]));
-  return entries.map((e) => ({
+  const files = entries.map((e) => ({
     name: e.name,
     size: sizes.get(e.name) || 0,
     storagePath: `${dir}/${e.name}`,
     contentType: "application/pdf",
   }));
+  // `combined` (with categories) is handed on to the SharePoint filing; empty
+  // for a plain reply or enquiry, which files nothing.
+  return { files, combined: isFir ? entries : [] };
 }
 
 /**
@@ -268,7 +273,7 @@ async function handle(req: Request) {
     await repo.writeFile(`${dir}/${safe}`, bytes, f.type || "application/octet-stream");
     raw.push({ name: safe, category: categories[i] || undefined });
   }
-  const stored = await messageFiles(dir, job, raw);
+  const { files: stored, combined } = await messageFiles(dir, job, raw);
 
   let updateId: string | null = null;
   if (job?.mondayItemId) {
@@ -314,6 +319,17 @@ async function handle(req: Request) {
     // board is already right by the time somebody opens the email.
     await moveOffFir(job);
     await notifyOffice(who, jobRef, job?.address || "", text, stored);
+    // File the returned drawings/engineering into the job's SharePoint folder,
+    // superseding the versions they replace. After the response — locating a
+    // folder and moving files is a SharePoint round trip the client shouldn't
+    // wait on — and off entirely until RECORD_TO_FOLDER is switched on.
+    if (combined.length) {
+      after(() =>
+        fileNewInfo(jobRef, job?.address || "", dir, combined).catch((e) =>
+          console.warn(`new-info ${jobRef}:`, (e as Error).message)
+        )
+      );
+    }
   }
   await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
   return NextResponse.json({ ok: true });
@@ -386,6 +402,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const folder = general ? `enquiries/${session.companyId}` : jobRef;
   const dir = `messages/${folder}/${msgId}`;
   let stored: repo.MessageFile[] = [];
+  let combined: { name: string; category?: string }[] = [];
 
   if (names.length) {
     const draftId = String(body.draftId || "");
@@ -420,7 +437,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     for (const n of names) {
       await repo.moveFile(`${prefix}/${n}`, `${dir}/${n}`);
     }
-    stored = await messageFiles(dir, job, rawFiles);
+    ({ files: stored, combined } = await messageFiles(dir, job, rawFiles));
   }
 
   let updateId: string | null = null;
@@ -465,6 +482,17 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     // board is already right by the time somebody opens the email.
     await moveOffFir(job);
     await notifyOffice(who, jobRef, job?.address || "", text, stored);
+    // File the returned drawings/engineering into the job's SharePoint folder,
+    // superseding the versions they replace. After the response — locating a
+    // folder and moving files is a SharePoint round trip the client shouldn't
+    // wait on — and off entirely until RECORD_TO_FOLDER is switched on.
+    if (combined.length) {
+      after(() =>
+        fileNewInfo(jobRef, job?.address || "", dir, combined).catch((e) =>
+          console.warn(`new-info ${jobRef}:`, (e as Error).message)
+        )
+      );
+    }
   }
   await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
   return NextResponse.json({ ok: true });

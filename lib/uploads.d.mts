@@ -16,3 +16,9 @@ export function combinedName(
 export function plannedName(
   category: string, address: string, date?: Date | string | number | null
 ): string | null;
+/** The dateless, extensionless stem shared by every version of a document. */
+export function nameStem(category: string, address: string): string | null;
+/** Existing file names a new version supersedes (same stem, not itself). */
+export function supersededBy(
+  existingNames: string[], stem: string | null, newName: string
+): string[];

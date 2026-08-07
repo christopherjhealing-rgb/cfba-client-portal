@@ -40,6 +40,21 @@ async function gget(path: string): Promise<Record<string, unknown>> {
   return r.json();
 }
 
+async function gsend(
+  method: "POST" | "PATCH", path: string, body: unknown
+): Promise<Record<string, unknown>> {
+  const r = await fetch(GRAPH + path, {
+    method,
+    headers: {
+      Authorization: `Bearer ${await token()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`Graph ${method} ${path} -> ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
 export interface RemoteFile {
   name: string;
   size: number;
@@ -249,19 +264,33 @@ export async function uploadFile(
     .filter(Boolean)
     .map(encodeURIComponent)
     .join("/");
-  const r = await fetch(
-    `${GRAPH}/drives/${env.graphDriveId}/root:/${parts}:/createUploadSession`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${await token()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        item: { "@microsoft.graph.conflictBehavior": "replace" },
-      }),
-    }
-  );
+  await uploadSession(`/drives/${env.graphDriveId}/root:/${parts}:`, filename, bytes);
+}
+
+/** Upload a file into a folder addressed by its item id — robust to however the
+ *  client folders are nested, since no path is reconstructed. Same replace-on-
+ *  conflict, same chunked session as uploadFile. */
+export async function uploadIntoFolder(
+  folderId: string,
+  filename: string,
+  bytes: Buffer
+): Promise<void> {
+  const enc = encodeURIComponent(filename);
+  await uploadSession(`/drives/${env.graphDriveId}/items/${folderId}:/${enc}:`, filename, bytes);
+}
+
+/** The chunked upload both routes share: open a session on `itemPath`
+ *  (…without the trailing "/createUploadSession"), then PUT the bytes in
+ *  320-KiB-aligned pieces. */
+async function uploadSession(itemPath: string, filename: string, bytes: Buffer): Promise<void> {
+  const r = await fetch(`${GRAPH}${itemPath}/createUploadSession`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${await token()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ item: { "@microsoft.graph.conflictBehavior": "replace" } }),
+  });
   if (!r.ok) throw new Error(`Upload session ${filename} -> ${r.status} ${await r.text()}`);
   const uploadUrl = String((await r.json()).uploadUrl || "");
   if (!uploadUrl) throw new Error(`Upload session ${filename} -> no uploadUrl`);
@@ -282,6 +311,52 @@ export async function uploadFile(
     });
     if (!put.ok) throw new Error(`Upload ${filename} chunk @${start} -> ${put.status} ${await put.text()}`);
   }
+}
+
+// --- Filing new info into a job folder (replace + supersede) ----------------
+// The client's answer to an FIR goes into the job's own folder, and the version
+// it replaces is moved aside into a "Superseded" subfolder rather than
+// overwritten — so the office keeps the history without the top of the folder
+// filling with old drawings. These are the three moves that takes.
+
+/** The files (not subfolders) sitting directly in a folder, by its item id. */
+export async function folderFiles(
+  folderId: string
+): Promise<{ id: string; name: string }[]> {
+  const kids = await childrenOf(folderId);
+  return kids
+    .filter((k) => !k.folder)
+    .map((k) => ({ id: String(k.id), name: String(k.name || "") }));
+}
+
+/** A subfolder by name, created if it isn't there yet; returns its item id. */
+export async function ensureSubfolder(parentId: string, name: string): Promise<string> {
+  const find = (kids: Record<string, unknown>[]) =>
+    kids.find(
+      (k) => k.folder && String(k.name || "").trim().toLowerCase() === name.toLowerCase()
+    );
+  const here = find(await childrenOf(parentId));
+  if (here) return String(here.id);
+  try {
+    const made = await gsend("POST", `/drives/${env.graphDriveId}/items/${parentId}/children`, {
+      name, folder: {}, "@microsoft.graph.conflictBehavior": "fail",
+    });
+    return String(made.id);
+  } catch (e) {
+    // Lost a race to create it — read it back rather than fail.
+    if (/-> 409/.test((e as Error).message)) {
+      const again = find(await childrenOf(parentId));
+      if (again) return String(again.id);
+    }
+    throw e;
+  }
+}
+
+/** Move an item into another folder in the same drive, keeping its name. */
+export async function moveItem(itemId: string, destFolderId: string): Promise<void> {
+  await gsend("PATCH", `/drives/${env.graphDriveId}/items/${itemId}`, {
+    parentReference: { id: destFolderId },
+  });
 }
 
 // --- Diagnostics -----------------------------------------------------------
