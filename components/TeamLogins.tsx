@@ -51,7 +51,7 @@ export function TeamLogins({ logins, readonly }: { logins: TeamLogin[]; readonly
 
   return (
     <div className="card mb-6 p-5">
-      <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+      <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/60">
         Your Team&apos;s Logins
       </p>
       <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink/65">
@@ -67,13 +67,13 @@ export function TeamLogins({ logins, readonly }: { logins: TeamLogin[]; readonly
               {l.username}
             </span>
             {l.displayName && (
-              <span className={`text-[13px] ${l.disabled ? "text-ink/35" : "text-ink/65"}`}>
+              <span className={`text-[13px] ${l.disabled ? "text-ink/60" : "text-ink/65"}`}>
                 {l.displayName}
               </span>
             )}
             {l.you && <span className="chip">You</span>}
             {l.disabled && <span className="chip">Disabled</span>}
-            <span className="ml-auto text-[12px] text-ink/45">
+            <span className="ml-auto text-[12px] text-ink/60">
               {l.disabled ? "call us to re-enable" : `last sign-in: ${lastSeen(l.lastLoginAt)}`}
             </span>
             {!l.you && !l.disabled && !readonly && (

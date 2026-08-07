@@ -62,7 +62,7 @@ export default async function EnquiriesPage() {
       )}
 
       {threads.length === 0 ? (
-        <p className="rounded-md border border-dashed border-rule bg-wash px-4 py-8 text-center text-[13px] text-ink/50">
+        <p className="empty">
           No enquiries yet.
         </p>
       ) : (
@@ -74,7 +74,7 @@ export default async function EnquiriesPage() {
                   <div className="truncate font-medium">
                     {nameOf.get(t.companyId) || t.companyId}
                   </div>
-                  <div className="mt-0.5 text-[12px] text-ink/50">
+                  <div className="mt-0.5 text-[12px] text-ink/60">
                     Last message {when(t.last.createdAt)}
                   </div>
                 </div>
@@ -92,7 +92,7 @@ export default async function EnquiriesPage() {
                       <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                         {m.from === "cfba" ? "CF Building Approvals" : nameOf.get(m.companyId) || "Client"}
                       </span>
-                      <span className="text-[11px] text-ink/50">{when(m.createdAt)}</span>
+                      <span className="text-[11px] text-ink/60">{when(m.createdAt)}</span>
                     </div>
                     {m.body && (
                       <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">
@@ -100,7 +100,7 @@ export default async function EnquiriesPage() {
                       </p>
                     )}
                     {m.files && m.files.length > 0 && (
-                      <p className="mt-2 pl-8 text-[12px] text-ink/50">
+                      <p className="mt-2 pl-8 text-[12px] text-ink/60">
                         Attached: {m.files.map((f) => f.name).join(", ")} — open the
                         client&apos;s portal view to download.
                       </p>

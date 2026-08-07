@@ -87,11 +87,11 @@ export default async function AmendmentsPage() {
       <PastJobsCard last={history} />
 
       <div className="mb-2.5 flex items-center gap-3">
-        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
           Waiting
         </h2>
         <span className="h-px flex-1 bg-rule" />
-        <span className="font-mono text-[12px] text-ink/45">{waiting}</span>
+        <span className="font-mono text-[12px] text-ink/60">{waiting}</span>
       </div>
 
       <AmendmentList rows={rows} />

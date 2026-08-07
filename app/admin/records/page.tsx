@@ -106,7 +106,7 @@ export default async function Records({
               show === f.key ? "border-seal bg-seal text-white"
                 : "border-rule bg-white text-ink/65 hover:bg-wash"}`}>
             {f.label}
-            <span className={`ml-1.5 font-mono ${show === f.key ? "text-white/70" : "text-ink/35"}`}>
+            <span className={`ml-1.5 font-mono ${show === f.key ? "text-white/70" : "text-ink/60"}`}>
               {count(f.key)}
             </span>
           </Link>
@@ -143,7 +143,7 @@ export default async function Records({
                       <td className="td font-mono text-[12px] text-ink/60">{j.ref}</td>
                       <td className="td">
                         <div className="font-medium text-ink">{j.address || "—"}</div>
-                        <div className="mt-0.5 text-[12.5px] text-ink/55">
+                        <div className="mt-0.5 text-[12.5px] text-ink/60">
                           Last message {dateOnly(c.last)}
                         </div>
                       </td>

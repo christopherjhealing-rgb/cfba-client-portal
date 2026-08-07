@@ -62,7 +62,7 @@ export function DeleteClient({ companyId, companyName }: { companyId: string; co
         <>
           <p className="mt-1.5 text-[13px] text-ink/75">It takes with it:</p>
           <ul className="mt-1 space-y-0.5 text-[13px] text-ink/75">
-            {fp.jobs > 0 && <li>· <strong>{fp.jobs}</strong> job{fp.jobs === 1 ? "" : "s"} {fp.refs.length > 0 && <span className="font-mono text-[12px] text-ink/50">({fp.refs.join(", ")}{fp.jobs > fp.refs.length ? "…" : ""})</span>}</li>}
+            {fp.jobs > 0 && <li>· <strong>{fp.jobs}</strong> job{fp.jobs === 1 ? "" : "s"} {fp.refs.length > 0 && <span className="font-mono text-[12px] text-ink/60">({fp.refs.join(", ")}{fp.jobs > fp.refs.length ? "…" : ""})</span>}</li>}
             {fp.files > 0 && <li>· <strong>{fp.files}</strong> stored file{fp.files === 1 ? "" : "s"} — deleted from storage</li>}
             {fp.messages > 0 && <li>· <strong>{fp.messages}</strong> message{fp.messages === 1 ? "" : "s"}</li>}
             {fp.logins > 0 && <li>· <strong>{fp.logins}</strong> login{fp.logins === 1 ? "" : "s"} — they can no longer sign in</li>}

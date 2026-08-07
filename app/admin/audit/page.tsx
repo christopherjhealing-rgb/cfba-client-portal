@@ -36,7 +36,7 @@ export default async function AuditPage() {
       </p>
 
       {entries.length === 0 ? (
-        <p className="rounded-md border border-dashed border-rule bg-wash px-4 py-8 text-center text-[13px] text-ink/50">
+        <p className="empty">
           Nothing logged yet.
         </p>
       ) : (
@@ -53,12 +53,12 @@ export default async function AuditPage() {
             <tbody className="divide-y divide-rule">
               {entries.map((e) => (
                 <tr key={e.id}>
-                  <td className="td text-[12.5px] text-ink/55">{when(e.at)}</td>
+                  <td className="td text-[12.5px] text-ink/60">{when(e.at)}</td>
                   <td className="td text-[13px] font-medium">{LABELS[e.action] || e.action}</td>
                   <td className="td text-[13px] text-ink/70">
-                    {e.target}{e.detail ? <span className="text-ink/45"> · {e.detail}</span> : null}
+                    {e.target}{e.detail ? <span className="text-ink/60"> · {e.detail}</span> : null}
                   </td>
-                  <td className="td text-[12.5px] text-ink/55">{e.actor}</td>
+                  <td className="td text-[12.5px] text-ink/60">{e.actor}</td>
                 </tr>
               ))}
             </tbody>

@@ -50,7 +50,7 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
           <div>
             <p className="eyebrow">Folder Check</p>
             <h1 className="mt-1 font-display text-[26px] font-semibold">{company.name}</h1>
-            <p className="mt-1 text-[13px] text-ink/55">
+            <p className="mt-1 text-[13px] text-ink/60">
               {jobs.length} job{jobs.length === 1 ? "" : "s"} matched to this client
               {!GRAPH_READY && " · SharePoint not connected, showing the portal's copy only"}
             </p>
@@ -62,7 +62,7 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
         </div>
 
         {rows.length === 0 ? (
-          <p className="rounded-md border border-dashed border-rule bg-wash px-4 py-10 text-center text-[13px] text-ink/50">
+          <p className="empty">
             No jobs are matched to this client yet. Run a sync from the admin page,
             or check the Client column on the Monday card matches this company.
           </p>
@@ -78,10 +78,10 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
               return (
                 <div key={job.ref} className="card p-4">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="font-mono text-[12px] text-ink/45">{job.ref}</span>
+                    <span className="font-mono text-[12px] text-ink/60">{job.ref}</span>
                     <span className="font-medium">{job.address}</span>
                     <span className="chip">{job.mondayStatus || "no status"}</span>
-                    <span className="text-[12px] text-ink/45">
+                    <span className="text-[12px] text-ink/60">
                       client sees: “{clientStatusLabel(job.mondayStatus, job.fileCount)}” · {bucket.replace("_", " ")}
                     </span>
                     <span className="ml-auto">
@@ -90,7 +90,7 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
                   </div>
 
                   {job.sourceFolder && (
-                    <div className="mt-2 break-all font-mono text-[11px] text-ink/45">
+                    <div className="mt-2 break-all font-mono text-[11px] text-ink/60">
                       {env.clientFilesRoot}/{job.sourceFolder}
                     </div>
                   )}
@@ -99,13 +99,13 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
                     <div>
                       <div className="eyebrow mb-1.5">In the Portal ({files.length})</div>
                       {files.length === 0 ? (
-                        <p className="text-[13px] text-ink/45">No files synced.</p>
+                        <p className="text-[13px] text-ink/60">No files synced.</p>
                       ) : (
                         <ul className="space-y-1 text-[13px]">
                           {files.map((f) => (
                             <li key={f.filename} className="flex justify-between gap-3">
                               <span className="truncate">{f.filename}</span>
-                              <span className="shrink-0 font-mono text-[11px] text-ink/45">{kb(f.size)}</span>
+                              <span className="shrink-0 font-mono text-[11px] text-ink/60">{kb(f.size)}</span>
                             </li>
                           ))}
                         </ul>
@@ -119,7 +119,7 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
                       {liveError ? (
                         <p className="text-[13px] text-flag">Lookup failed: {liveError}</p>
                       ) : live === null ? (
-                        <p className="text-[13px] text-ink/45">
+                        <p className="text-[13px] text-ink/60">
                           {GRAPH_READY ? "Only checked for issued jobs." : "SharePoint not connected."}
                         </p>
                       ) : live.length === 0 ? (
@@ -132,7 +132,7 @@ export default async function ClientCheckPage({ params }: { params: Promise<{ id
                           {live.map((f) => (
                             <li key={f.name} className="flex justify-between gap-3">
                               <span className="truncate">{f.name}</span>
-                              <span className="shrink-0 font-mono text-[11px] text-ink/45">{kb(f.size)}</span>
+                              <span className="shrink-0 font-mono text-[11px] text-ink/60">{kb(f.size)}</span>
                             </li>
                           ))}
                         </ul>

@@ -18,9 +18,9 @@ function median(nums: number[]): number | null {
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="card p-4">
-      <div className="font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/50">{label}</div>
+      <div className="font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/60">{label}</div>
       <div className="mt-1 font-display text-[28px] font-semibold">{value}</div>
-      {sub && <div className="mt-0.5 text-[12.5px] text-ink/50">{sub}</div>}
+      {sub && <div className="mt-0.5 text-[12.5px] text-ink/60">{sub}</div>}
     </div>
   );
 }
@@ -92,13 +92,13 @@ export default async function Reports() {
       )}
 
       <div className="mb-2.5 flex items-center gap-3">
-        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
           Busiest Clients (Active Jobs)
         </h2>
         <span className="h-px flex-1 bg-rule" />
       </div>
       {topClients.length === 0 ? (
-        <p className="text-[13px] text-ink/50">No active jobs.</p>
+        <p className="text-[13px] text-ink/60">No active jobs.</p>
       ) : (
         <div className="card divide-y divide-rule">
           {topClients.map(([id, n]) => (

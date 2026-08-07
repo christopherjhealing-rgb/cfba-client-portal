@@ -52,7 +52,7 @@ export function AmendmentRouting({
 
   return (
     <div className="card mb-8 p-4">
-      <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+      <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
         Amendments
       </h2>
       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink/60">
@@ -97,10 +97,10 @@ export function AmendmentRouting({
       </div>
 
       <label className="mt-4 block">
-        <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+        <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
           If nobody is in Certified By
         </span>
-        <p className="mt-1 text-[12.5px] text-ink/50">
+        <p className="mt-1 text-[12.5px] text-ink/60">
           Send it to this person. Without it an amendment lands nowhere and the
           client is left thinking it&apos;s with you.
         </p>
