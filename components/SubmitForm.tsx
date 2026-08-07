@@ -35,7 +35,6 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   const [files, setFiles] = useState<Record<string, File[]>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  const [instant, setInstant] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [library, setLibrary] = useState<LibraryDoc[]>([]);
@@ -190,7 +189,6 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       void fetch("/api/library", { method: "POST", body: fd }).catch(() => {});
     }
 
-    setInstant(!!d.accepted);
     setDone(true);
   }
 
@@ -205,14 +203,9 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         </div>
         <h2 className="font-display text-[21px] font-semibold">Job Lodged</h2>
         <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-ink/65">
-          {instant ? (
-            <>Thanks — it&apos;s on our board, and it&apos;s already showing at the
-            top of <span className="font-medium">My Jobs</span>.</>
-          ) : (
-            <>Thanks — it&apos;s with the CFBA office for checking. It will show in your
-            job list under <span className="font-medium">Waiting to be accepted</span>,
-            and once it&apos;s accepted you&apos;ll be able to follow its progress here.</>
-          )}
+          Thanks — it&apos;s lodged and showing at the top of{" "}
+          <span className="font-medium">My Jobs</span> now. We&apos;re placing it on
+          our board; follow its progress here any time.
         </p>
         {clientRef.trim() && (
           <p className="mx-auto mt-2.5 max-w-sm text-[13px] text-ink/60">

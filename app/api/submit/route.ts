@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
@@ -346,8 +346,13 @@ async function handle(req: Request) {
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
   if (!amendmentOf) { await stashItems(id, said.items); await stashBal(id, bal); }
 
-  const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
-  return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });
+  // Place it on the board after the response is sent. The lodgement is already
+  // saved and shows in My Jobs straight away (a "received" row until the sync
+  // catches up), so the client isn't held at the button while a Monday card is
+  // created and its files are shuttled across. A failure here leaves it in the
+  // review queue — exactly what a failed inline accept always did.
+  after(() => finishLodgement(id, session.companyName, !!amendmentOf));
+  return NextResponse.json({ ok: true, id, amendment: !!amendmentOf });
 }
 
 /** Metadata-only lodgement referencing files the browser already PUT into the
@@ -463,6 +468,11 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   }, id, amendmentOf ? AMENDMENT_OPEN : "pending");
   if (!amendmentOf) { await stashItems(id, said.items); await stashBal(id, bal); }
 
-  const accepted = await finishLodgement(id, session.companyName, !!amendmentOf);
-  return NextResponse.json({ ok: true, id, accepted, amendment: !!amendmentOf });
+  // Place it on the board after the response is sent. The lodgement is already
+  // saved and shows in My Jobs straight away (a "received" row until the sync
+  // catches up), so the client isn't held at the button while a Monday card is
+  // created and its files are shuttled across. A failure here leaves it in the
+  // review queue — exactly what a failed inline accept always did.
+  after(() => finishLodgement(id, session.companyName, !!amendmentOf));
+  return NextResponse.json({ ok: true, id, amendment: !!amendmentOf });
 }
