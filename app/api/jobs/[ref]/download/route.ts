@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { after } from "next/server";
 import { getClientSession } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import * as monday from "@/lib/monday";
@@ -71,31 +72,30 @@ export async function GET(
   await repo.markDownloaded(ref, now.toISOString());
   await repo.logAudit("certificate.download", ref, session.companyName, session.username || "client");
 
-  // The correspondence record goes to the office on EVERY download — a record
-  // of each time the package is collected, not only the first (Chris's call).
-  // The seven-year copy is emailed to the office, and (when RECORD_TO_FOLDER is
-  // on) filed back into the job's own Issued folder beside the certified
-  // documents. Built once, handed to both, and now sent for every job whether
-  // or not a word was exchanged on it.
+  // Hand the client their zip the moment it's built. Everything the office
+  // needs from a download runs AFTER the response is sent — Vercel keeps the
+  // function alive for after(), so nothing is lost, and a download is only ever
+  // as slow as zipping the files, not the mailbox and the board behind them.
   //
-  // Wrapped, and none of it may cost the client their files: the zip is already
-  // built and the client is mid-download, so a mailbox or library that's down
-  // is the office's problem to read in the send log, never the client's to meet
-  // at the Download button.
-  try {
-    const built = await buildRecord(ref);
-    const r = await mailJobRecord(ref, { prebuilt: built });
-    if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
-    const f = await fileJobRecord(ref, { prebuilt: built });
-    if (f === "failed") console.warn(`download ${ref}: correspondence record not filed to SharePoint`);
-  } catch (e) {
-    console.warn(`download ${ref}: correspondence record not kept —`, (e as Error).message);
-  }
+  //   • The correspondence record — emailed to the office and (when
+  //     RECORD_TO_FOLDER is on) filed to the Issued folder — on EVERY download,
+  //     a record of each collection whether or not a word was exchanged.
+  //   • The one-time state events, first download only: the board receipt
+  //     (posting it every time would spam the card), the PORTAL move to
+  //     DOWNLOADED, and the Teams ping.
+  after(async () => {
+    try {
+      const built = await buildRecord(ref);
+      const r = await mailJobRecord(ref, { prebuilt: built });
+      if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
+      const f = await fileJobRecord(ref, { prebuilt: built });
+      if (f === "failed") console.warn(`download ${ref}: correspondence record not filed to SharePoint`);
+    } catch (e) {
+      console.warn(`download ${ref}: correspondence record not kept —`, (e as Error).message);
+    }
 
-  // The rest are one-time state events, so they stay on the first download: the
-  // board receipt (posting it every time would spam the card), the PORTAL move
-  // to DOWNLOADED (already there after the first), and the Teams ping.
-  if (firstDownload) {
+    if (!firstDownload) return;
+
     if (job.mondayItemId) {
       // Download receipt on the card, so the office can see the client has
       // the CDC Package — kills the "did you get it?" call.
@@ -129,7 +129,7 @@ export async function GET(
       facts: [["Job", ref], ["Site", job.address || ""]],
       text: "Their certificate is in their hands — nothing to do.",
     });
-  }
+  });
 
   const safe = (job.address || ref).replace(/[^A-Za-z0-9 .-]/g, "").slice(0, 60).trim();
   const filename = `CFBA ${ref} - ${safe}.zip`;
