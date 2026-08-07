@@ -13,6 +13,7 @@ import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { JobTimeline } from "@/components/JobTimeline";
 import { DownloadButton } from "@/components/DownloadButton";
 import { ReplyBox } from "@/components/ReplyBox";
+import { FirResponseBox } from "@/components/FirResponseBox";
 import { CancelJob } from "@/components/CancelJob";
 import { Icon } from "@/components/Icon";
 import { fmtDate } from "@/components/JobBits";
@@ -303,7 +304,14 @@ export default async function JobDetail({
         </div>
         {!messagesOff && (
           <div id="reply" className="scroll-mt-6">
-            <ReplyBox refNo={ref} />
+            {/* Waiting on the client → the categorised box, so updated drawings
+                and engineering come back tidy and dated. Otherwise the ordinary
+                reply. */}
+            {needsClientInfo(job) ? (
+              <FirResponseBox refNo={ref} address={(job.address as string) || ""} />
+            ) : (
+              <ReplyBox refNo={ref} />
+            )}
           </div>
         )}
       </div>

@@ -10,6 +10,33 @@ import {
 import { env } from "@/lib/env";
 import { notifyTeams } from "@/lib/teams";
 import { isGeneralRef, GENERAL_REF } from "@/lib/core.mjs";
+import { combineUploads } from "@/lib/combine-uploads";
+import { combinable } from "@/lib/uploads.mjs";
+
+/**
+ * Turn a message's raw uploads into the files stored against it. On a job reply
+ * whose files are tagged (an FIR response through the categorised box), the
+ * drawings and engineering are combined into one dated PDF each — the same tidy
+ * naming as a lodgement, with the day it came in on the end — so the office gets
+ * "Site Plan and Elevations - <site> - 7 Aug 2026.pdf", not three loose files.
+ * A plain reply, or an enquiry, keeps its files exactly as sent.
+ */
+async function messageFiles(
+  dir: string,
+  job: { address?: string | null } | undefined,
+  raw: { name: string; category?: string }[]
+): Promise<repo.MessageFile[]> {
+  const entries = job && raw.some((e) => e.category && combinable(e.category))
+    ? await combineUploads(dir, job.address || "", raw, { date: new Date() })
+    : raw;
+  const sizes = new Map((await repo.listFiles(dir)).map((f) => [f.name, f.size]));
+  return entries.map((e) => ({
+    name: e.name,
+    size: sizes.get(e.name) || 0,
+    storagePath: `${dir}/${e.name}`,
+    contentType: "application/pdf",
+  }));
+}
 
 /**
  * Read what the client just sent back out of storage so it can ride along on
@@ -192,6 +219,7 @@ async function handle(req: Request) {
   const text = String(form.get("body") || "").trim().slice(0, MAX_TEXT);
   const subject = String(form.get("subject") || "").trim().slice(0, MAX_SUBJECT);
   const uploads = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const categories = form.getAll("fileCategories").map(String);
   const general = isGeneralRef(jobRef);
 
   if (!jobRef) return NextResponse.json({ error: "Choose which job this message is for." }, { status: 400 });
@@ -231,17 +259,16 @@ async function handle(req: Request) {
 
   const msgId = "msg_" + Math.random().toString(36).slice(2, 10);
   const folder = general ? `enquiries/${session.companyId}` : jobRef;
-  const stored: repo.MessageFile[] = [];
-  const bytesByName = new Map<string, { bytes: Buffer; type: string }>();
-  for (const f of uploads) {
+  const dir = `messages/${folder}/${msgId}`;
+  const raw: { name: string; category?: string }[] = [];
+  for (let i = 0; i < uploads.length; i++) {
+    const f = uploads[i];
     const safe = f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120);
     const bytes = Buffer.from(await f.arrayBuffer());
-    const storagePath = `messages/${folder}/${msgId}/${safe}`;
-    const contentType = f.type || "application/octet-stream";
-    await repo.writeFile(storagePath, bytes, contentType);
-    stored.push({ name: safe, size: bytes.length, storagePath, contentType });
-    bytesByName.set(safe, { bytes, type: contentType });
+    await repo.writeFile(`${dir}/${safe}`, bytes, f.type || "application/octet-stream");
+    raw.push({ name: safe, category: categories[i] || undefined });
   }
+  const stored = await messageFiles(dir, job, raw);
 
   let updateId: string | null = null;
   if (job?.mondayItemId) {
@@ -256,8 +283,8 @@ async function handle(req: Request) {
       );
       if (updateId) {
         for (const f of stored) {
-          const b = bytesByName.get(f.name);
-          if (b) await monday.addFileToUpdate(updateId, f.name, b.bytes, b.type);
+          const bytes = await repo.readFile(f.storagePath);
+          await monday.addFileToUpdate(updateId, f.name, bytes, f.contentType);
         }
       }
     } catch {
@@ -318,9 +345,24 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   const jobRef = String(body.ref || "").trim();
   const text = String(body.body || "").trim().slice(0, MAX_TEXT);
   const subject = String(body.subject || "").trim().slice(0, MAX_SUBJECT);
-  const names: string[] = Array.isArray(body.files)
-    ? (body.files as unknown[]).map((n) => String(n || "")).filter(Boolean)
+  // Files arrive either as bare names (a plain reply) or as {name, category}
+  // objects (the categorised FIR box). Normalise to entries; names drives the
+  // storage checks, categories drive the combine.
+  const rawFiles: { name: string; category?: string }[] = Array.isArray(body.files)
+    ? (body.files as unknown[])
+        .map((x) =>
+          typeof x === "string"
+            ? { name: x }
+            : {
+                name: String((x as { name?: unknown })?.name || ""),
+                category: (x as { category?: unknown })?.category
+                  ? String((x as { category?: unknown }).category)
+                  : undefined,
+              }
+        )
+        .filter((f) => f.name)
     : [];
+  const names = rawFiles.map((f) => f.name);
   const general = isGeneralRef(jobRef);
 
   if (!jobRef) return NextResponse.json({ error: "Choose which job this message is for." }, { status: 400 });
@@ -342,7 +384,8 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
 
   const msgId = "msg_" + Math.random().toString(36).slice(2, 10);
   const folder = general ? `enquiries/${session.companyId}` : jobRef;
-  const stored: repo.MessageFile[] = [];
+  const dir = `messages/${folder}/${msgId}`;
+  let stored: repo.MessageFile[] = [];
 
   if (names.length) {
     const draftId = String(body.draftId || "");
@@ -375,12 +418,9 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     }
 
     for (const n of names) {
-      const storagePath = `messages/${folder}/${msgId}/${n}`;
-      await repo.moveFile(`${prefix}/${n}`, storagePath);
-      stored.push({
-        name: n, size: landed.get(n) || 0, storagePath, contentType: "application/pdf",
-      });
+      await repo.moveFile(`${prefix}/${n}`, `${dir}/${n}`);
     }
+    stored = await messageFiles(dir, job, rawFiles);
   }
 
   let updateId: string | null = null;

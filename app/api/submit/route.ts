@@ -337,7 +337,7 @@ async function handle(req: Request) {
   // PDF each (see lib/combine-uploads), so that's what lands on the card. An
   // amendment keeps the client's own file names — the point of one is which
   // drawing changed, not a fresh set.
-  const filed = amendmentOf ? stored : await combineUploads(id, address, stored);
+  const filed = amendmentOf ? stored : await combineUploads(`submissions/${id}`, address, stored);
 
   await repo.addSubmission({
     clientRef: clientRef || null,
@@ -464,7 +464,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   // Combine and rename the drawings and engineering into one tidy, site-named
   // PDF each (see lib/combine-uploads) — same as the multipart path above.
   // Lodgements only; an amendment keeps the client's own file names.
-  const filed = amendmentOf ? claimed : await combineUploads(id, address, claimed);
+  const filed = amendmentOf ? claimed : await combineUploads(`submissions/${id}`, address, claimed);
 
   await repo.addSubmission({
     clientRef: clientRef || null,

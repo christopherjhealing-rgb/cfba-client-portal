@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   COMBINE, combinable, addressForName, safeForFilename, combinedName, plannedName,
+  formatStamp,
 } from "../lib/uploads.mjs";
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,43 @@ test("a non-combined category has no combined name", () => {
 test("the base names match the exported map", () => {
   assert.ok(combinedName("drawings", "x").startsWith(COMBINE.drawings));
   assert.ok(combinedName("engineering", "x").startsWith(COMBINE.engineering));
+});
+
+// ---------------------------------------------------------------------------
+// formatStamp — Perth-time date for a file name
+// ---------------------------------------------------------------------------
+test("formats a date stamp in Perth time", () => {
+  // Mid-morning Perth (UTC+8): 02:00 UTC is 10:00 in Perth, same day.
+  assert.equal(formatStamp("2026-08-07T02:00:00.000Z"), "7 Aug 2026");
+});
+
+test("uses the Perth day, not UTC, across midnight", () => {
+  // 20:00 UTC on the 6th is 04:00 on the 7th in Perth — the office's day.
+  assert.equal(formatStamp("2026-08-06T20:00:00.000Z"), "7 Aug 2026");
+  assert.equal(formatStamp(new Date("2026-12-31T18:00:00.000Z")), "1 Jan 2027");
+});
+
+// ---------------------------------------------------------------------------
+// combinedName with a date — FIR responses
+// ---------------------------------------------------------------------------
+test("a dated combined name carries the day it came in", () => {
+  assert.equal(
+    combinedName("drawings", "32 Elvira Street, Palmyra WA 6156", "2026-08-07T02:00:00.000Z"),
+    "Site Plan and Elevations - 32 Elvira Street Palmyra - 7 Aug 2026.pdf"
+  );
+  assert.equal(
+    combinedName("engineering", "12 Smith Street", "2026-08-07T02:00:00.000Z"),
+    "Engineering - 12 Smith Street - 7 Aug 2026.pdf"
+  );
+});
+
+test("no date means no stamp (a first lodgement)", () => {
+  assert.equal(
+    combinedName("drawings", "12 Smith Street"),
+    "Site Plan and Elevations - 12 Smith Street.pdf"
+  );
+  assert.equal(combinedName("drawings", "12 Smith Street", null),
+    "Site Plan and Elevations - 12 Smith Street.pdf");
 });
 
 // ---------------------------------------------------------------------------
