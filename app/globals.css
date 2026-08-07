@@ -31,13 +31,17 @@ body {
     .btn, .btn-ghost { @apply tracking-[0.02em]; }
   }
   .field {
+    /* Placeholder was ink/35 (~2.2:1 on white) — below the 4.5:1 floor and hard
+       to read; ink/60 clears it while staying clearly lighter than typed text.
+       Caret picks up the brand green rather than the browser's black. */
     @apply w-full rounded-md border border-rule bg-white px-3 py-2.5 text-[15px]
-      text-ink outline-none transition placeholder:text-ink/35
+      text-ink caret-seal outline-none transition placeholder:text-ink/60
       focus:border-seal focus:ring-2 focus:ring-seal/20;
   }
   .label {
+    /* ink/55 read at ~4:1; ink/60 clears 4.5:1 for these small caps. */
     @apply mb-1.5 block font-display text-[10px] font-semibold uppercase
-      tracking-[0.14em] text-ink/55;
+      tracking-[0.14em] text-ink/60;
   }
   .card {
     @apply rounded-xl border border-rule bg-white shadow-[0_1px_2px_rgba(16,26,21,0.04),0_8px_24px_-16px_rgba(16,26,21,0.15)];
@@ -54,17 +58,19 @@ body {
       shadow-[0_1px_2px_rgba(16,26,21,0.04)];
   }
   .stat-num {
-    @apply font-display text-[26px] font-semibold leading-none text-ink;
+    /* tabular-nums so a column of counts aligns digit-for-digit as they change. */
+    @apply font-display text-[26px] font-semibold leading-none text-ink tabular-nums;
   }
   .sectionhead {
     @apply mb-2.5 flex items-center gap-3 font-display text-[12px] font-semibold
       uppercase tracking-[0.14em] text-ink/65;
   }
   .th {
+    /* ink/45 (~2.9:1) was under the floor for these small caps; ink/60 clears it. */
     @apply px-4 py-2.5 text-left font-display text-[10px] font-semibold uppercase
-      tracking-[0.13em] text-ink/45;
+      tracking-[0.13em] text-ink/60;
   }
-  .td { @apply px-4 py-3.5 align-top text-[14px]; }
+  .td { @apply px-4 py-3.5 align-top text-[14px] tabular-nums; }
   .panel-amber {
     @apply rounded-xl border border-[#E4C98A] bg-[#FCF7EC];
   }
@@ -90,6 +96,12 @@ body {
 }
 
 :focus-visible { outline: 2px solid theme(colors.seal.DEFAULT); outline-offset: 2px; }
+
+/* Selected text carries the brand green, not the browser's default blue — the
+   cheapest tell that a page was designed rather than assembled. Background only,
+   never forcing a text colour, so it stays readable on the dark sidebar too. */
+::selection { background: rgba(30, 91, 60, 0.22); }
+
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
 /* Motion layer — the portal breathes. CSS-only, and switched off entirely
