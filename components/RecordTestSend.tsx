@@ -32,7 +32,7 @@ export function RecordTestSend({ refNo }: { refNo: string }) {
       </button>
       {msg && (
         <div className={`mt-1 max-w-[220px] text-[11.5px] leading-snug ${
-          state === "error" ? "text-flag" : "text-ink/55"}`}>
+          state === "error" ? "text-flag" : "text-ink/60"}`}>
           {msg}
         </div>
       )}

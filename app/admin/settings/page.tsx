@@ -45,7 +45,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="mb-8 mt-8">
-        <h2 className="mb-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+        <h2 className="mb-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
           Connections
         </h2>
         <div className="card divide-y divide-rule text-[13px]">
@@ -105,7 +105,7 @@ export default async function SettingsPage() {
 function Row({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-      <span className="text-ink/55">{label}</span>
+      <span className="text-ink/60">{label}</span>
       <span className={warn ? "text-brass" : "text-ink/80"}>{value}</span>
     </div>
   );

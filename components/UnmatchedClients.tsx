@@ -65,7 +65,7 @@ export function UnmatchedClients({
           <li key={spelling} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
             <div className="min-w-0">
               <span className="text-[13px] font-medium">{spelling || "(blank)"}</span>
-              <span className="ml-2 text-[12px] text-ink/45">{n} job{n === 1 ? "" : "s"}</span>
+              <span className="ml-2 text-[12px] text-ink/60">{n} job{n === 1 ? "" : "s"}</span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <select

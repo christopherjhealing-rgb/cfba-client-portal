@@ -78,7 +78,7 @@ export function FirLibrary({ rows: initial }: { rows: FirRow[] }) {
       {/* How it works, because the whole feature is invisible until somebody
           knows the convention exists. */}
       <div className="card mb-6 p-5">
-        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+        <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
           How to use it
         </h2>
         <p className="mt-2 max-w-3xl text-[13.5px] leading-relaxed text-ink/70">
@@ -91,7 +91,7 @@ export function FirLibrary({ rows: initial }: { rows: FirRow[] }) {
           <Example code="FIR: Soil Class, Elevations" note="One message, numbered." />
           <Example code="FIR: Please ring me about the setback" note="Not a shortcut — goes as written." />
         </div>
-        <p className="mt-3 max-w-3xl text-[12.5px] leading-relaxed text-ink/55">
+        <p className="mt-3 max-w-3xl text-[12.5px] leading-relaxed text-ink/60">
           Case, spacing and punctuation don&apos;t matter, and most shortcuts answer to
           several words. If something looks like a shortcut with a letter wrong —{" "}
           <span className="font-mono">Sol Class</span> — nothing is sent and the card gets a note
@@ -107,7 +107,7 @@ export function FirLibrary({ rows: initial }: { rows: FirRow[] }) {
             placeholder="Search a shortcut, or what it asks for…"
             className="field w-full" />
         </div>
-        <span className="font-mono text-[12px] text-ink/45">{live} live</span>
+        <span className="font-mono text-[12px] text-ink/60">{live} live</span>
         <button className="btn-ghost" onClick={() => { setAdding((a) => !a); setOpen(null); }}>
           {adding ? "Cancel" : "Add One of Ours"}
         </button>
@@ -136,7 +136,7 @@ export function FirLibrary({ rows: initial }: { rows: FirRow[] }) {
             onSave={save} onRevert={revert} onToggle={toggle} onRemove={remove} />
         ))}
         {!shown.length && (
-          <p className="px-4 py-6 text-center text-[13px] text-ink/50">
+          <p className="px-4 py-6 text-center text-[13px] text-ink/60">
             Nothing matches &ldquo;{q}&rdquo;.
           </p>
         )}
@@ -151,7 +151,7 @@ function Example({ code, note }: { code: string; note: string }) {
   return (
     <div className="rounded-md border border-rule bg-wash px-3 py-2">
       <div className="font-mono text-[12.5px] text-seal">{code}</div>
-      <div className="mt-0.5 text-[11.5px] text-ink/50">{note}</div>
+      <div className="mt-0.5 text-[11.5px] text-ink/60">{note}</div>
     </div>
   );
 }
@@ -184,7 +184,7 @@ function Row({
             {row.disabled && <span className="chip">Off</span>}
           </div>
           {!!row.aliases?.length && (
-            <div className="mt-1 text-[12px] text-ink/45">
+            <div className="mt-1 text-[12px] text-ink/60">
               also: {row.aliases.join(" · ")}
             </div>
           )}
@@ -202,7 +202,7 @@ function Row({
           {/* What the client will actually read, assembled the way the sync
               assembles it — so nobody has to send one to find out. */}
           <div className="mb-3">
-            <span className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+            <span className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/60">
               What the client reads
             </span>
             <p className="mt-1 whitespace-pre-line rounded-md border border-rule bg-white px-3 py-2 text-[13px] leading-relaxed text-ink/75">
@@ -217,7 +217,7 @@ function Row({
           <label className="label" htmlFor={`b-${row.code}`}>The request</label>
           <textarea id={`b-${row.code}`} rows={4} className="field"
             value={body} onChange={(e) => setBody(e.target.value)} />
-          <p className="mt-1 text-[12px] text-ink/45">
+          <p className="mt-1 text-[12px] text-ink/60">
             No greeting and no sign-off — the email already has both. Write the one thing
             being asked for, as you&apos;d say it.
           </p>
@@ -268,20 +268,20 @@ function AddForm({
           <label className="label" htmlFor="new-code">Shortcut</label>
           <input id="new-code" className="field font-mono" value={code} placeholder="verge"
             onChange={(e) => setCode(e.target.value)} />
-          <p className="mt-1 text-[12px] text-ink/45">What gets typed after FIR:. Keep it short.</p>
+          <p className="mt-1 text-[12px] text-ink/60">What gets typed after FIR:. Keep it short.</p>
         </div>
         <div>
           <label className="label" htmlFor="new-title">Name</label>
           <input id="new-title" className="field" value={title} placeholder="Verge treatment"
             onChange={(e) => setTitle(e.target.value)} />
-          <p className="mt-1 text-[12px] text-ink/45">What the card note calls it.</p>
+          <p className="mt-1 text-[12px] text-ink/60">What the card note calls it.</p>
         </div>
       </div>
       <div className="mt-3">
         <label className="label" htmlFor="new-alias">Other words for it</label>
         <input id="new-alias" className="field" value={aliases} placeholder="crossover, verge treatment"
           onChange={(e) => setAliases(e.target.value)} />
-        <p className="mt-1 text-[12px] text-ink/45">
+        <p className="mt-1 text-[12px] text-ink/60">
           Comma separated. Worth doing — it&apos;s what stops somebody having to remember
           which word we picked.
         </p>

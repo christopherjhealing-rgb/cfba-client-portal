@@ -43,7 +43,7 @@ export default async function EmailLog() {
       )}
 
       {log.length === 0 ? (
-        <p className="rounded-md border border-dashed border-rule bg-wash px-4 py-8 text-center text-[13px] text-ink/50">
+        <p className="empty">
           Nothing logged yet. Entries appear here from the next email the portal sends.
         </p>
       ) : (
@@ -54,10 +54,10 @@ export default async function EmailLog() {
                 <span className={`font-display text-[10px] font-semibold uppercase tracking-[0.1em] ${e.ok ? "text-seal" : "text-flag"}`}>
                   {e.ok ? "Sent" : "Failed"}
                 </span>
-                <span className="font-mono text-[12px] text-ink/50">{when(e.at)}</span>
+                <span className="font-mono text-[12px] text-ink/60">{when(e.at)}</span>
                 <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{e.subject}</span>
               </div>
-              <div className="mt-0.5 text-[12px] text-ink/55">To: {e.to}</div>
+              <div className="mt-0.5 text-[12px] text-ink/60">To: {e.to}</div>
               {!e.ok && e.error && (
                 <div className="mt-1 font-mono text-[11.5px] leading-snug text-flag/90">{e.error}</div>
               )}

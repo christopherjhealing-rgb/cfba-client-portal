@@ -65,7 +65,7 @@ export default async function ClientsPage() {
                       <span className="font-medium">{c.name}</span>
                       {c.isTest && <span className="chip">Test</span>}
                     </div>
-                    <div className="mt-1 text-[12px] text-ink/50">
+                    <div className="mt-1 text-[12px] text-ink/60">
                       {jobCounts[c.id]} job{jobCounts[c.id] === 1 ? "" : "s"}
                       {c.emails.length > 0 && <> · {c.emails.join(", ")}</>}
                     </div>
@@ -79,7 +79,7 @@ export default async function ClientsPage() {
                             ) : l.mustSetPassword ? (
                               <span className="ml-2 text-brass">awaiting first sign-in</span>
                             ) : (
-                              <span className="ml-2 text-ink/50">
+                              <span className="ml-2 text-ink/60">
                                 active{l.lastLoginAt
                                   ? ` · last in ${new Date(l.lastLoginAt).toLocaleDateString("en-AU")}`
                                   : ""}

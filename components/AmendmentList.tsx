@@ -67,7 +67,7 @@ export function AmendmentList({ rows }: { rows: AmendmentRow[] }) {
 
   if (!rows.length) {
     return (
-      <p className="rounded-md border border-dashed border-rule bg-wash px-4 py-8 text-center text-[13px] text-ink/50">
+      <p className="empty">
         No amendments waiting. They arrive here when a client lodges one, and go
         out by email to whoever certified the original.
       </p>
