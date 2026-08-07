@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   aliasKey, matchCompany, parseRef, folderMatchesRef, clientStatusLabel,
   addMonths, retention, jobBucket, groupJobs, isClientVisible, awaitingBoardRows,
-  stageIndex, stageStates, businessDaysSince,
+  stageIndex, stageStates, effectiveStageIndex, sortJobs,
+  businessDaysSince,
   clientPausedDays, nextClientPause, elapsedBusinessDays,
   canCancel, portalColumnWrite, portalLadder, portalRank,
   PORTAL_LODGED, PORTAL_ISSUED, PORTAL_READY, PORTAL_DOWNLOADED, PORTAL_STUCK,
@@ -106,6 +107,54 @@ test("a status matches however the office capitalised it on the board", () => {
   assert.equal(canCancel({ mondayStatus: "CANCELLED", fileCount: 0 }), false);
   assert.equal(canCancel({ mondayStatus: "INVOICED / COMPLETED", fileCount: 1 }), false);
   assert.equal(stageIndex({ mondayStatus: "to check" }), stageIndex({ mondayStatus: "To Check" }));
+});
+
+test("the timeline waits for the files, not just the board's Issued", () => {
+  // Issued on the board but nothing in the portal yet — "Being finalised".
+  // The timeline must NOT tick Issued while the chip beside it says so.
+  const finalising = { mondayStatus: "Issued", fileCount: 0, firstDownloadedAt: null };
+  assert.equal(effectiveStageIndex(finalising), 3); // certificate, not issued
+  const st = stageStates(finalising);
+  assert.equal(st[3], "current");  // certificate being prepared
+  assert.equal(st[4], "pending");  // issued — not yet
+  assert.equal(clientStatusLabel(finalising.mondayStatus, finalising.fileCount), "Being finalised");
+
+  // Files have landed: genuinely issued.
+  assert.equal(effectiveStageIndex({ mondayStatus: "Issued", fileCount: 2 }), 4);
+  assert.equal(stageStates({ mondayStatus: "Issued", fileCount: 2 })[4], "current");
+
+  // Downloaded, files since purged (fileCount 0): still issued, not reset.
+  assert.equal(effectiveStageIndex(
+    { mondayStatus: "Invoiced / Completed", fileCount: 0, firstDownloadedAt: "2026-07-01T00:00:00Z" }), 4);
+});
+
+test("sortJobs orders a job list and floats FIR to the top", () => {
+  const J = [
+    { ref: "56800", receivedAt: "2026-08-01T00:00:00Z", mondayStatus: "To Assess" },
+    { ref: "56700", receivedAt: "2026-07-01T00:00:00Z", mondayStatus: "To Assess" },
+    { ref: "56900", receivedAt: "2026-08-05T00:00:00Z", mondayStatus: "FIR" }, // needs the client
+  ];
+  const refs = (xs) => xs.map((j) => j.ref);
+
+  // Latest first by lodged date.
+  assert.deepEqual(refs(sortJobs(J, "recent")), ["56900", "56800", "56700"]);
+  // Oldest first.
+  assert.deepEqual(refs(sortJobs(J, "oldest")), ["56700", "56800", "56900"]);
+  // By job number, highest first.
+  assert.deepEqual(refs(sortJobs(J, "number")), ["56900", "56800", "56700"]);
+
+  // actionFirst pins the FIR job on top even when the sort would bury it.
+  assert.equal(sortJobs(J, "oldest", { actionFirst: true })[0].ref, "56900");
+  assert.deepEqual(refs(sortJobs(J, "oldest", { actionFirst: true })), ["56900", "56700", "56800"]);
+
+  // A dateless job sorts to the end either direction, never leaps to the top.
+  const withBlank = [...J, { ref: "1", mondayStatus: "To Assess" }];
+  assert.equal(sortJobs(withBlank, "oldest").at(-1).ref, "1");
+  assert.equal(sortJobs(withBlank, "recent").at(-1).ref, "1");
+
+  // Junk in, no throw.
+  assert.deepEqual(sortJobs(null), []);
+  assert.equal(sortJobs([{}, { ref: "9" }], "number").length, 2);
 });
 
 test("every label the live board carries reaches the client as words", () => {

@@ -78,9 +78,17 @@ export const INFO_RECEIVED_STATUS: string;
 export const AWAITING_REPLY_STATUSES: StatusSet;
 export function needsClientInfo(job: PortalJob): boolean;
 export function splitInProgress<T extends PortalJob>(jobs: T[]): { awaiting: T[]; running: T[] };
+export const JOB_SORTS: { key: string; label: string }[];
+export const DEFAULT_JOB_SORT: string;
+export function sortJobs<T extends PortalJob>(
+  jobs: T[] | null | undefined,
+  key?: string,
+  opts?: { actionFirst?: boolean },
+): T[];
 export const STAGES: { key: string; label: string }[];
 export const PAUSED_STATUSES: StatusSet;
 export function stageIndex(job: PortalJob): number;
+export function effectiveStageIndex(job: PortalJob): number;
 export function stageStates(job: PortalJob): string[];
 export const WA_PUBLIC_HOLIDAYS: Set<string>;
 export function businessDaysSince(iso: string, now?: Date, holidays?: Set<string>): number | null;

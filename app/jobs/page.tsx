@@ -6,11 +6,13 @@ import * as repo from "@/lib/repo";
 import {
   groupJobs, clientStatusLabel, isClientVisible, needsClientInfo,
   elapsedBusinessDays, businessDaysSince, PAUSED_STATUSES, awaitingBoardRows,
+  sortJobs, JOB_SORTS, DEFAULT_JOB_SORT,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { DownloadButton } from "@/components/DownloadButton";
+import { SortControl } from "@/components/SortControl";
 import { Icon } from "@/components/Icon";
 import { JobArt } from "@/components/JobArt";
 import { EmptyState, fmtDate, LodgedLine } from "@/components/JobBits";
@@ -33,7 +35,7 @@ const DEFAULT_FILTER: FilterKey = "progress";
 
 export default async function MyJobs({
   searchParams,
-}: { searchParams: Promise<{ show?: string; q?: string }> }) {
+}: { searchParams: Promise<{ show?: string; q?: string; sort?: string }> }) {
   const session = await getClientSession();
   if (!session) redirect("/");
   const sp = await searchParams;
@@ -42,8 +44,17 @@ export default async function MyJobs({
   const show = (FILTERS.find((f) => f.key === sp.show)?.key ||
     DEFAULT_FILTER) as FilterKey;
   const q = (sp.q || "").trim().toLowerCase();
-  // Carry the current search into the filter-chip links so the two combine.
-  const withQ = (href: string) => q ? `${href}${href.includes("?") ? "&" : "?"}q=${encodeURIComponent(q)}` : href;
+  const sort = JOB_SORTS.find((s) => s.key === sp.sort)?.key || DEFAULT_JOB_SORT;
+  // Carry the current search AND sort into the filter-chip links so all three
+  // combine — clicking a filter must not silently reset how the list is ordered.
+  const carry = (href: string) => {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (sort !== DEFAULT_JOB_SORT) p.set("sort", sort);
+    const qs = p.toString();
+    return qs ? `${href}${href.includes("?") ? "&" : "?"}${qs}` : href;
+  };
+  const withQ = carry;
 
   const [all, subs] = await Promise.all([
     repo.listJobsForCompany(session.companyId)
@@ -77,12 +88,19 @@ export default async function MyJobs({
   const matchesQ = (j: typeof all[number]) => !q ||
     `${j.ref} ${j.address} ${j.description} ${j.clientRef || ""}`.toLowerCase().includes(q);
 
-  const rows = all.filter((j) => {
+  const filtered = all.filter((j) => {
     if (!matchesQ(j)) return false;
     if (show === "all") return true;
     if (show === "action") return needsClientInfo(j);
     return bucketOf(j.ref as string) === show;
   });
+  // Chosen order, with jobs waiting on the client floated to the top of the
+  // mixed views — the same "act on this first" grouping the dashboard makes,
+  // without a second table. In the single-bucket views (Ready, Past, Needs
+  // You) there's nothing to float, so it's a plain sort.
+  const rows = sortJobs(filtered, sort, {
+    actionFirst: show === "progress" || show === "all",
+  }) as typeof filtered;
 
   // The chip counts must honour the active search too — otherwise a search
   // that narrows the table to one row still reads "Current 12" above it, which
@@ -137,9 +155,11 @@ export default async function MyJobs({
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <form className="flex-1 min-w-[200px]" action="/jobs" method="get">
           {show !== "all" && <input type="hidden" name="show" value={show} />}
+          {sort !== DEFAULT_JOB_SORT && <input type="hidden" name="sort" value={sort} />}
           <input name="q" defaultValue={sp.q || ""} className="field h-9 py-1 text-[14px]"
             placeholder="Search job no., address or description…" />
         </form>
+        <SortControl options={JOB_SORTS} value={sort} defaultKey={DEFAULT_JOB_SORT} />
         <a href="/api/jobs/export" className="btn-ghost shrink-0">
           <Icon name="download" size={14} /> Export CSV
         </a>

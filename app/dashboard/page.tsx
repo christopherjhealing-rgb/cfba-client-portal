@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import {
   groupJobs, clientStatusLabel, retention, isClientVisible, splitInProgress,
-  businessDaysSince, awaitingBoardRows,
+  businessDaysSince, awaitingBoardRows, sortJobs,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell } from "@/components/AppShell";
@@ -54,7 +54,13 @@ export default async function Dashboard() {
       .map((m) => m.createdAt).sort().pop();
   const jobs = allJobs.map(repo.toPortalJob).filter(isClientVisible);
   const g = groupJobs(jobs, new Date(), env.retentionMonths);
-  const { awaiting, running } = splitInProgress(g.in_progress);
+  const split = splitInProgress(g.in_progress);
+  // Action Required leads with the job that's been waiting longest — the one
+  // most at risk of being forgotten. In Progress and Ready run newest first,
+  // so the job the client most likely lodged last is at the top.
+  const awaiting = sortJobs(split.awaiting, "oldest");
+  const running = sortJobs(split.running, "recent");
+  const ready = sortJobs(g.ready, "recent");
 
   // Plain business days since we received it — not the paused-adjusted "day N"
   // counter that My Jobs shows beside the status. Two different questions:
@@ -131,7 +137,7 @@ export default async function Dashboard() {
             <section className="mb-8">
               <SectionHead title="Ready to Download" count={g.ready.length} />
               <div className="card divide-y divide-rule overflow-hidden">
-                {g.ready.map((j) => (
+                {ready.map((j) => (
                   <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-4">
                     <JobArt description={j.description as string} />
                     {/* min-w keeps the text column readable on phones — the
