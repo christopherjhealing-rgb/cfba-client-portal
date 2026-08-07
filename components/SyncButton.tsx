@@ -24,7 +24,7 @@ export function SyncButton() {
       <button onClick={run} className="btn" disabled={busy}>
         {busy ? "Syncing…" : "Run Sync"}
       </button>
-      {result && <span className="mt-1 max-w-[280px] text-right text-[11px] text-ink/55">{result}</span>}
+      {result && <span className="mt-1 max-w-[280px] text-right text-[11px] text-ink/60">{result}</span>}
     </div>
   );
 }

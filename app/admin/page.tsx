@@ -138,15 +138,15 @@ export default async function AdminHome() {
 
         <section>
           <div className="mb-2.5 flex items-center gap-3">
-            <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.15em] text-ink/70">
+            <h2 className="font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink/65">
               Submissions Awaiting Review
             </h2>
             <span className="h-px flex-1 bg-rule" />
-            <span className="font-mono text-[12px] text-ink/45">{pending.length}</span>
+            <span className="font-mono text-[12px] text-ink/60">{pending.length}</span>
           </div>
 
           {pending.length === 0 ? (
-            <p className="rounded-md border border-dashed border-rule bg-wash px-4 py-8 text-center text-[13px] text-ink/50">
+            <p className="empty">
               Nothing waiting. Jobs lodged through the portal land here for checking
               before they go on the board.
             </p>
@@ -163,11 +163,11 @@ export default async function AdminHome() {
                       <div className="mt-0.5 text-[13px] text-ink/60">{s.description}</div>
                       {s.notes && (
                         <div className="mt-2 rounded-sm border-l-[3px] border-seal-2 bg-wash px-3 py-1.5 text-[13px] text-ink/70">
-                          <span className="font-display text-[10px] font-semibold uppercase tracking-[0.1em] text-ink/45">Note</span>
+                          <span className="font-display text-[10px] font-semibold uppercase tracking-[0.1em] text-ink/60">Note</span>
                           <div className="mt-0.5 whitespace-pre-wrap">{s.notes}</div>
                         </div>
                       )}
-                      <div className="mt-1.5 text-[12px] text-ink/50">
+                      <div className="mt-1.5 text-[12px] text-ink/60">
                         {names[s.companyId] || s.companyId}
                         {s.email && <> · {s.email}</>}
                         {" · "}
