@@ -7,6 +7,7 @@ import { notifyTeams } from "@/lib/teams";
 import { mailJobRecord } from "@/lib/record-mail";
 import { fileJobRecord } from "@/lib/record-file";
 import { buildRecord } from "@/lib/record-build";
+import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,20 +79,37 @@ export async function GET(
   // as slow as zipping the files, not the mailbox and the board behind them.
   //
   //   • The correspondence record — emailed to the office and (when
-  //     RECORD_TO_FOLDER is on) filed to the Issued folder — on EVERY download,
-  //     a record of each collection whether or not a word was exchanged.
+  //     RECORD_TO_FOLDER is on) filed to the Issued folder — kept ONCE per job.
+  //     Once the office has it, a re-download doesn't send it again (Chris's
+  //     call). The gate is the record actually having been kept, not merely a
+  //     previous download: if the first attempt never reached the office (a
+  //     mailbox down), a later download still retries, so the seven-year record
+  //     can't go missing because one collection happened to fail.
   //   • The one-time state events, first download only: the board receipt
   //     (posting it every time would spam the card), the PORTAL move to
   //     DOWNLOADED, and the Teams ping.
   after(async () => {
-    try {
-      const built = await buildRecord(ref);
-      const r = await mailJobRecord(ref, { prebuilt: built });
-      if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
-      const f = await fileJobRecord(ref, { prebuilt: built });
-      if (f === "failed") console.warn(`download ${ref}: correspondence record not filed to SharePoint`);
-    } catch (e) {
-      console.warn(`download ${ref}: correspondence record not kept —`, (e as Error).message);
+    const recordKey = `record:${ref}`;
+    const wantRecord =
+      (env.recordEmailEnabled || env.recordToFolderEnabled) &&
+      !(await repo.getSetting(recordKey).catch(() => null));
+    if (wantRecord) {
+      try {
+        const built = await buildRecord(ref);
+        const r = await mailJobRecord(ref, { prebuilt: built });
+        if (r === "failed") console.warn(`download ${ref}: correspondence record not emailed`);
+        const f = await fileJobRecord(ref, { prebuilt: built });
+        if (f === "failed") console.warn(`download ${ref}: correspondence record not filed to SharePoint`);
+        // Marked kept once a copy is safely away — the email the office keeps,
+        // or the folder copy when that's the only channel switched on. A later
+        // re-download then leaves it alone; a failed attempt is left un-marked
+        // so the next download tries again.
+        if (r === "sent" || f === "filed") {
+          await repo.setSetting(recordKey, { at: now.toISOString() }).catch(() => {});
+        }
+      } catch (e) {
+        console.warn(`download ${ref}: correspondence record not kept —`, (e as Error).message);
+      }
     }
 
     if (!firstDownload) return;
