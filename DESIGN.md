@@ -435,6 +435,14 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (Batch 5 shipped):** P0 execution aids. Go-live pre-flight
+  card on /admin — presence/pass-fail only, no value ever rendered
+  (leak-tested with live-looking secrets: zero appeared in the HTML);
+  quiet-when-healthy (one collapsed line, amber chip only when something
+  needs a human — same register as the evening-report line). Runbook
+  Phase 7 extended to smoke every Batch 1–4 behaviour; P0-3 verify-first
+  data-hygiene SQL documented in the runbook, matching the app's own
+  cascade order. Docs + one read-only card; no schema, no new writes.
 - **2026-08-12 (Batch 4 shipped):** the pilot's measurement instrument.
   "Send feedback" in both shells' chrome (five plain categories; captured
   context — page, job, device class — is shown before Send, §18 spirit:

@@ -757,6 +757,28 @@ logins note → CTA strip.
   with page+job context; post-download one-tap question renders once.
   DoD: events visible in rollup; widget on every page; zero schema drift.
 
+> **BATCH 5: DONE — 12 Aug 2026** (browser-verified; 486 tests green;
+> build green). **The Go-live pre-flight card** sits at the top of /admin:
+> ten automatic checks (data store, session secret quality, staff
+> passcode non-default, cron secret, Monday token, Graph trio, email
+> path, public address, Maps key, bushfire flag) plus the four by-hand
+> confirms (bucket privacy, Maps referrer, cron registration, domain) —
+> one list for all of P0-1, collapsed to a single line day-to-day.
+> Presence and pass/fail only: verified by restarting the server with
+> five real-looking secrets set — passes flipped green and **none of the
+> five values appeared anywhere in the served HTML** (server component;
+> comparison literals stay server-side). Demo mode shows 0/9 green with
+> "ambers are expected here" so the dry run reads correctly. **Runbook
+> Phase 7** now smokes all Batch 1–4 behaviours (pre-flight green, FIR
+> flip + re-arm, rejection notice with reason, collision suffix, cancel
+> request→board confirm, My Documents round trip, BAL/strata gates,
+> login-email changes, 3-month retention wording, feedback loop end to
+> end) and carries the **P0-3 data-hygiene step**: verify-first SQL
+> matching the app's own cascade order (job_files keyed by ref;
+> company_aliases included), admin-UI delete preferred, marker/metrics
+> cleanup, and a final pilot-login check. Go/no-go gained the pre-flight
+> and hygiene lines; §9.1 cross-references the runbook.
+
 **BATCH 5 — Live verification support + P0 execution aids** *(small)*
 - Goal: make P0-1/2/3 mechanical for the owner.
 - Items: pre-flight checklist surfaced on /admin (read-only env presence
@@ -787,6 +809,9 @@ post-pilot per §1.
 service-role-only posture (S2) stays exactly as is.
 
 **9.1 Production data hygiene (P0-3)** — *data rows, not schema.*
+- **The full verify-first query set now lives in docs/GO-LIVE-RUNBOOK.md
+  Phase 7 ("Data hygiene — run before any invitation goes out")** — one
+  document to work from, matching the app's own cascade order.
 - Purpose: no test artifacts visible to the pilot client.
 - Change: verify-then-delete any test companies/jobs/logins in the LIVE
   database. Verification first:

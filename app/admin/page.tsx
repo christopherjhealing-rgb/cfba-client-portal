@@ -4,6 +4,7 @@ import { isStaff } from "@/lib/session";
 import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import { StaffShell } from "@/components/StaffShell";
+import { Preflight } from "@/components/Preflight";
 import { SyncButton } from "@/components/SyncButton";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { SyncHealth } from "@/components/SyncHealth";
@@ -86,6 +87,8 @@ export default async function AdminHome() {
           <Link href="/admin/feedback" className="btn-ghost">Feedback</Link>
           <SyncButton />
         </div>
+
+        <Preflight />
 
         {emailFails > 0 && (
           <Link href="/admin/emails"
