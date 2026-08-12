@@ -435,6 +435,19 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (info-sheet craft pass):** frontend-design + impeccable
+  run over the 14 guidance notes. Detector: all sheets on the A4 floor,
+  no title/mark collisions, no orphaned heads. Eyes: suite floor already
+  high; two content-currency defects fixed — note 03 (BAL) gained "How
+  the Portal Handles It at Lodgement" (map check as you type, pre-2016
+  exemption for patios/carports AND sheds, 2016+ split, 6 m rule) and a
+  current callout; note 02 (engineering) gained the My-Documents
+  save-and-reuse line. Both re-fitted to one sheet via per-note fit
+  blocks (house precedent: h1.fit/.long). OPEN QUESTION for the owner:
+  the suite contradicts itself on whether CFBA prepares BAL reports
+  (services/tools/lodging-card say yes; the lodgement verdict copy says
+  "We don't prepare BAL reports", test-pinned) — new copy stays neutral
+  until decided.
 - **2026-08-12 (owner rule fix):** the pre-2016 exemption now covers
   sheds too — the shed path asks "Was the house built before 2016?";
   before 2016 = exempt (exemption code stamped), 2016 or later = the
