@@ -9,6 +9,7 @@ import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
 import { DownloadButton } from "@/components/DownloadButton";
 import { SectionHead, ReadyRow, EmptyState, fmtDate } from "@/components/JobBits";
+import { PilotQuestion } from "@/components/FeedbackWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,7 @@ export default async function Downloads() {
               </div>
             </section>
           )}
+          <PilotQuestion moment="downloads" />
         </>
       )}
     </AppShell>

@@ -435,6 +435,18 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (Batch 4 shipped):** the pilot's measurement instrument.
+  "Send feedback" in both shells' chrome (five plain categories; captured
+  context — page, job, device class — is shown before Send, §18 spirit:
+  nothing rides silently); the panel portals to `<body>` because the
+  drawer's transform would otherwise contain `fixed` and pin it inside
+  the rail. The core pilot question renders one-tap on lodgement success
+  + Downloads, max once a fortnight, dismissible forever. Events
+  (lodge.start/success, upload.reject, certificate.download, auth.login,
+  feedback) ride the audit log — zero schema drift; demo store persists
+  audit so the dials are demo-verifiable. `/admin/feedback` = weekly
+  rollup + newest-first feedback with context. Impersonated staff
+  feedback is attributed to staff, never the client's voice.
 - **2026-08-12 (Batch 3 shipped):** typography §14 delivered (self-hosted
   @fontsource, Google runtime link removed); contrast floor §19 verified
   by axe at 0 serious nodes on the gate pages, both viewports (sweep

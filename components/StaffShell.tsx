@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FeedbackWidget } from "./FeedbackWidget";
 
 // Separate destinations, not one page with everything on it. The homepage is
 // what somebody opens every morning; the rest is what they set up once and
@@ -63,6 +64,9 @@ export function StaffShell({
         </div>
         {children}
       </main>
+      <div className="mx-auto max-w-[1100px] px-5 pb-6">
+        <FeedbackWidget tone="staff" />
+      </div>
     </div>
   );
 }

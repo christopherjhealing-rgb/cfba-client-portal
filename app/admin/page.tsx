@@ -83,6 +83,7 @@ export default async function AdminHome() {
           <Link href="/admin/reports" className="btn-ghost">Turnaround Reports</Link>
           <Link href="/admin/audit" className="btn-ghost">Activity Log</Link>
           <Link href="/admin/emails" className="btn-ghost">Email Log</Link>
+          <Link href="/admin/feedback" className="btn-ghost">Feedback</Link>
           <SyncButton />
         </div>
 

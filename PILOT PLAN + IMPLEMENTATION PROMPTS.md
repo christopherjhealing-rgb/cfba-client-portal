@@ -725,6 +725,28 @@ logins note → CTA strip.
   change renders instantly (cascade only on first landing). DoD: QA-5/6/7/
   8/12 closed; axe clean on the two gate pages.
 
+> **BATCH 4: DONE — 12 Aug 2026** (browser-verified; 486 tests green;
+> build green). The measurement instrument is in: **Send feedback** sits
+> in both shells' chrome (client sidebar footer + staff footer) — five
+> plain categories, everything auto-captured (page, job ref, device
+> class) is *shown* before Send, optional "okay to ring me"; the panel
+> portals to `<body>` so the sidebar's drawer transform can't pin it
+> inside the rail (found and fixed in verification — panel now measures
+> against the viewport at desktop and 390px). **The pilot question**
+> ("Would you rather lodge your next job here, or by email?") renders
+> one-tap on the lodgement success card and Downloads, at most once a
+> fortnight, dismissible forever — verified: answered "Portal", thanked,
+> did not reappear on /downloads. **Events**: lodge.start beacon (first
+> address keystroke), lodge.success, upload.reject (with reason),
+> auth.login (device class), certificate.download — all ride the existing
+> audit log, zero schema drift; the demo store now persists audit entries
+> (capped 500) so metrics are demo-verifiable. **/admin/feedback** shows
+> the weekly rollup (started / completed / refused / downloaded /
+> sign-ins / feedback) + newest-first feedback with category chips and
+> context lines — verified row matched the store's tallies exactly.
+> Impersonation guard verified: a staff member sending feedback while
+> viewing a client is recorded as **staff**, never as the client's voice.
+
 **BATCH 4 — Feedback + pilot metrics**
 - Goal: P1-9, P1-10 — the measurement instrument.
 - Areas: new `FeedbackWidget` (both shells' chrome), `/api/feedback`

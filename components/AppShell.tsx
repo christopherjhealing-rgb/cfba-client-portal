@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "./Icon";
+import { FeedbackWidget } from "./FeedbackWidget";
 import { Notifications } from "./Notifications";
 
 interface NavItem {
@@ -296,6 +297,7 @@ export function AppShell({
 
         <div className="shell-hide px-5 pb-5 text-[11px] leading-relaxed text-white/75">
           CF Building Approvals · Perth WA
+          <div className="mt-1"><FeedbackWidget tone="client" /></div>
         </div>
       </aside>
 

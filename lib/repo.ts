@@ -703,7 +703,21 @@ export async function setPageDisabled(key: string, disabled: boolean) {
 /** Append-only audit trail. Never throws — a logging failure must not break
  *  the action being logged. */
 export async function logAudit(action: string, target?: string, detail?: string, actor = "staff") {
-  if (DEMO_MODE) return;
+  if (DEMO_MODE) {
+    // Demo keeps a real (capped) trail so rehearsals see the Activity Log,
+    // feedback and pilot-metric pages behave — this was a silent no-op.
+    try {
+      const db = await demo.load();
+      db.audit ||= [];
+      db.audit.unshift({
+        id: Date.now(), at: new Date().toISOString(), actor,
+        action, target: target || null, detail: detail || null,
+      });
+      if (db.audit.length > 500) db.audit.length = 500;
+      await demo.save(db);
+    } catch { /* never fatal */ }
+    return;
+  }
   try {
     await sb().from("audit_log").insert({
       action, target: target || null, detail: detail || null, actor,
@@ -755,7 +769,10 @@ export async function listSendLog(): Promise<SendLogEntry[]> {
 }
 
 export async function listAudit(limit = 200): Promise<AuditEntry[]> {
-  if (DEMO_MODE) return [];
+  if (DEMO_MODE) {
+    const db = await demo.load();
+    return (db.audit || []).slice(0, limit) as AuditEntry[];
+  }
   const { data } = await sb().from("audit_log")
     .select("*").order("at", { ascending: false }).limit(limit);
   return (data || []) as AuditEntry[];

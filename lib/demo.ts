@@ -90,6 +90,10 @@ export interface DemoDB {
   attempts?: Record<string, { count: number; last: string }>;
   /** portal_settings stand-in (login_design, engineering, …). */
   settings?: Record<string, unknown>;
+  /** audit_log stand-in — capped, newest first, so demo rehearsals see the
+      Activity Log and the feedback/metrics pages working (was a no-op). */
+  audit?: { id: number; at: string; actor: string; action: string;
+    target: string | null; detail: string | null }[];
   /** disabled_pages stand-in for the staff page toggles. */
   disabledPages?: string[];
 }

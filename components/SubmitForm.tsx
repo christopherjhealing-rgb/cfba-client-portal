@@ -10,6 +10,7 @@ import { JobItems, blankItem, type Item } from "./JobItems";
 import { describeJob } from "@/lib/jobdesc.mjs";
 import { balKinds } from "@/lib/bushfire.mjs";
 import { plannedName } from "@/lib/uploads.mjs";
+import { PilotQuestion } from "./FeedbackWidget";
 
 // Drawings and engineering are both required: an assessment cannot start
 // without them, and a job lodged short of them only comes straight back.
@@ -53,6 +54,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   // Strata is self-declared for now (auto-detection waits on the cadastre
   // licence); declaring it makes the strata plan a required document.
   const [strata, setStrata] = useState(false);
+  const [started, setStarted] = useState(false);
 
   // The company's saved documents (see My details). A failed fetch just means
   // no tick-list — the form works exactly as before.
@@ -239,6 +241,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
           <a href="/jobs" className="btn">View My Jobs</a>
           <a href="/submit" className="btn-ghost">Lodge Another Job</a>
         </div>
+        <PilotQuestion moment="lodge-success" />
       </div>
     );
   }
@@ -264,7 +267,19 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
     <form onSubmit={submit} className="card p-6 sm:p-7">
       <label className="label" htmlFor="address">Site Address</label>
       <AddressField id="address" required autoFocus value={address}
-        onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
+        onChange={(v) => {
+          setAddress(v);
+          // Pilot metric: a lodgement genuinely begun (first keystroke), once
+          // per form instance. Fire-and-forget — never in the client's way.
+          if (!started) {
+            setStarted(true);
+            void fetch("/api/event", { method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "lodge.start",
+                ua: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop" }),
+            }).catch(() => {});
+          }
+        }} placeholder="32 Elvira St, Palmyra" />
 
       <div className="mt-5">
         <JobItems items={items} onChange={setItems} />
