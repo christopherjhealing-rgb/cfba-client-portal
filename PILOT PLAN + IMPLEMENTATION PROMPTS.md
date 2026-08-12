@@ -787,6 +787,38 @@ logins note → CTA strip.
 - DB: none applied. DoD: owner can run P0 end-to-end from one page + one
   doc.
 
+> **BATCH 6: DONE — 12 Aug 2026** (suite green **twice consecutively**,
+> 10/10 specs, ~45 s per run — far inside the 5-minute budget; 486 unit
+> tests + tsc still green). `npm run test:e2e` now runs a real-browser
+> regression suite on **zero new dependencies** (playwright-core was
+> already a devDependency; node's built-in test runner drives it): the
+> runner boots the production build on its own port with a private
+> TMPDIR so the seeded demo store is the fixture — fresh every run,
+> never the developer's own data — with auto-accept off so the queue
+> path is exercised. Specs: smoke (logins, dashboard, notifications
+> 200/401); auth (generic wrong-password copy, the 3-strike per-username
+> lockout probed on a throwaway name, staff passcode, session-expiry
+> message); lodgement (named-missing gate, visible .txt refusal,
+> combine-renamed store names, double-click = exactly one, em-dash
+> accepted + collision -2 at the API, oversize 413 with the 40 MB
+> message); FIR (reply → banner flip → dated rename → Action Required
+> cleared); download (real zip bytes, PK magic, regroup, T-1005
+> permanence, 3-month wording); cancel (request banner, duplicate 409,
+> certified/stale-tab 409, already-cancelled 409); amendment (client
+> lodge → staff WAITING); queue (accept drains + card id stamped;
+> reject-with-reason → client sees the reason verbatim + Lodge It
+> Again); permissions (foreign-ref 404s, staff gate, impersonation
+> bannered, messages 403, feedback attributed to staff); admin (enquiry
+> round trip via ?ref=GENERAL, email/audit/feedback/reports pages,
+> pre-flight card). Final manual sweep: 11 screenshots at desktop +
+> 390 px, zero horizontal overflow on all four core client pages.
+> Residuals for the pilot log: demo accept stamps the card id but the
+> job row only materialises via board sync in production (demo-fidelity
+> gap, live path unaffected); CDP file-delivery of em-dash names stays
+> flaky in harnesses, so that regression is asserted at the API (the
+> app-side surface); impersonated feedback records as STAFF by design
+> (Batch-4 contract), which the spec asserts rather than a blanket 403.
+
 **BATCH 6 — Automated regression + final QA sweep**
 - Goal: P2-2 pulled to the pilot boundary — the 10-spec Playwright suite
   from QA §11 (smoke, auth, lodgement incl. collision + em-dash
@@ -1144,7 +1176,7 @@ issues for the pilot log. Commit and push. STOP after this batch.
 - [x] P1-5 decided (retention stays 3 months) + batches approved — 12 Aug
       (P1-4 final copy nod comes with the Batch 1 report)
 - [ ] P0-1 config pre-flight green
-- [ ] Batches 1–4 merged; Batch 6 suite green twice
+- [x] Batches 1–6 shipped; Batch 6 suite green twice — 12 Aug 2026
 - [ ] P0-2 live smoke green (incl. FIR flip + collision + rejection paths)
 - [ ] P0-3 store clean; pilot company, aliases, logins + setup codes ready;
       history syncing

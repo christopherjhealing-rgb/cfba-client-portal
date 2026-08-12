@@ -30,10 +30,17 @@ cd cfba-client-portal
 npm install
 npm run build
 npm test
+npm run test:e2e   # 10-spec browser regression suite, ~1 min, demo mode
 npm run dev
 ```
 
 Open http://localhost:3000. With `SUPABASE_URL` blank it runs in **demo mode** — seeded sample data, nothing written to Monday or SharePoint.
+
+`test:e2e` drives a real browser through login, lodgement, FIR, download,
+cancel, amendment, the queue, permissions and the admin pages against the
+seeded demo store on its own port — it never touches your dev server's
+data. It uses a Chrome/Chromium already on the machine (set `CHROMIUM_PATH`
+to the binary if it can't find one); it never downloads a browser.
 
 Click through every one of the eight sidebar destinations: Dashboard, My Jobs, Downloads, Messages, Amend a Job, Info Sheets, Help & Support, My Details. Then `/admin` with the staff passcode.
 
@@ -347,6 +354,7 @@ None are blockers, but know them now so they're not surprises:
 Don't give a client the URL until every one of these is ticked:
 
 - [ ] Live URL loads, no demo-mode banner
+- [ ] `npm run test:e2e` green on the code you deployed (10 specs, ~1 min)
 - [ ] The pre-flight card on `/admin` shows **every automatic check green**
 - [ ] `STAFF_PASSCODE` is not `demo`
 - [ ] `AUTH_SECRET` and `CRON_SECRET` are freshly generated, different from each other

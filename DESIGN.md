@@ -435,6 +435,16 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (Batch 6 shipped):** the regression net. `npm run
+  test:e2e` — ten real-browser specs (smoke, auth incl. lockout and
+  session-expiry copy, lodgement incl. the Batch-1 tolerant-intake and
+  collision regressions, FIR flip, download + permanence + retention
+  wording, cancel request 409s, amendment, queue accept/reject-with-
+  reason, permissions incl. impersonation attribution, admin round
+  trips) on zero new dependencies, fresh demo seed per run, green twice
+  consecutively at ~45 s. Final sweep: 11 screenshots desktop + 390 px,
+  zero horizontal overflow. Test code and scripts only — no application
+  behaviour changed.
 - **2026-08-12 (Batch 5 shipped):** P0 execution aids. Go-live pre-flight
   card on /admin — presence/pass-fail only, no value ever rendered
   (leak-tested with live-looking secrets: zero appeared in the HTML);
