@@ -12,7 +12,7 @@ export interface Bucket {
 }
 
 export function FileBucket({
-  bucket, files, onChange, combinedAs,
+  bucket, files, onChange, combinedAs, satisfied, children,
 }: {
   bucket: Bucket;
   files: File[];
@@ -20,6 +20,13 @@ export function FileBucket({
   /** For drawings/engineering: the single name these will be filed under. When
    *  set and files are attached, the box shows what the office will receive. */
   combinedAs?: string | null;
+  /** The requirement is met by something other than an upload here (e.g.
+   *  engineering ticked from My Documents) — stops the box reading as empty. */
+  satisfied?: boolean;
+  /** Extra content rendered INSIDE the card, below the file list — used to
+   *  keep related pieces (From Your Documents, save-for-next-time) in the
+   *  same box instead of a stack of separate ones. */
+  children?: React.ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -27,7 +34,7 @@ export function FileBucket({
   // reads as "the portal is broken". (Title/BA1 skips stay quiet on purpose —
   // that's a recorded owner call; this is only for files we REFUSE.)
   const [leftOut, setLeftOut] = useState<string[]>([]);
-  const missing = bucket.required && files.length === 0;
+  const missing = bucket.required && files.length === 0 && !satisfied;
   const takePdfs = (picked: File[]) => {
     const pdf = picked.filter((f) => /\.pdf$/i.test(f.name));
     setLeftOut(picked.filter((f) => !/\.pdf$/i.test(f.name)).map((f) => f.name));
@@ -102,6 +109,8 @@ export function FileBucket({
           </span>
         </p>
       )}
+
+      {children}
     </div>
   );
 }

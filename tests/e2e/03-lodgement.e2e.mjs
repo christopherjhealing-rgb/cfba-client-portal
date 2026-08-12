@@ -35,7 +35,14 @@ test("lodgement: gates, visible refusal, combine names, double-click, tolerant i
     await inputs.nth(0).setInputFiles(fixture("siteplan.pdf"));
     await inputs.nth(1).setInputFiles(fixture("engineering.pdf"));
     await page.waitForTimeout(500);
-    assert.equal(await lodge.isEnabled(), true, "lodge arms once required files attach");
+
+    // The strata question is compulsory: files alone must NOT arm the button.
+    assert.equal(await lodge.isDisabled(), true, "lodge still held by the unanswered strata question");
+    assert.ok(await waitText(page, /is the lot part of a strata/i), "…and the hold is named");
+    const strataNo = page.locator('[role="group"][aria-label*="strata" i] button', { hasText: /^no$/i });
+    await strataNo.click();
+    await page.waitForTimeout(400);
+    assert.equal(await lodge.isEnabled(), true, "lodge arms once files attach and strata is answered");
     await lodge.dblclick();
     assert.ok(await waitText(page, /lodged|received|my jobs/i, 12000), "success card renders");
     await page.waitForTimeout(600);

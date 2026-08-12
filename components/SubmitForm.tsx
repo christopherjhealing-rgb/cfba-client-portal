@@ -52,8 +52,9 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   // report, or evidence of the house's rating. Gates the lodge button.
   const [bushfireNeeds, setBushfireNeeds] = useState<"shed-report" | "evidence" | null>(null);
   // Strata is self-declared for now (auto-detection waits on the cadastre
-  // licence); declaring it makes the strata plan a required document.
-  const [strata, setStrata] = useState(false);
+  // licence). The question is COMPULSORY — null until the client answers Yes
+  // or No — and Yes makes the strata plan a required document.
+  const [strata, setStrata] = useState<boolean | null>(null);
   const [started, setStarted] = useState(false);
 
   // The company's saved documents (see My details). A failed fetch just means
@@ -142,7 +143,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
     const notesOut = [
       notes.trim(),
       balRequired ? bushfireSummary : null,
-      strata ? "Strata lot — strata plan attached." : null,
+      strata === true ? "Strata lot — strata plan attached." : null,
     ].filter(Boolean).join("\n\n");
 
     // Files go straight to storage via signed URLs (see lib/upload-client) —
@@ -260,8 +261,9 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
     || (b.key === "engineering" && tickedDocs.length > 0));
   const balDone = !balRequired || bushfireSummary !== null;
   const balDocOk = !balRequired || !bushfireNeeds || (files.bal || []).length > 0;
-  const strataOk = !strata || (files.strata || []).length > 0;
-  const ready = described && filesOk && balDone && balDocOk && strataOk;
+  const strataAnswered = strata !== null;
+  const strataOk = strata !== true || (files.strata || []).length > 0;
+  const ready = described && filesOk && balDone && balDocOk && strataAnswered && strataOk;
 
   return (
     <form onSubmit={submit} className="card p-6 sm:p-7">
@@ -316,6 +318,38 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         </div>
       )}
 
+      {/* Compulsory, and asked BEFORE the documents so a Yes has already
+          added the strata-plan slot by the time the client is attaching
+          things. Same button idiom as the bushfire questions. */}
+      <div className="mt-6 rounded-lg border border-rule bg-white px-4 py-3.5">
+        <p className="font-display text-[13px] font-semibold text-ink">
+          Is this lot part of a strata?<span className="ml-1.5 text-flag">*</span>
+        </p>
+        <p className="mt-0.5 text-[12px] leading-snug text-ink/60">
+          Units, villas or grouped dwellings on a shared plan. If yes, we&apos;ll
+          need the strata plan before this can lodge.
+        </p>
+        <div className="mt-2.5 flex gap-2" role="group" aria-label="Is this lot part of a strata?">
+          {([["Yes", true], ["No", false]] as const).map(([label, val]) => (
+            <button key={label} type="button" onClick={() => setStrata(val)}
+              aria-pressed={strata === val}
+              className={`min-h-10 rounded-lg border px-6 text-[13.5px] font-medium transition ${
+                strata === val
+                  ? "border-seal bg-seal text-white"
+                  : "border-rule bg-white text-ink/75 hover:border-seal/40"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {strata === true && (
+          <p className="mt-2 text-[12px] leading-snug text-seal-deep">
+            The Strata Plan slot has been added under Supporting Documents,
+            just after Engineering.
+          </p>
+        )}
+      </div>
+
       <div className="mt-6">
         <p className="label">Supporting Documents</p>
         <p className="mb-3 text-[13px] leading-relaxed text-ink/60">
@@ -327,50 +361,47 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
             <div key={b.key}>
               <FileBucket bucket={b} files={files[b.key] || []}
                 onChange={(f) => setFiles((prev) => ({ ...prev, [b.key]: f }))}
-                combinedAs={plannedName(b.key, address)} />
-
-              {/* The company's saved documents ride along under Engineering:
-                  tick to attach, no re-upload. Saved on the My details page.
-                  First run, before anything is saved, one line sells the
-                  save-for-next-time tick rather than rendering nothing. */}
-              {b.key === "engineering" && library.length === 0 && (
-                <p className="mt-1.5 px-1 text-[12px] leading-snug text-ink/60">
-                  Lodge the same engineering often? Tick{" "}
-                  <span className="font-medium text-ink/70">Save this engineering to My documents</span>{" "}
-                  below once it&apos;s attached, and next time it&apos;s one tick here
-                  instead of another upload.
-                </p>
-              )}
-              {b.key === "engineering" && library.length > 0 && (
-                // Deliberately dressed like part of the Engineering bucket —
-                // it IS the second way to satisfy it. Tick as many as apply;
-                // no re-upload. (Owner: make this obvious — it was too quiet.)
-                <div className="mt-2 rounded-lg border border-seal/35 bg-[#F4F8F4] px-4 py-3">
-                  <p className="font-display text-[13px] font-semibold text-seal-deep">
-                    From Your Documents — attach saved engineering
+                combinedAs={plannedName(b.key, address)}
+                satisfied={b.key === "engineering" && tickedDocs.length > 0}>
+                {/* ONE box, per the owner: the saved-documents picker lives
+                    inside the Engineering card — it IS the second way to
+                    satisfy it. Tick to attach; no re-upload. */}
+                {b.key === "engineering" && library.length === 0 && (
+                  <p className="mt-3 border-t border-rule/70 pt-2.5 text-[12px] leading-snug text-ink/60">
+                    Lodge the same engineering often? Tick{" "}
+                    <span className="font-medium text-ink/70">Save this engineering to My documents</span>{" "}
+                    below once it&apos;s attached, and next time it&apos;s one tick here
+                    instead of another upload.
                   </p>
-                  <p className="mt-0.5 text-[12px] leading-snug text-ink/60">
-                    Engineering you&apos;ve saved with us. Tick any that apply — they
-                    attach to this job without another upload. Manage them under{" "}
-                    <a href="/documents" className="font-medium underline underline-offset-2 hover:text-seal">My Documents</a>.
-                  </p>
-                  <ul className="mt-2 space-y-0.5">
-                    {library.map((d) => (
-                      <li key={d.id}>
-                        <label className="flex cursor-pointer items-center gap-2.5 py-1 text-[13px] text-ink/80">
-                          <input type="checkbox" checked={ticked.has(d.id)}
-                            onChange={() => toggleDoc(d.id)}
-                            className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
-                          <span className="min-w-0 flex-1 truncate">{d.label}</span>
-                          <span className="shrink-0 font-mono text-[11px] text-ink/60">
-                            {(d.size / 1048576).toFixed(1)} MB
-                          </span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                )}
+                {b.key === "engineering" && library.length > 0 && (
+                  <div className="mt-3 border-t border-rule/70 pt-2.5">
+                    <p className="font-display text-[12.5px] font-semibold text-seal-deep">
+                      From Your Documents — attach saved engineering
+                    </p>
+                    <p className="mt-0.5 text-[12px] leading-snug text-ink/60">
+                      Engineering you&apos;ve saved with us. Tick any that apply — they
+                      attach to this job without another upload. Manage them under{" "}
+                      <a href="/documents" className="font-medium underline underline-offset-2 hover:text-seal">My Documents</a>.
+                    </p>
+                    <ul className="mt-1.5 space-y-0.5">
+                      {library.map((d) => (
+                        <li key={d.id}>
+                          <label className="flex cursor-pointer items-center gap-2.5 py-1 text-[13px] text-ink/80">
+                            <input type="checkbox" checked={ticked.has(d.id)}
+                              onChange={() => toggleDoc(d.id)}
+                              className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
+                            <span className="min-w-0 flex-1 truncate">{d.label}</span>
+                            <span className="shrink-0 font-mono text-[11px] text-ink/60">
+                              {(d.size / 1048576).toFixed(1)} MB
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </FileBucket>
 
               {b.key === "engineering" && (files.engineering || []).length > 0 && (
                 // The save-for-next-time offer, made properly visible (owner:
@@ -395,6 +426,22 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                   )}
                 </div>
               )}
+
+              {/* The strata plan slots in directly after Engineering — the
+                  Yes above put it here, where the client is already
+                  attaching documents. */}
+              {b.key === "engineering" && strata === true && (
+                <div className="mt-3">
+                  <FileBucket
+                    bucket={{
+                      key: "strata", required: true, label: "Strata Plan",
+                      hint: "The strata plan showing this lot — we can't assess a strata site without it.",
+                    }}
+                    files={files.strata || []}
+                    onChange={(f) => setFiles((prev) => ({ ...prev, strata: f }))}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -404,26 +451,6 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
             : "Up to 40 MB in total. Email anything larger to the office."}
         </p>
 
-        <div className="mt-4 rounded-lg border border-rule bg-white px-4 py-3">
-          <label className="flex cursor-pointer items-center gap-2.5 text-[13.5px] text-ink/80">
-            <input type="checkbox" checked={strata}
-              onChange={(e) => setStrata(e.target.checked)}
-              className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
-            <span>This lot is part of a <span className="font-medium">strata</span></span>
-          </label>
-          {strata && (
-            <div className="mt-3">
-              <FileBucket
-                bucket={{
-                  key: "strata", required: true, label: "Strata Plan",
-                  hint: "The strata plan showing this lot — we can't assess a strata site without it.",
-                }}
-                files={files.strata || []}
-                onChange={(f) => setFiles((prev) => ({ ...prev, strata: f }))}
-              />
-            </div>
-          )}
-        </div>
       </div>
 
       <label className="label mt-6" htmlFor="clientRef">Your Reference (optional)</label>
@@ -485,7 +512,9 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                   ? (bushfireNeeds === "shed-report"
                       ? "Still needed: the shed's new BAL report — attach it and the button unlocks."
                       : "Still needed: BAL rating evidence — attach it and the button unlocks.")
-                  : "Still needed: the strata plan — attach it and the button unlocks."}
+                  : !strataAnswered
+                    ? "One more answer needed: is the lot part of a strata? Yes or No above."
+                    : "Still needed: the strata plan — attach it and the button unlocks."}
         </p>
       )}
 
