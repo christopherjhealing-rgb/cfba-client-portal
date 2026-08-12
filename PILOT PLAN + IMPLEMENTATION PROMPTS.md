@@ -670,6 +670,22 @@ logins note → CTA strip.
   client-visible trace. Automated: extend logic tests for suffix + flip
   helpers. DoD: all four QA findings closed with screenshot evidence.
 
+> **BATCH 2: DONE — 12 Aug 2026** (browser-verified at desktop + 390px
+> with a 17-active-job store; 486 tests green; build green). Dynamic stat
+> order (Action Required leads when non-zero, amber; sections reordered so
+> the needs-you strip renders first); cancelled jobs are a Past state
+> everywhere (new `cancelled` bucket in core.mjs — out of In Progress
+> counts/sections, into Past with a CANCELLED chip on dashboard + My Jobs
+> filter counts); per-row timelines removed from dashboard rows (full
+> timeline stays on job detail — 17 jobs now scan in one column); 2×2
+> stat grid on phones; Quick Actions trimmed to the two action-shaped
+> tiles; "My Jobs now" spacing fixed; client's own ref echoed on
+> received-rows; Reports duplicate heading removed and the Issued 30/90-day
+> counters fixed (they required receivedAt for a plain issued count —
+> now 5/6 against the seed, matching hand-count); Downloads wording adds
+> the ring-us path. **Retention behaviour untouched** (T-1005 countdown
+> verified unchanged).
+
 **BATCH 2 — Dashboard hierarchy + copy (retention wording confirmed)**
 - Goal: the flagship surface at pilot volume; retention stays as built
   (P1-5 decided — wording pass only).

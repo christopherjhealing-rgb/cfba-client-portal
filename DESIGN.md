@@ -110,10 +110,11 @@ Order, top to bottom (S4 report §3/§11):
 5. Quick-action tiles: cut to at most the two genuinely action-shaped
    entries, or drop the band — nav duplication is an anti-pattern (§20).
 
-**CURRENT:** all sections exist and answer the four questions on one
-screen (A3 evidence); gaps vs this spec: static stat order, cancelled jobs
-listed in progress with live-looking timelines, full timeline on every
-row, 6-tile quick-action band.
+**CURRENT (matches SPEC as of 12 Aug 2026, Batch 2):** dynamic stat order
+with the needs-you section rendered first; cancelled → Past everywhere
+(core.mjs `cancelled` bucket); compressed rows without per-row timelines,
+verified legible at 17 active jobs; 2×2 phone stat grid; two-tile quick
+actions.
 
 ## 5. Admin dashboard hierarchy — SPEC + CURRENT
 
@@ -434,6 +435,12 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (Batch 2 shipped):** dashboard hierarchy now matches §4
+  (dynamic stats, needs-you first, cancelled→Past bucket portal-wide, row
+  compression at volume, 2×2 phone stats, quick-action trim); Reports
+  issued-counters fixed and heading deduped; success-card spacing;
+  received-row ref echo; Downloads retention wording carries the ring-us
+  path (§10 obligation).
 - **2026-08-12 (Batch 1 shipped):** FIR answered-flip (§6) live on job
   page + dashboard; collision suffix everywhere names are written;
   visible-refusal + named-missing lines (§18) live; rejected lodgements

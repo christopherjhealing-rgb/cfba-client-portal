@@ -36,7 +36,7 @@ export default async function Downloads() {
       <PageHead
         hero="/heroes/pool.jpg"
         title="Downloads"
-        sub={`Issued jobs stay available for ${env.retentionMonths} months from the day you first download them.`}
+        sub={`Issued jobs stay available here for ${env.retentionMonths} months from the day you first download them. Need one later? Ring 1300 029 074 — we keep every certificate on file.`}
       />
 
       {g.ready.length + g.downloaded.length === 0 ? (

@@ -1,4 +1,4 @@
-export type Bucket = "ready" | "in_progress" | "downloaded" | "expired";
+export type Bucket = "ready" | "in_progress" | "downloaded" | "expired" | "cancelled";
 
 export interface CompanyMatch {
   id: string;

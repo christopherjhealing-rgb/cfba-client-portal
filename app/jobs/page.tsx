@@ -83,6 +83,7 @@ export default async function MyJobs({
   const bucketOf = (ref: string) =>
     g.ready.some((j) => j.ref === ref) ? "ready"
       : g.downloaded.some((j) => j.ref === ref) ? "past"
+      : g.cancelled.some((j) => j.ref === ref) ? "past"
       : "progress";
 
   const matchesQ = (j: typeof all[number]) => !q ||
@@ -116,7 +117,7 @@ export default async function MyJobs({
       : k === "progress" ? nQ(g.in_progress, matchesQ) + nQ(received, receivedQ)
       : k === "action" ? nQ(all, (j) => needsClientInfo(j) && matchesQ(j))
       : k === "ready" ? nQ(g.ready, matchesQ)
-      : k === "past" ? nQ(g.downloaded, matchesQ)
+      : k === "past" ? nQ(g.downloaded, matchesQ) + nQ(g.cancelled, matchesQ)
       : nQ(all, (j) => needsClientInfo(j) && matchesQ(j));
 
   const hidden = await disabledPages();
@@ -218,7 +219,10 @@ export default async function MyJobs({
                       <JobArt description={r.description} size="sm" />
                       <div className="min-w-0">
                         <div className="font-medium text-ink">{r.address}</div>
-                        <div className="mt-0.5 text-[13px] text-ink/55">{r.description}</div>
+                        <div className="mt-0.5 text-[13px] text-ink/55">
+                          {r.description}
+                          {r.clientRef ? <span className="text-ink/60"> · your ref {r.clientRef}</span> : null}
+                        </div>
                       </div>
                     </div>
                   </td>

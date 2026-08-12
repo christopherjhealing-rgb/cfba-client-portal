@@ -222,7 +222,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         <h2 className="font-display text-[21px] font-semibold">Job Lodged</h2>
         <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-ink/65">
           Thanks — it&apos;s lodged and showing at the top of{" "}
-          <span className="font-medium">My Jobs</span> now. We&apos;re placing it on
+          <span className="font-medium">My Jobs</span>{" "}now. We&apos;re placing it on
           our board; follow its progress here any time.
         </p>
         {clientRef.trim() && (
