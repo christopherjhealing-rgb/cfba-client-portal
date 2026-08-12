@@ -248,10 +248,12 @@ green before walking the list below.
       Nothing cancels without that board move — the portal only asks.
 - [ ] **My Documents**: upload a file to My Documents, replace it, delete it;
       then lodge a job attaching engineering *From your documents*.
-- [ ] **BAL / strata gates**: lodge a shed at a bushfire-prone address → the
-      new BAL report upload is required before the lodge button arms (patio or
-      carport: evidence is enough). Tick *strata lot* → the strata plan upload
-      becomes required.
+- [ ] **BAL / strata gates**: lodge a shed at a bushfire-prone address and
+      answer "house 2016 or later" → the new BAL report upload is required
+      before the lodge button arms (patio or carport: evidence is enough;
+      **before 2016 = exempt for both**, exemption code stamped). Answer Yes
+      to the strata question → the strata plan upload becomes required.
+
 - [ ] **Login email**: issue a login to your own address — the how-to PDF is
       attached, there's no "no phone call, no chasing" line, and the footer
       doesn't carry the client's name.

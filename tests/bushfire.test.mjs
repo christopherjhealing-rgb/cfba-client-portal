@@ -143,11 +143,24 @@ test("distance decides first: 6 m or more needs nothing", () => {
   assert.equal(v.mondayBal, null); // nothing stamped on the board
 });
 
-test("a shed within 6 m needs its own report, whatever the house's age", () => {
+test("a shed on a pre-2016 house is exempt, same as a patio (owner's rule)", () => {
   const v = balVerdict({ distance: "near", kind: "shed", age: "pre2016" });
+  assert.equal(v.tone, "clear");
+  assert.match(v.summary, /exempt/);
+  assert.equal(v.mondayBal, BAL_EXEMPTION);
+});
+
+test("a shed on a 2016-or-later house needs its own new report", () => {
+  const v = balVerdict({ distance: "near", kind: "shed", age: "post2016" });
   assert.equal(v.tone, "action");
   assert.match(v.headline, /own new BAL report/);
+  assert.match(v.detail, /don't prepare BAL reports/);
   assert.equal(v.mondayBal, null); // the office sets it off the new report
+});
+
+test("a shed with the house's age unknown waits for assessment — and unanswered decides nothing", () => {
+  assert.equal(balVerdict({ distance: "near", kind: "shed", age: "unsure" }).tone, "info");
+  assert.equal(balVerdict({ distance: "near", kind: "shed" }), null);
 });
 
 test("a patio on a pre-2016 house is exempt, stamped with the exemption code", () => {

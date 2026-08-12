@@ -95,19 +95,23 @@ export function BushfireAssessment({
   const pickDistance = (d: Distance) => { setDistance(d); setAge(null); setRating(""); };
   const pickAge = (a: Age) => { setAge(a); setRating(""); };
 
-  // One verdict per structure the job actually has. Far ends it for everything.
+  // One verdict per structure the job actually has. Far ends it for
+  // everything; near, BOTH kinds wait on the house's age (pre-2016 = exempt,
+  // shed and patio alike — the owner's rule, Aug 2026).
   const farV = distance === "far" ? balVerdict({ distance: "far" }) : null;
-  const shedV = distance === "near" && shed ? balVerdict({ distance: "near", kind: "shed" }) : null;
+  const shedV = distance === "near" && shed ? balVerdict({ distance: "near", kind: "shed", age }) : null;
   const patioV = distance === "near" && patio
     ? balVerdict({ distance: "near", kind: "patio", age, rating: rating || null })
     : null;
 
-  // Answered when every structure present has its verdict. The patio path is
-  // the only one that can still be waiting (on the house-age answer).
-  const done = distance === "far" || (distance === "near" && (!patio || !!patioV));
+  // Answered when every structure present has its verdict — both kinds can
+  // be waiting on the house-age answer now.
+  const done = distance === "far"
+    || (distance === "near" && (!patio || !!patioV) && (!shed || !!shedV));
   const parts = farV ? [farV] : [shedV, patioV].filter((v): v is BalVerdict => !!v);
   const summary = done ? parts.map((p) => p.summary).join(" ") : null;
-  const bal = done ? (patioV?.mondayBal ?? null) : null;
+  // A patio's rating outranks the exemption code if both somehow apply.
+  const bal = done ? (patioV?.mondayBal ?? shedV?.mondayBal ?? null) : null;
   // What must be attached before this can lodge (owner's rule, Aug 2026):
   // a shed's own new report outranks patio evidence when both are present.
   const needs: "shed-report" | "evidence" | null = !done ? null
@@ -145,7 +149,7 @@ export function BushfireAssessment({
         <Choice label="6 m or more away" active={distance === "far"} onClick={() => pickDistance("far")} />
       </Question>
 
-      {distance === "near" && patio && (
+      {distance === "near" && (
         <Question label="Was the house built before 2016?">
           <Choice label="Yes, before 2016" active={age === "pre2016"} onClick={() => pickAge("pre2016")} />
           <Choice label="No / 2016 or later" active={age === "post2016"} onClick={() => pickAge("post2016")} />
