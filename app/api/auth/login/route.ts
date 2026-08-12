@@ -67,5 +67,10 @@ export async function POST(req: Request) {
     { companyId: company.id, companyName: company.name, username, displayName: login.displayName || undefined },
     remember ? 24 * 30 : 12
   );
+  await repo.logAudit(
+    "auth.login", username,
+    /Mobi|Android/i.test(req.headers.get("user-agent") || "") ? "mobile" : "desktop",
+    username
+  ).catch(() => {});
   return NextResponse.json({ ok: true });
 }

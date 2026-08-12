@@ -9,6 +9,7 @@ import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { PageOffline } from "@/components/PageOffline";
 import { DownloadButton } from "@/components/DownloadButton";
 import { SectionHead, ReadyRow, EmptyState, fmtDate } from "@/components/JobBits";
+import { PilotQuestion } from "@/components/FeedbackWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function Downloads() {
       <PageHead
         hero="/heroes/pool.jpg"
         title="Downloads"
-        sub={`Issued jobs stay available for ${env.retentionMonths} months from the day you first download them.`}
+        sub={`Issued jobs stay available here for ${env.retentionMonths} months from the day you first download them. Need one later? Ring 1300 029 074 — we keep every certificate on file.`}
       />
 
       {g.ready.length + g.downloaded.length === 0 ? (
@@ -71,10 +72,10 @@ export default async function Downloads() {
                     <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-3.5">
                       <div className="min-w-[170px] max-w-full flex-1">
                         <div className="flex flex-wrap items-baseline gap-2">
-                          <span className="font-mono text-[12px] text-ink/55">{j.ref}</span>
+                          <span className="font-mono text-[12px] text-ink/60">{j.ref}</span>
                           <span className="truncate font-medium text-ink/80">{j.address}</span>
                         </div>
-                        <div className="mt-0.5 text-[13px] text-ink/55">
+                        <div className="mt-0.5 text-[13px] text-ink/60">
                           {j.description}
                           {j.issuedAt ? <> · issued {fmtDate(j.issuedAt)}</> : null}
                         </div>
@@ -82,7 +83,7 @@ export default async function Downloads() {
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <DownloadButton href={`/api/jobs/${encodeURIComponent(j.ref)}/download`}
                           label="Download Again" />
-                        <span className={`text-[11px] ${soon ? "font-medium text-brass-deep" : "text-ink/55"}`}>
+                        <span className={`text-[11px] ${soon ? "font-medium text-brass-deep" : "text-ink/60"}`}>
                           available {r.daysLeft} more day{r.daysLeft === 1 ? "" : "s"}
                         </span>
                       </div>
@@ -92,6 +93,7 @@ export default async function Downloads() {
               </div>
             </section>
           )}
+          <PilotQuestion moment="downloads" />
         </>
       )}
     </AppShell>

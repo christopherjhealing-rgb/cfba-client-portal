@@ -26,7 +26,7 @@ export default async function StudioFrontDoor() {
             <li>· Duplicate a plan for the next job instead of redrawing it</li>
             <li>· Free to use, no card, no lock-in</li>
           </ul>
-          <p className="mt-5 text-[13px] text-ink/50">
+          <p className="mt-5 text-[13px] text-ink/60">
             Create a free account to start — it takes a few seconds and your
             plans are saved to it.
           </p>

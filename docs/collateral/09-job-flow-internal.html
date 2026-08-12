@@ -8,11 +8,11 @@
 /* ---- fitted to A4 ----
    Every .page has to BE one sheet: 1119px at 96dpi. The stages page carries
    the most rows, so the row rhythm is what gives. Spacing only — no copy cut. */
-.content { padding-top: 6mm; padding-bottom: 6mm; }
+.content { padding-top: 5.6mm; padding-bottom: 5.6mm; }
 .sec { margin-top: 4mm; margin-bottom: 1.8mm; }
 td, th { padding-top: 0.9mm; padding-bottom: 0.9mm; }
 .check li { padding-top: 0.7mm; padding-bottom: 0.7mm; }
-.steps li { padding-top: 1.1mm; padding-bottom: 1.1mm; }
+.steps li { padding-top: 0.72mm; padding-bottom: 0.72mm; }
 p + p { margin-top: 1.2mm; }
 
 /* ---- at-a-glance flowchart (page 1) ---- */
@@ -139,8 +139,11 @@ p + p { margin-top: 1.2mm; }
         <strong>instantly</strong> in New Jobs — client name, email, class and description
         filled, the PDFs in the card's <strong>Files column</strong>, the client's note posted
         to Updates. <strong>Lodge Similar</strong> pre-fills a repeat job (never the address).
-        The review queue only holds a lodgement if Monday was unreachable at that moment. Jobs
-        still arriving by email are entered by hand as they are now.</p>
+        A bushfire-prone address must attach its BAL paperwork before it lodges (shed: new
+        report; patio/carport: evidence) — the <strong>BAL column</strong> is stamped from it;
+        a strata lot must attach the strata plan. The review queue only holds a lodgement if
+        Monday was unreachable at that moment. Jobs still arriving by email are entered by
+        hand as they are now.</p>
       </div></li>
       <li><span class="step-n">2</span><div style="flex:1">
         <h3>Reference number &amp; folder
@@ -269,7 +272,8 @@ p + p { margin-top: 1.2mm; }
         <h3>Portal <span class="pill-role r-auto" style="float:right">Automatic</span></h3>
         <p>Posts the reply and files onto the card, <strong>and emails the office</strong> that a
         reply has arrived — Monday doesn't notify us of updates made with our own token, the
-        email does. Files land on the card with the message.</p>
+        email does. The client's job page flips to <em>Answer sent — it's with us</em>; a new
+        or reworded <span class="mono">FIR:</span> note arms the flag again.</p>
       </div></li>
       <li><span class="step-n">5</span><div style="flex:1">
         <h3>Surveyor <span class="pill-role r-chris" style="float:right">Chris</span></h3>
@@ -292,6 +296,8 @@ p + p { margin-top: 1.2mm; }
             <li>Download receipt noted on the card</li>
             <li>PORTAL column kept honest as delivery happens — the public status page reads it</li>
             <li>Correspondence record emailed to the office on first download (7-year file)</li>
+            <li>Cancellation request → card note + office email (final only when we cancel the card)</li>
+            <li>Feedback + weekly pilot dials on Admin → Feedback</li>
             <li>Sync health + unmatched list on /admin; the 5pm report</li>
             <li>Files purged three months after first download</li>
           </ul>
@@ -369,10 +375,13 @@ p + p { margin-top: 1.2mm; }
     </table>
 
     <div class="callout warn" style="margin-top:4mm">
-      <strong>Coming soon:</strong> a send log on /admin (every email the portal sent, and any
-      that failed — the answer to "did they actually get it?"), a client-side Team screen
-      (clients disable their own departed logins), and an automatic bushfire-prone flag at
-      lodgement.
+      <strong>Two newer loops to know.</strong> <em>Cancellation:</em> a client can request
+      one from the job's page — the card gets a <span class="mono">CANCELLATION
+      REQUESTED</span> update and the office an email. Pause work and move the card to
+      Cancelled to confirm; <strong>nothing is final until the card moves</strong>.
+      <em>Rejecting a queued lodgement:</em> the reason you type shows on the client's
+      dashboard <strong>word for word</strong>, with a Lodge It Again button — write it for
+      their eyes, not the file.
     </div>
 
     <div class="callout" style="margin-top:3mm">

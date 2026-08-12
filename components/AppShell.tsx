@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "./Icon";
+import { FeedbackWidget } from "./FeedbackWidget";
 import { Notifications } from "./Notifications";
 
 interface NavItem {
@@ -66,6 +67,9 @@ const NAV: NavItem[] = [
   { href: "/submit", label: "Lodge a Job", icon: "plus" },
   { href: "/amend", label: "Amend a Job", icon: "edit" },
   { href: "/downloads", label: "Downloads", icon: "download" },
+  // The saved-engineering library, surfaced (owner: under My Details nobody
+  // found it). Same store the Lodge form's "From Your Documents" reads.
+  { href: "/documents", label: "My Documents", icon: "folder" },
   { href: "/info-sheets", label: "Info Sheets", icon: "book" },
   // One entry, not three. The site plan tool and the engineering checker are
   // still their own screens — they're reached from Tools, and `also` keeps
@@ -127,6 +131,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen lg:flex">
+      <a href="#main" className="skiplink">Skip to content</a>
       <script dangerouslySetInnerHTML={{ __html: BOOT }} />
       <style>{RAIL}</style>
 
@@ -177,7 +182,7 @@ export function AppShell({
               CF BUILDING
               <br /> APPROVALS
             </div>
-            <div className="mt-1 font-display text-[9px] uppercase tracking-[0.22em] text-white/45">
+            <div className="mt-1 font-display text-[9px] uppercase tracking-[0.22em] text-white/80">
               Client Portal
             </div>
             <div className="mt-2 border-t border-white/10 pt-2 text-[12px] font-medium leading-snug text-white/75 lg:mt-2.5 lg:pt-2.5">
@@ -262,7 +267,7 @@ export function AppShell({
               name="q"
               type="search"
               placeholder="Search your jobs…"
-              className="w-full rounded-md border border-white/10 bg-white/[0.07] px-3 py-2 text-[13px] text-white/70 outline-none transition placeholder:text-white/40 focus:border-white/30 focus:text-white"
+              className="w-full rounded-md border border-white/10 bg-white/[0.07] px-3 py-2 text-[13px] text-white/70 outline-none transition placeholder:text-white/75 focus:border-white/30 focus:text-white"
             />
           </form>
         </nav>
@@ -279,7 +284,7 @@ export function AppShell({
             aria-expanded={!collapsed}
             aria-controls="shell-nav"
             title={collapsed ? "Expand Menu" : "Collapse Menu"}
-            className="shell-row relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] text-white/55 transition hover:bg-white/[0.07] hover:text-white"
+            className="shell-row relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] text-white/75 transition hover:bg-white/[0.07] hover:text-white"
           >
             <span className="shell-toggle-icon shrink-0 opacity-80">
               <Icon name="chevronsLeft" size={16} />
@@ -290,8 +295,9 @@ export function AppShell({
           </button>
         </div>
 
-        <div className="shell-hide px-5 pb-5 text-[11px] leading-relaxed text-white/30">
+        <div className="shell-hide px-5 pb-5 text-[11px] leading-relaxed text-white/75">
           CF Building Approvals · Perth WA
+          <div className="mt-1"><FeedbackWidget tone="client" /></div>
         </div>
       </aside>
 
@@ -306,7 +312,7 @@ export function AppShell({
             run all the way across). Reading-heavy blocks keep their own
             max-width where it matters. `wide` is now the default and kept only
             so existing callers don't break. */}
-        <main className="mx-auto max-w-none px-4 py-6 lg:px-6 lg:py-7">
+        <main id="main" className="mx-auto max-w-none overflow-x-clip px-4 py-6 lg:px-6 lg:py-7">
           {children}
         </main>
       </div>

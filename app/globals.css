@@ -1,4 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap");
+/* Fonts are self-hosted via @fontsource imports in app/layout.tsx — the page
+   must never wait on fonts.googleapis.com (QA-6 measured a 12.7s worst-case
+   stall when it was unreachable). Family names are unchanged. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -218,3 +220,18 @@ body {
 }
 .studio-tab:hover { background: rgba(255, 255, 255, 0.7); }
 .studio-tab[aria-pressed="true"] { background: var(--sp-band); color: #fff; }
+
+/* Entrance cascade runs on the FIRST landing of a session only — a tool
+   opened twenty times a day must render instantly on every route change
+   (DESIGN.md §17). The html class is set pre-paint by the inline script in
+   app/layout.tsx. Revert by deleting that script. */
+html.no-cascade main, html.no-cascade main > * { animation: none !important; }
+
+/* Skip link: first tab stop, invisible until focused. */
+.skiplink { position: absolute; left: -9999px; top: 0; z-index: 100; }
+.skiplink:focus {
+  left: 12px; top: 12px;
+  background: #1E5B3C; color: #fff;
+  padding: 10px 16px; border-radius: 8px;
+  font-weight: 600; font-size: 14px;
+}

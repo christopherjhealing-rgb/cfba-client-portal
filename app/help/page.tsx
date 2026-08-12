@@ -73,7 +73,7 @@ export default async function Help() {
         </div>
 
         <div className="card p-5">
-          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/60">
             Contact Us
           </p>
           <p className="mt-3 text-[14px] font-medium text-ink">CF Building Approvals</p>
@@ -85,10 +85,10 @@ export default async function Help() {
               admin@cfba.com.au
             </a>
           </p>
-          <p className="mt-4 text-[13px] leading-relaxed text-ink/55">
+          <p className="mt-4 text-[13px] leading-relaxed text-ink/60">
             Office hours Monday to Friday. Quote your job number and we&apos;ll get to it faster.
           </p>
-          <p className="mt-3 text-[13px] leading-relaxed text-ink/55">
+          <p className="mt-3 text-[13px] leading-relaxed text-ink/60">
             Got a question that isn&apos;t about a job you&apos;ve lodged — a quote,
             a fee, or whether you need a CDC at all?{" "}
             {/* prefetch={false} for the same reason the thread links on
@@ -106,7 +106,7 @@ export default async function Help() {
         </div>
       </div>
 
-      <p className="mt-6 text-[12px] text-ink/50">
+      <p className="mt-6 text-[12px] text-ink/60">
         Jobs stay downloadable for {env.retentionMonths} months after first download.
       </p>
     </AppShell>

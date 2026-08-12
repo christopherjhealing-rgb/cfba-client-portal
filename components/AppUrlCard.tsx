@@ -54,14 +54,14 @@ export function AppUrlCard({
       </p>
 
       <div className="mt-3 rounded-lg border border-rule bg-wash px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink/50">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink/60">
           Links are using
         </p>
         <p className={`mt-0.5 break-all font-mono text-[13px] ${dead ? "text-flag" : "text-ink"}`}>
           {now}
         </p>
         {!stored && (
-          <p className="mt-1 text-[12px] text-ink/55">
+          <p className="mt-1 text-[12px] text-ink/60">
             No override set — this is what the deployment was given.
           </p>
         )}
@@ -71,7 +71,7 @@ export function AppUrlCard({
       <input id="appurl" value={url} onChange={(e) => setUrl(e.target.value)}
         className="field font-mono text-[13px]" placeholder={fallback}
         inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
-      <p className="mt-1.5 text-[12px] text-ink/50">
+      <p className="mt-1.5 text-[12px] text-ink/60">
         Leave it blank to go back to the deployment&apos;s own address. No
         trailing slash — it&apos;s added where it&apos;s needed.
       </p>
@@ -94,7 +94,7 @@ export function AppUrlCard({
         </p>
       )}
 
-      <p className="mt-3 border-t border-rule pt-3 text-[12px] leading-relaxed text-ink/55">
+      <p className="mt-3 border-t border-rule pt-3 text-[12px] leading-relaxed text-ink/60">
         Emails already sent keep the address they were sent with — this only
         changes what goes out from now on.
       </p>

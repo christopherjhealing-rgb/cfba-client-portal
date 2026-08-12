@@ -79,13 +79,13 @@ export function SectionHead({
       <span className={tone === "amber" ? "text-brass-deep" : undefined}>{title}</span>
       <span className="h-px flex-1 bg-rule" />
       {count !== undefined && (
-        <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/55"}`}>
+        <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/60"}`}>
           {count}
         </span>
       )}
       {action && (
         <Link href={action.href} prefetch={false}
-          className="group flex shrink-0 items-center gap-1.5 text-[13px] font-medium normal-case tracking-normal text-seal">
+          className="group flex shrink-0 items-center gap-1.5 text-[13px] font-medium normal-case tracking-normal text-seal max-lg:-my-2 max-lg:inline-flex max-lg:min-h-10 max-lg:items-center">
           {action.label}
           <Icon name="arrowRight" size={13}
             className="transition-transform duration-150 group-hover:translate-x-0.5" />
@@ -117,7 +117,7 @@ export function ReadyRow({
           instead of crushing the words. */}
       <div className="min-w-[170px] max-w-full flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-mono text-[12px] text-ink/55">{refNo}</span>
+          <span className="font-mono text-[12px] text-ink/60">{refNo}</span>
           <span className="truncate font-medium text-ink">{address}</span>
         </div>
         <div className="mt-0.5 truncate text-[13px] text-ink/60">{meta}</div>

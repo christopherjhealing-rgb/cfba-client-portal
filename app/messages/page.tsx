@@ -103,7 +103,7 @@ export default async function Messages({
           {/* Threads */}
           <div className="card overflow-hidden">
             {jobRefs.length === 0 && (
-              <p className="border-b border-rule px-4 py-3.5 text-[13px] leading-relaxed text-ink/55">
+              <p className="border-b border-rule px-4 py-3.5 text-[13px] leading-relaxed text-ink/60">
                 No job messages yet. When we need something on a job, or have an
                 update worth sending, it appears here.
               </p>
@@ -119,7 +119,7 @@ export default async function Messages({
                     active ? "bg-wash" : "hover:bg-wash/60"} ${
                     isGeneral ? "border-t-2 border-t-rule" : ""}`}>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-[12px] text-ink/55">
+                    <span className="font-mono text-[12px] text-ink/60">
                       {isGeneral ? "Enquiry" : ref}
                     </span>
                     {isUnread(ref) && !active && (
@@ -128,7 +128,7 @@ export default async function Messages({
                     {/* The list runs newest first; without a date on it that
                         order looks arbitrary. */}
                     {lastAt.get(ref) && (
-                      <span className="ml-auto shrink-0 text-[11px] text-ink/40">
+                      <span className="ml-auto shrink-0 text-[11px] text-ink/60">
                         {fmtWhen(lastAt.get(ref)!).split(" · ")[0]}
                       </span>
                     )}
@@ -136,7 +136,7 @@ export default async function Messages({
                   <div className="mt-0.5 truncate text-[14px] font-medium text-ink">
                     {isGeneral ? "General Enquiry" : (j?.address as string || "Job " + ref)}
                   </div>
-                  <div className="mt-0.5 truncate text-[12px] text-ink/50">
+                  <div className="mt-0.5 truncate text-[12px] text-ink/60">
                     {last?.body.split("\n")[0] ||
                       (isGeneral ? "Ask us something else" : "")}
                   </div>
@@ -152,7 +152,7 @@ export default async function Messages({
                 {isGeneralRef(open) ? (
                   <>
                     <div className="font-medium">General Enquiry</div>
-                    <div className="mt-0.5 text-[13px] text-ink/55">
+                    <div className="mt-0.5 text-[13px] text-ink/60">
                       Anything that isn&apos;t about a job you&apos;ve lodged — a quote,
                       a fee, or whether you need a CDC at all.
                     </div>
@@ -160,11 +160,11 @@ export default async function Messages({
                 ) : (
                   <>
                     <div className="flex items-baseline gap-2">
-                      <span className="font-mono text-[12px] text-ink/55">{open}</span>
+                      <span className="font-mono text-[12px] text-ink/60">{open}</span>
                       <span className="truncate font-medium">{job?.address as string}</span>
                     </div>
                     {job && (
-                      <div className="mt-0.5 text-[13px] text-ink/55">{job.description as string}</div>
+                      <div className="mt-0.5 text-[13px] text-ink/60">{job.description as string}</div>
                     )}
                   </>
                 )}
@@ -192,7 +192,7 @@ export default async function Messages({
                     <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                       {m.from === "cfba" ? "CF Building Approvals" : session.companyName}
                     </span>
-                    <span className="text-[11px] text-ink/50">{fmtWhen(m.createdAt)}</span>
+                    <span className="text-[11px] text-ink/60">{fmtWhen(m.createdAt)}</span>
                   </div>
                   {m.body && (
                     <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">
@@ -207,7 +207,7 @@ export default async function Messages({
                             className="inline-flex max-w-full items-center gap-2 rounded-md border border-rule bg-white px-3 py-1.5 text-[13px] text-ink/75 transition hover:border-seal/40 hover:bg-wash">
                             <span className="shrink-0 text-seal"><Icon name="download" size={13} /></span>
                             <span className="min-w-0 truncate">{f.name}</span>
-                            <span className="shrink-0 font-mono text-[11px] text-ink/40">
+                            <span className="shrink-0 font-mono text-[11px] text-ink/60">
                               {fmtMB(f.size)}
                             </span>
                           </a>
@@ -218,7 +218,7 @@ export default async function Messages({
                   {/* The Monday update id is set the moment a reply posts to
                       the card — its presence IS the delivery receipt. */}
                   {m.from === "client" && m.mondayUpdateId && (
-                    <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/45">
+                    <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/60">
                       <Icon name="check" size={12} /> Delivered to your surveyor
                     </p>
                   )}
@@ -230,7 +230,7 @@ export default async function Messages({
           </div>
       </div>
 
-      <p className="mt-5 flex items-center gap-2 text-[12px] text-ink/55">
+      <p className="mt-5 flex items-center gap-2 text-[12px] text-ink/60">
         <Icon name="inbox" size={13} />
         {isGeneralRef(open)
           ? "Enquiries come straight to the office — there's no need to email as well."

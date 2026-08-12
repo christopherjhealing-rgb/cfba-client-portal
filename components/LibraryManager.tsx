@@ -88,7 +88,7 @@ export function LibraryManager({ initial }: { initial: LibraryDoc[] }) {
                   <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink">
                     {d.label}
                   </span>
-                  <span className="shrink-0 font-mono text-[11px] text-ink/40">
+                  <span className="shrink-0 font-mono text-[11px] text-ink/60">
                     {(d.size / 1048576).toFixed(1)} MB · {fmtDate(d.uploadedAt)}
                   </span>
                   <span className="flex shrink-0 gap-2">
@@ -124,7 +124,7 @@ export function LibraryManager({ initial }: { initial: LibraryDoc[] }) {
           </button>
         </div>
         {file && (
-          <p className="mt-2 text-[12px] text-ink/55">
+          <p className="mt-2 text-[12px] text-ink/60">
             {file.name} — {(file.size / 1048576).toFixed(1)} MB. PDF only, up to 25 MB.
           </p>
         )}

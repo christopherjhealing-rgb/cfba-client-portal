@@ -83,6 +83,7 @@ export default async function MyJobs({
   const bucketOf = (ref: string) =>
     g.ready.some((j) => j.ref === ref) ? "ready"
       : g.downloaded.some((j) => j.ref === ref) ? "past"
+      : g.cancelled.some((j) => j.ref === ref) ? "past"
       : "progress";
 
   const matchesQ = (j: typeof all[number]) => !q ||
@@ -116,7 +117,7 @@ export default async function MyJobs({
       : k === "progress" ? nQ(g.in_progress, matchesQ) + nQ(received, receivedQ)
       : k === "action" ? nQ(all, (j) => needsClientInfo(j) && matchesQ(j))
       : k === "ready" ? nQ(g.ready, matchesQ)
-      : k === "past" ? nQ(g.downloaded, matchesQ)
+      : k === "past" ? nQ(g.downloaded, matchesQ) + nQ(g.cancelled, matchesQ)
       : nQ(all, (j) => needsClientInfo(j) && matchesQ(j));
 
   const hidden = await disabledPages();
@@ -168,12 +169,12 @@ export default async function MyJobs({
       <div className="mb-5 flex flex-wrap gap-1.5">
         {FILTERS.map((f) => (
           <Link key={f.key} href={withQ(f.key === DEFAULT_FILTER ? "/jobs" : `/jobs?show=${f.key}`)}
-            className={`rounded-md border px-3 py-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.07em] transition ${
+            className={`rounded-md border px-3 py-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.07em] transition max-lg:inline-flex max-lg:min-h-10 max-lg:items-center ${
               show === f.key
                 ? "border-seal bg-seal text-white"
                 : "border-rule bg-white text-ink/65 hover:bg-wash"}`}>
             {f.label}
-            <span className={`ml-1.5 font-mono ${show === f.key ? "text-white/70" : "text-ink/35"}`}>
+            <span className={`ml-1.5 font-mono ${show === f.key ? "text-white/70" : "text-ink/60"}`}>
               {count(f.key)}
             </span>
           </Link>
@@ -212,13 +213,16 @@ export default async function MyJobs({
             <tbody className="divide-y divide-rule">
               {showReceived && received.map((r) => (
                 <tr key={r.id}>
-                  <td className="td font-mono text-[12px] text-ink/40">—</td>
+                  <td className="td font-mono text-[12px] text-ink/60">—</td>
                   <td className="td">
                     <div className="flex items-center gap-3">
                       <JobArt description={r.description} size="sm" />
                       <div className="min-w-0">
                         <div className="font-medium text-ink">{r.address}</div>
-                        <div className="mt-0.5 text-[13px] text-ink/55">{r.description}</div>
+                        <div className="mt-0.5 text-[13px] text-ink/60">
+                          {r.description}
+                          {r.clientRef ? <span className="text-ink/60"> · your ref {r.clientRef}</span> : null}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -227,7 +231,7 @@ export default async function MyJobs({
                       {r.status === "accepted" ? "Lodged — on our board" : "Received — awaiting CFBA"}
                     </span>
                   </td>
-                  <td className="td text-right"><span className="text-[13px] text-ink/35">—</span></td>
+                  <td className="td text-right"><span className="text-[13px] text-ink/60">—</span></td>
                 </tr>
               ))}
               {rows.map((j) => {
@@ -235,7 +239,7 @@ export default async function MyJobs({
                 const elapsed = b === "progress" ? elapsedFor(j) : null;
                 return (
                   <tr key={j.ref as string} className={needsClientInfo(j) ? "bg-[#FCF7EC]" : undefined}>
-                    <td className="td font-mono text-[12px] text-ink/50">
+                    <td className="td font-mono text-[12px] text-ink/60">
                       <Link href={`/jobs/${encodeURIComponent(j.ref as string)}`} prefetch={false} className="hover:text-seal hover:underline">
                         {j.ref as string}
                       </Link>
@@ -246,9 +250,9 @@ export default async function MyJobs({
                           tone={needsClientInfo(j) ? "amber" : "seal"} />
                         <div className="min-w-0">
                           <div className="font-medium text-ink group-hover:text-seal">{j.address as string}</div>
-                          <div className="mt-0.5 break-words text-[13px] text-ink/55">
+                          <div className="mt-0.5 break-words text-[13px] text-ink/60">
                             {j.description as string}
-                            {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
+                            {j.clientRef ? <span className="text-ink/60"> · your ref {String(j.clientRef)}</span> : null}
                             {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
                           </div>
                           <LodgedLine className="mt-0.5" receivedAt={j.receivedAt as string}
@@ -261,7 +265,7 @@ export default async function MyJobs({
                         {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
                       </span>
                       {elapsed !== null && (
-                        <div className="mt-1 text-[11.5px] text-ink/55">
+                        <div className="mt-1 text-[11.5px] text-ink/60">
                           Day {elapsed + 1}
                         </div>
                       )}
@@ -271,7 +275,7 @@ export default async function MyJobs({
                         needsClientInfo(j) ? (
                           <Link href={`/messages?ref=${encodeURIComponent(j.ref as string)}`}
                             className="btn-ghost">Send Info</Link>
-                        ) : <span className="text-[13px] text-ink/35">—</span>
+                        ) : <span className="text-[13px] text-ink/60">—</span>
                       ) : (
                         <DownloadButton href={`/api/jobs/${encodeURIComponent(j.ref as string)}/download`}
                           label={b === "past" ? "Download Again" : "Download"} />
@@ -314,7 +318,7 @@ function JobCards({
             <JobArt description={r.description} size="sm" />
             <div className="min-w-0 flex-1">
               <div className="font-medium leading-snug text-ink">{r.address}</div>
-              <div className="mt-0.5 break-words text-[13px] text-ink/55">{r.description}</div>
+              <div className="mt-0.5 break-words text-[13px] text-ink/60">{r.description}</div>
             </div>
           </div>
           <div className="mt-3">
@@ -338,11 +342,11 @@ function JobCards({
                 tone={needs ? "amber" : "seal"} />
               <div className="min-w-0 flex-1">
                 <div className="font-medium leading-snug text-ink">{j.address as string}</div>
-                <div className="mt-0.5 break-words text-[13px] text-ink/55">
+                <div className="mt-0.5 break-words text-[13px] text-ink/60">
                   {j.description as string}
-                  {j.clientRef ? <span className="text-ink/50"> · your ref {String(j.clientRef)}</span> : null}
+                  {j.clientRef ? <span className="text-ink/60"> · your ref {String(j.clientRef)}</span> : null}
                 </div>
-                <div className="mt-1 font-mono text-[11.5px] text-ink/45">
+                <div className="mt-1 font-mono text-[11.5px] text-ink/60">
                   {ref}
                   {j.issuedAt ? <> · issued {fmtDate(j.issuedAt as string)}</> : null}
                 </div>
@@ -356,7 +360,7 @@ function JobCards({
                 {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
               </span>
               {elapsed !== null && (
-                <span className="text-[12px] text-ink/55">Day {elapsed + 1}</span>
+                <span className="text-[12px] text-ink/60">Day {elapsed + 1}</span>
               )}
             </div>
 

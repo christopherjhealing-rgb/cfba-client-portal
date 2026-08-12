@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FeedbackWidget } from "./FeedbackWidget";
 
 // Separate destinations, not one page with everything on it. The homepage is
 // what somebody opens every morning; the rest is what they set up once and
@@ -21,6 +22,7 @@ export function StaffShell({
 }) {
   return (
     <div className="min-h-screen">
+      <a href="#main" className="skiplink">Skip to content</a>
       <header className="border-b border-rule bg-seal-deep">
         <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-4 px-5 py-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -55,13 +57,16 @@ export function StaffShell({
           </form>
         </div>
       </header>
-      <main className="mx-auto max-w-[1100px] px-5 py-8">
+      <main id="main" className="mx-auto max-w-[1100px] overflow-x-clip px-5 py-8">
         <div className="mb-6">
           <h1 className="font-display text-[26px] font-semibold text-ink">{title}</h1>
           {sub && <p className="mt-1 text-[14px] text-ink/60">{sub}</p>}
         </div>
         {children}
       </main>
+      <div className="mx-auto max-w-[1100px] px-5 pb-6">
+        <FeedbackWidget tone="staff" />
+      </div>
     </div>
   );
 }

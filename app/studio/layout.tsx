@@ -40,7 +40,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
       <main className="mx-auto max-w-[1560px] px-5 py-7">{children}</main>
-      <footer className="px-5 py-6 text-center text-[12.5px] text-ink/45">
+      <footer className="px-5 py-6 text-center text-[12.5px] text-ink/60">
         Site Plan Studio · a free tool for drawing a site plan to scale
       </footer>
     </div>

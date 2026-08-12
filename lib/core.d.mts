@@ -1,4 +1,4 @@
-export type Bucket = "ready" | "in_progress" | "downloaded" | "expired";
+export type Bucket = "ready" | "in_progress" | "downloaded" | "expired" | "cancelled";
 
 export interface CompanyMatch {
   id: string;
@@ -166,3 +166,10 @@ export function refSearchTerms(ref: string | null | undefined): string[];
 export function sameRef(a: string | null | undefined, b: string | null | undefined): boolean;
 
 export const REVISED: string;
+/** Has the client already answered the CURRENT information request? The
+ *  marker is written by the messages route on an FIR-state reply; a changed
+ *  ask text re-arms the amber state. */
+export function firAnswered(
+  marker: { at?: string; ask?: string | null } | null | undefined,
+  firRequest: string | null
+): boolean;

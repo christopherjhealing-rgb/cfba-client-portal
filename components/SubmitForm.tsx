@@ -10,6 +10,7 @@ import { JobItems, blankItem, type Item } from "./JobItems";
 import { describeJob } from "@/lib/jobdesc.mjs";
 import { balKinds } from "@/lib/bushfire.mjs";
 import { plannedName } from "@/lib/uploads.mjs";
+import { PilotQuestion } from "./FeedbackWidget";
 
 // Drawings and engineering are both required: an assessment cannot start
 // without them, and a job lodged short of them only comes straight back.
@@ -47,6 +48,13 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   // and the BAL column label to stamp on the Monday card.
   const [bushfireSummary, setBushfireSummary] = useState<string | null>(null);
   const [bushfireBal, setBushfireBal] = useState<string | null>(null);
+  // What the verdict obliges them to attach (owner's rule): a shed's own new
+  // report, or evidence of the house's rating. Gates the lodge button.
+  const [bushfireNeeds, setBushfireNeeds] = useState<"shed-report" | "evidence" | null>(null);
+  // Strata is self-declared for now (auto-detection waits on the cadastre
+  // licence); declaring it makes the strata plan a required document.
+  const [strata, setStrata] = useState(false);
+  const [started, setStarted] = useState(false);
 
   // The company's saved documents (see My details). A failed fetch just means
   // no tick-list — the form works exactly as before.
@@ -95,7 +103,10 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   // A stale conclusion must never ride along after its trigger goes away —
   // the address moved off a prone lot, or the patio row was deleted.
   useEffect(() => {
-    if (!balRequired) { setBushfireSummary(null); setBushfireBal(null); }
+    if (!balRequired) {
+      setBushfireSummary(null); setBushfireBal(null); setBushfireNeeds(null);
+      setFiles((prev) => (prev.bal?.length ? { ...prev, bal: [] } : prev));
+    }
   }, [balRequired]);
 
   const tickedDocs = library.filter((d) => ticked.has(d.id));
@@ -128,16 +139,24 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
     // surveyor sees the client's own answer (distance, house age → BAL
     // outcome) on the job without re-asking. Only when the questions were
     // actually triggered and answered.
-    const notesOut = [notes.trim(), balRequired ? bushfireSummary : null]
-      .filter(Boolean).join("\n\n");
+    const notesOut = [
+      notes.trim(),
+      balRequired ? bushfireSummary : null,
+      strata ? "Strata lot — strata plan attached." : null,
+    ].filter(Boolean).join("\n\n");
 
     // Files go straight to storage via signed URLs (see lib/upload-client) —
     // a full drawing set doesn't fit through a serverless request body. Site
     // photos aren't a bucket of their own; they ride in Other Supporting
     // Documents like any other PDF.
-    const entries = BUCKETS.flatMap((b) =>
-      (files[b.key] || []).map((f) => ({ file: f, category: b.key }))
-    );
+    const entries = [
+      ...BUCKETS.flatMap((b) =>
+        (files[b.key] || []).map((f) => ({ file: f, category: b.key }))),
+      // Conditional required documents ride as "other": kept under their own
+      // names, never combined — a BAL report or strata plan is its own record.
+      ...(files.bal || []).map((f) => ({ file: f, category: "other" })),
+      ...(files.strata || []).map((f) => ({ file: f, category: "other" })),
+    ];
     const up = await uploadDirect(
       "submission",
       entries.map((x) => x.file),
@@ -205,7 +224,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         <h2 className="font-display text-[21px] font-semibold">Job Lodged</h2>
         <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-ink/65">
           Thanks — it&apos;s lodged and showing at the top of{" "}
-          <span className="font-medium">My Jobs</span> now. We&apos;re placing it on
+          <span className="font-medium">My Jobs</span>{" "}now. We&apos;re placing it on
           our board; follow its progress here any time.
         </p>
         {clientRef.trim() && (
@@ -222,11 +241,13 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
           <a href="/jobs" className="btn">View My Jobs</a>
           <a href="/submit" className="btn-ghost">Lodge Another Job</a>
         </div>
+        <PilotQuestion moment="lodge-success" />
       </div>
     );
   }
 
-  const all = BUCKETS.flatMap((b) => files[b.key] || []);
+  const all = [...BUCKETS.flatMap((b) => files[b.key] || []),
+    ...(files.bal || []), ...(files.strata || [])];
   const count = all.length + tickedDocs.length;
   const totalMb = (all.reduce((n, f) => n + f.size, 0)
     + tickedDocs.reduce((n, d) => n + d.size, 0)) / 1_048_576;
@@ -238,13 +259,27 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
   const filesOk = BUCKETS.every((b) => !b.required || (files[b.key] || []).length > 0
     || (b.key === "engineering" && tickedDocs.length > 0));
   const balDone = !balRequired || bushfireSummary !== null;
-  const ready = described && filesOk && balDone;
+  const balDocOk = !balRequired || !bushfireNeeds || (files.bal || []).length > 0;
+  const strataOk = !strata || (files.strata || []).length > 0;
+  const ready = described && filesOk && balDone && balDocOk && strataOk;
 
   return (
     <form onSubmit={submit} className="card p-6 sm:p-7">
       <label className="label" htmlFor="address">Site Address</label>
       <AddressField id="address" required autoFocus value={address}
-        onChange={setAddress} placeholder="32 Elvira St, Palmyra" />
+        onChange={(v) => {
+          setAddress(v);
+          // Pilot metric: a lodgement genuinely begun (first keystroke), once
+          // per form instance. Fire-and-forget — never in the client's way.
+          if (!started) {
+            setStarted(true);
+            void fetch("/api/event", { method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "lodge.start",
+                ua: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop" }),
+            }).catch(() => {});
+          }
+        }} placeholder="32 Elvira St, Palmyra" />
 
       <div className="mt-5">
         <JobItems items={items} onChange={setItems} />
@@ -256,8 +291,29 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
         <BushfireAssessment
           patio={kinds.patio}
           shed={kinds.shed}
-          onResult={(r) => { setBushfireSummary(r?.summary ?? null); setBushfireBal(r?.bal ?? null); }}
+          onResult={(r) => {
+            setBushfireSummary(r?.summary ?? null);
+            setBushfireBal(r?.bal ?? null);
+            setBushfireNeeds(r?.needs ?? null);
+          }}
         />
+      )}
+      {balRequired && bushfireNeeds && (
+        <div className="mt-3">
+          <FileBucket
+            bucket={{
+              key: "bal", required: true,
+              label: bushfireNeeds === "shed-report"
+                ? "New BAL Report for the Shed"
+                : "BAL Rating Evidence",
+              hint: bushfireNeeds === "shed-report"
+                ? "The shed's own report from an accredited BAL assessor."
+                : "The original BAL report or certificate, the house's Certificate of Design Compliance, or house plans noting the rating.",
+            }}
+            files={files.bal || []}
+            onChange={(f) => setFiles((prev) => ({ ...prev, bal: f }))}
+          />
+        </div>
       )}
 
       <div className="mt-6">
@@ -278,7 +334,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                   First run, before anything is saved, one line sells the
                   save-for-next-time tick rather than rendering nothing. */}
               {b.key === "engineering" && library.length === 0 && (
-                <p className="mt-1.5 px-1 text-[12px] leading-snug text-ink/55">
+                <p className="mt-1.5 px-1 text-[12px] leading-snug text-ink/60">
                   Lodge the same engineering often? Tick{" "}
                   <span className="font-medium text-ink/70">Save this engineering to My documents</span>{" "}
                   below once it&apos;s attached, and next time it&apos;s one tick here
@@ -286,12 +342,17 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                 </p>
               )}
               {b.key === "engineering" && library.length > 0 && (
-                <div className="mt-2 rounded-lg border border-rule bg-white px-4 py-3">
-                  <p className="font-display text-[13px] font-semibold text-ink">
-                    From Your Documents
+                // Deliberately dressed like part of the Engineering bucket —
+                // it IS the second way to satisfy it. Tick as many as apply;
+                // no re-upload. (Owner: make this obvious — it was too quiet.)
+                <div className="mt-2 rounded-lg border border-seal/35 bg-[#F4F8F4] px-4 py-3">
+                  <p className="font-display text-[13px] font-semibold text-seal-deep">
+                    From Your Documents — attach saved engineering
                   </p>
-                  <p className="mt-0.5 text-[12px] leading-snug text-ink/55">
-                    Engineering you&apos;ve saved with us — tick to attach it to this job.
+                  <p className="mt-0.5 text-[12px] leading-snug text-ink/60">
+                    Engineering you&apos;ve saved with us. Tick any that apply — they
+                    attach to this job without another upload. Manage them under{" "}
+                    <a href="/documents" className="font-medium underline underline-offset-2 hover:text-seal">My Documents</a>.
                   </p>
                   <ul className="mt-2 space-y-0.5">
                     {library.map((d) => (
@@ -301,7 +362,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                             onChange={() => toggleDoc(d.id)}
                             className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
                           <span className="min-w-0 flex-1 truncate">{d.label}</span>
-                          <span className="shrink-0 font-mono text-[11px] text-ink/40">
+                          <span className="shrink-0 font-mono text-[11px] text-ink/60">
                             {(d.size / 1048576).toFixed(1)} MB
                           </span>
                         </label>
@@ -312,12 +373,19 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
               )}
 
               {b.key === "engineering" && (files.engineering || []).length > 0 && (
-                <div className="mt-2 px-1">
-                  <label className="flex cursor-pointer items-center gap-2.5 text-[13px] text-ink/70">
+                // The save-for-next-time offer, made properly visible (owner:
+                // it was easy to miss as a bare checkbox).
+                <div className="mt-2 rounded-lg border border-seal/35 bg-[#F4F8F4] px-4 py-3">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-[13px] text-ink/80">
                     <input type="checkbox" checked={saveEng}
                       onChange={(e) => setSaveEng(e.target.checked)}
                       className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
-                    <span>Save this engineering to My documents for next time</span>
+                    <span>
+                      <span className="font-display font-semibold text-seal-deep">
+                        Save this engineering to My Documents
+                      </span>{" "}
+                      — next job, it&apos;s one tick instead of another upload.
+                    </span>
                   </label>
                   {saveEng && (
                     <input value={saveLabel} maxLength={80}
@@ -330,11 +398,32 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[12px] text-ink/50">
+        <p className="mt-2 text-[12px] text-ink/60">
           {totalMb > 0
             ? `${count} file${count === 1 ? "" : "s"}, ${totalMb.toFixed(1)} MB of 40 MB.`
             : "Up to 40 MB in total. Email anything larger to the office."}
         </p>
+
+        <div className="mt-4 rounded-lg border border-rule bg-white px-4 py-3">
+          <label className="flex cursor-pointer items-center gap-2.5 text-[13.5px] text-ink/80">
+            <input type="checkbox" checked={strata}
+              onChange={(e) => setStrata(e.target.checked)}
+              className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
+            <span>This lot is part of a <span className="font-medium">strata</span></span>
+          </label>
+          {strata && (
+            <div className="mt-3">
+              <FileBucket
+                bucket={{
+                  key: "strata", required: true, label: "Strata Plan",
+                  hint: "The strata plan showing this lot — we can't assess a strata site without it.",
+                }}
+                files={files.strata || []}
+                onChange={(f) => setFiles((prev) => ({ ...prev, strata: f }))}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <label className="label mt-6" htmlFor="clientRef">Your Reference (optional)</label>
@@ -346,7 +435,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <textarea id="notes" rows={3} value={notes}
         onChange={(e) => setNotes(e.target.value)} className="field"
         placeholder="Anything we should know about this job." />
-      <p className="mt-1.5 text-[12px] text-ink/50">
+      <p className="mt-1.5 text-[12px] text-ink/60">
         Added to the job&apos;s conversation for our team — not shown as a public field.
       </p>
 
@@ -357,20 +446,46 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <input id="contact" value={contact} maxLength={80}
         onChange={(e) => setContact(e.target.value)} className="field"
         placeholder="Who should we speak to about this one?" />
-      <p className="mt-1.5 text-[12px] text-ink/50">
+      <p className="mt-1.5 text-[12px] text-ink/60">
         A name is enough — we&apos;ll reply to your account either way.
       </p>
 
-      <button className="btn mt-6 w-full" disabled={busy || !ready}>
-        {busy ? (progress || "Lodging…") : "Lodge This Job"}
-      </button>
-      {!ready && (
-        <p className="mt-2 text-center text-[12px] text-ink/50">
+      {busy ? (
+        // The whole lodgement can take a while on a big drawing set over site
+        // wifi — without this, a quiet button reads as "stalled" and gets a
+        // second click or a closed tab. Named stages, and a clear don't-close.
+        <div className="mt-6 rounded-lg border border-seal/35 bg-[#F4F8F4] px-4 py-4 text-center" role="status" aria-live="polite">
+          <span className="mx-auto mb-2 block h-6 w-6 animate-spin rounded-full border-2 border-seal/30 border-t-seal motion-reduce:animate-none" aria-hidden="true" />
+          <p className="font-display text-[14px] font-semibold text-seal-deep">
+            {progress || "Lodging your job…"}
+          </p>
+          <p className="mt-1 text-[12.5px] text-ink/60">
+            Big drawing sets can take a minute — leave this page open and
+            we&apos;ll confirm the moment it&apos;s lodged.
+          </p>
+        </div>
+      ) : (
+        <button className="btn mt-6 w-full" disabled={!ready}>
+          Lodge This Job
+        </button>
+      )}
+      {!ready && !busy && (
+        <p className="mt-2 text-center text-[12px] text-ink/60">
           {!described
-            ? "Tell us what's being built to continue."
+            ? "Tell us what's being built, and the button unlocks."
             : !filesOk
-              ? "Attach drawings and engineering to continue."
-              : "Answer the bushfire questions above to lodge."}
+              ? `Still needed: ${BUCKETS.filter((b) => b.required && !(files[b.key] || []).length
+                  && !(b.key === "engineering" && tickedDocs.length))
+                  .map((b) => b.label.toLowerCase()).join(" and ")} — attach ${
+                  BUCKETS.filter((b) => b.required && !(files[b.key] || []).length
+                  && !(b.key === "engineering" && tickedDocs.length)).length === 1 ? "it" : "them"} and the button unlocks.`
+              : !balDone
+                ? "Answer the bushfire questions above to lodge."
+                : !balDocOk
+                  ? (bushfireNeeds === "shed-report"
+                      ? "Still needed: the shed's new BAL report — attach it and the button unlocks."
+                      : "Still needed: BAL rating evidence — attach it and the button unlocks.")
+                  : "Still needed: the strata plan — attach it and the button unlocks."}
         </p>
       )}
 

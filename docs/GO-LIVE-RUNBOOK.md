@@ -30,10 +30,17 @@ cd cfba-client-portal
 npm install
 npm run build
 npm test
+npm run test:e2e   # 10-spec browser regression suite, ~1 min, demo mode
 npm run dev
 ```
 
 Open http://localhost:3000. With `SUPABASE_URL` blank it runs in **demo mode** — seeded sample data, nothing written to Monday or SharePoint.
+
+`test:e2e` drives a real browser through login, lodgement, FIR, download,
+cancel, amendment, the queue, permissions and the admin pages against the
+seeded demo store on its own port — it never touches your dev server's
+data. It uses a Chrome/Chromium already on the machine (set `CHROMIUM_PATH`
+to the binary if it can't find one); it never downloads a browser.
 
 Click through every one of the eight sidebar destinations: Dashboard, My Jobs, Downloads, Messages, Amend a Job, Info Sheets, Help & Support, My Details. Then `/admin` with the staff passcode.
 
@@ -188,9 +195,12 @@ emails are actually using, so you can check it without opening Vercel.
 
 ---
 
-## Phase 7 — Live smoke test (45 min)
+## Phase 7 — Live smoke test (75 min)
 
-Now test against real data, but before any client has the URL.
+Now test against real data, but before any client has the URL. Start at
+`/admin`: the **Go-live pre-flight** card at the top of the page checks the
+configuration for you (presence only — it never shows a value). Work it to
+green before walking the list below.
 
 - [ ] Go to `/admin`, sign in with `STAFF_PASSCODE`.
 - [ ] **Clients & logins** — the registry starts empty by design: sync only
@@ -212,8 +222,103 @@ Now test against real data, but before any client has the URL.
       every lodgement, if `AUTO_ACCEPT_LODGEMENTS=0` is set in Vercel.
       **Then delete that test card.**
 - [ ] Try to upload a non-PDF and something over 25 MB — both should be refused.
+      The refusal must be **visible** — a line naming the file and why, never a
+      silent drop.
 - [ ] Get the login wrong four times — throttling should kick in.
 - [ ] Open the site on your phone. Half your clients will.
+
+### New behaviours since the first dry run (Batches 1–4) — smoke these too
+
+- [ ] **Pre-flight card**: `/admin` shows *Go-live pre-flight* with **every
+      automatic check green** on the live deploy. If anything reads ATTEND,
+      stop and fix it before continuing.
+- [ ] **FIR answered-flip**: raise an FIR on a test card → as the client,
+      reply from the job page → the amber "we need something" banner flips to
+      *Answer sent — it's with us*, and the job leaves the dashboard's Action
+      Required. Change the ask on the card and confirm the amber returns.
+- [ ] **Rejected lodgement notice**: reject a queued submission from `/admin`
+      **with a reason** → the client's dashboard shows it under Action
+      Required with that reason and a *Lodge It Again* button.
+- [ ] **Collision suffix**: lodge with two PDFs that share a filename → the
+      second arrives as `…-2.pdf`; nothing is overwritten.
+- [ ] **Cancel request**: as the client, request a cancellation → the card
+      gets a `CANCELLATION REQUESTED` update, the office email arrives, and
+      the job page shows *it's with us to confirm*. Move the card to Cancelled
+      on the board → after sync the job sits under Past as **Cancelled**.
+      Nothing cancels without that board move — the portal only asks.
+- [ ] **My Documents**: upload a file to My Documents, replace it, delete it;
+      then lodge a job attaching engineering *From your documents*.
+- [ ] **BAL / strata gates**: lodge a shed at a bushfire-prone address → the
+      new BAL report upload is required before the lodge button arms (patio or
+      carport: evidence is enough). Tick *strata lot* → the strata plan upload
+      becomes required.
+- [ ] **Login email**: issue a login to your own address — the how-to PDF is
+      attached, there's no "no phone call, no chasing" line, and the footer
+      doesn't carry the client's name.
+- [ ] **Retention wording**: Downloads says certificates stay downloadable
+      for 3 months and that you keep a copy on file — never "forever".
+- [ ] **Feedback loop**: send feedback from a job page → it appears in
+      `/admin/feedback` with the page and job attached; after your test
+      lodgement, answer the portal-or-email question and confirm both land
+      there and the weekly counters move.
+
+### Data hygiene — run before any invitation goes out (P0-3)
+
+The smoke test above just created artifacts. Sweep them, and anything else
+that isn't a real client, **verify-first** — read, confirm, then delete.
+You run these in the Supabase SQL editor; nothing automated touches them.
+
+```sql
+-- 1) LOOK. Who's in the live store?
+select id, name, created_at from companies order by created_at;
+select username, company_id, created_at from client_logins order by created_at;
+
+-- 2) LOOK for obvious test artifacts by name.
+select id, name from companies
+ where name ilike '%test%' or name ilike '%demo%' or name ilike '%cfba%';
+select ref, address, company_id from jobs
+ where address ilike '%test%' or address ilike '%demo%';
+select id, address, company_id, status from submissions
+ where address ilike '%test%';
+
+-- 3) LOOK at leftovers the smoke test leaves behind.
+select key from portal_settings
+ where key like 'firanswered:%' or key like 'cancelreq:%';
+select action, actor, target, at from audit_log
+ order by at desc limit 50;
+```
+
+For a **confirmed** test company, prefer the admin UI's company delete — it
+cascades through logins, jobs, files, messages and reads in the right order.
+Raw SQL is the fallback only, company by company, inside a transaction:
+
+```sql
+begin;
+-- replace :co with the confirmed test company id, and READ each count first
+-- (same order the app's own company delete uses)
+delete from job_files      where ref in (select ref from jobs where company_id = ':co');
+delete from jobs           where company_id = ':co';
+delete from messages       where company_id = ':co';
+delete from message_reads  where company_id = ':co';
+delete from submissions    where company_id = ':co';
+delete from client_logins  where company_id = ':co';
+delete from company_emails where company_id = ':co';
+delete from company_aliases where company_id = ':co';
+delete from companies      where id = ':co';
+commit;  -- or rollback if any count surprised you
+```
+
+Then the markers and metrics from your own smoke run (optional but tidy —
+the pilot's dials start at zero):
+
+```sql
+delete from portal_settings
+ where key like 'firanswered:TEST-%' or key like 'cancelreq:TEST-%';
+delete from audit_log where actor in ('<your-test-login>');
+```
+
+Finally sign in as the pilot client's login and confirm they see **only**
+their own jobs, and `/admin/feedback` shows a clean slate.
 
 **Rollback if anything's badly wrong:** Vercel → Deployments → previous deployment → **Promote to Production**. Instant. You are never stuck.
 
@@ -249,6 +354,8 @@ None are blockers, but know them now so they're not surprises:
 Don't give a client the URL until every one of these is ticked:
 
 - [ ] Live URL loads, no demo-mode banner
+- [ ] `npm run test:e2e` green on the code you deployed (10 specs, ~1 min)
+- [ ] The pre-flight card on `/admin` shows **every automatic check green**
 - [ ] `STAFF_PASSCODE` is not `demo`
 - [ ] `AUTH_SECRET` and `CRON_SECRET` are freshly generated, different from each other
 - [ ] Supabase `issued` bucket is **private**
@@ -257,6 +364,8 @@ Don't give a client the URL until every one of these is ticked:
 - [ ] Custom domain resolving over HTTPS
 - [ ] You have personally completed the full client journey end to end
 - [ ] Real Issued job downloaded and the files verified correct
+- [ ] Phase 7's data-hygiene sweep run — no test companies, jobs or logins
+      left in the live store
 - [ ] Calendar reminder set for the Graph secret expiry
 - [ ] Rebecca and Kacie know it's going live and what to do when a client rings
 

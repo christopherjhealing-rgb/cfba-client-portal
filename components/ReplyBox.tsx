@@ -99,12 +99,12 @@ export function ReplyBox({ refNo, general }: { refNo: string; general?: boolean 
             <li key={f.name} className="flex items-center gap-2 text-[13px] text-ink/75">
               <span className="text-seal"><Icon name="check" size={13} /></span>
               <span className="min-w-0 flex-1 truncate">{f.name}</span>
-              <span className="shrink-0 font-mono text-[11px] text-ink/40">
+              <span className="shrink-0 font-mono text-[11px] text-ink/60">
                 {(f.size / 1_048_576).toFixed(1)} MB
               </span>
               <button type="button" aria-label={`Remove ${f.name}`}
                 onClick={() => setFiles(files.filter((_, n) => n !== i))}
-                className="shrink-0 rounded p-1 text-ink/35 transition hover:bg-wash hover:text-flag">
+                className="shrink-0 rounded p-1 text-ink/60 transition hover:bg-wash hover:text-flag">
                 <Icon name="close" size={13} />
               </button>
             </li>
@@ -119,7 +119,7 @@ export function ReplyBox({ refNo, general }: { refNo: string; general?: boolean 
         <button type="button" onClick={() => input.current?.click()} className="btn-ghost">
           <Icon name="plus" size={13} /> Attach Files
         </button>
-        <span className={`text-[12px] ${tooBig ? "font-medium text-flag" : "text-ink/50"}`}>
+        <span className={`text-[12px] ${tooBig ? "font-medium text-flag" : "text-ink/60"}`}>
           {files.length
             ? `${files.length} file${files.length === 1 ? "" : "s"}, ${totalMb.toFixed(1)} MB of ${MAX_MB} MB`
             : `Attach PDFs — drawings, engineering or certificates, up to ${MAX_MB} MB.`}

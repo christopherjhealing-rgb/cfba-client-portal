@@ -26,7 +26,7 @@ export default async function StudioDesignPage(
             {meta.name}
           </h1>
         </div>
-        <span className="text-[12.5px] text-ink/45">Saves automatically as you draw</span>
+        <span className="text-[12.5px] text-ink/60">Saves automatically as you draw</span>
       </div>
       <StudioEditor id={id} owner={who.owner} cadastre={CADASTRE_READY} />
     </div>

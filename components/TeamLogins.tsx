@@ -63,7 +63,7 @@ export function TeamLogins({ logins, readonly }: { logins: TeamLogin[]; readonly
       <ul className="mt-3 divide-y divide-rule">
         {logins.map((l) => (
           <li key={l.username} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
-            <span className={`font-mono text-[14px] ${l.disabled ? "text-ink/40 line-through" : "text-ink"}`}>
+            <span className={`font-mono text-[14px] ${l.disabled ? "text-ink/60 line-through" : "text-ink"}`}>
               {l.username}
             </span>
             {l.displayName && (

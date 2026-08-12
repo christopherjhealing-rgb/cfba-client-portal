@@ -128,17 +128,17 @@ export function SoakwellCheck() {
 
           {/* The council sizes the whole catchment, and this is the sentence
               that stops somebody sizing only the new patio. */}
-          <p className="mt-2 text-[12.5px] leading-relaxed text-ink/55">
+          <p className="mt-2 text-[12.5px] leading-relaxed text-ink/60">
             Both, not just the new part — the council sizes storage against the
             whole roof, so an addition can reveal the house was never covered
             either.
           </p>
 
           <div className="mt-5">
-            <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+            <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
               Soakwells already in the ground
             </span>
-            <p className="mt-1 text-[12.5px] text-ink/50">
+            <p className="mt-1 text-[12.5px] text-ink/60">
               Diameter × depth in millimetres. Add one for each size on the lot,
               then set how many of them there are.
             </p>
@@ -172,7 +172,7 @@ export function SoakwellCheck() {
                     <li key={w.key} className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5">
                       <span className="text-[13.5px]">
                         <strong>{sizeLabel(s)}</strong>
-                        <span className="ml-2 text-ink/55">{s.capacity} m³ each</span>
+                        <span className="ml-2 text-ink/60">{s.capacity} m³ each</span>
                       </span>
                       <span className="flex items-center gap-2">
                         <button type="button" className="btn-ghost px-2.5 py-1"
@@ -182,7 +182,7 @@ export function SoakwellCheck() {
                         <button type="button" className="btn-ghost px-2.5 py-1"
                           aria-label={`One more ${sizeLabel(s)}`}
                           onClick={() => setCount(w.key, w.count + 1)}>+</button>
-                        <span className="ml-1 w-16 text-right font-mono text-[12.5px] text-ink/55">
+                        <span className="ml-1 w-16 text-right font-mono text-[12.5px] text-ink/60">
                           {fmt(round2(s.capacity * w.count))} m³
                         </span>
                       </span>
@@ -249,11 +249,11 @@ export function SoakwellCheck() {
         <ul className="mt-2 space-y-1">
           {SOAKWELL_SITE_PLAN.map((line) => (
             <li key={line} className="relative pl-4 text-[12.5px] leading-relaxed text-ink/65">
-              <span className="absolute left-0 top-0 text-ink/35">·</span>{line}
+              <span className="absolute left-0 top-0 text-ink/60">·</span>{line}
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[12.5px] text-ink/55">
+        <p className="mt-2 text-[12.5px] text-ink/60">
           The detail is in{" "}
           <a href="/info-sheets" className="text-seal underline">
             guidance note 11 — Stormwater &amp; Soak Wells
@@ -262,7 +262,7 @@ export function SoakwellCheck() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-3">
-        <p className="max-w-3xl text-[12px] leading-relaxed text-ink/45">
+        <p className="max-w-3xl text-[12px] leading-relaxed text-ink/60">
           {SOAKWELL_SOURCE} {SOAKWELL_CAVEAT}
         </p>
         <button type="button" onClick={reset} className="btn-ghost shrink-0">Start Again</button>
@@ -281,7 +281,7 @@ function ModeTab({
       className={`flex-1 rounded-md border px-3.5 py-2.5 text-left transition ${
         on ? "border-seal bg-[#EDF3EE] text-seal" : "border-rule bg-white text-ink/70 hover:border-seal/50"}`}>
       <span className="block text-[13.5px] font-medium">{title}</span>
-      <span className="block text-[12px] text-ink/50">{sub}</span>
+      <span className="block text-[12px] text-ink/60">{sub}</span>
     </button>
   );
 }
@@ -293,7 +293,7 @@ function Area({
 }: { label: string; hint: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="block">
-      <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+      <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
         {label}
       </span>
       <span className="mt-1 flex items-center gap-2">
@@ -302,9 +302,9 @@ function Area({
           placeholder="0"
           onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, ""))}
           className="field w-full font-mono" />
-        <span className="shrink-0 text-[13px] text-ink/55">m²</span>
+        <span className="shrink-0 text-[13px] text-ink/60">m²</span>
       </span>
-      <span className="mt-1 block text-[12px] text-ink/50">{hint}</span>
+      <span className="mt-1 block text-[12px] text-ink/60">{hint}</span>
     </label>
   );
 }
@@ -314,7 +314,7 @@ function Answer({ children }: { children: React.ReactNode }) {
 }
 
 function Waiting({ children }: { children: React.ReactNode }) {
-  return <p className="text-[13px] text-ink/50">{children}</p>;
+  return <p className="text-[13px] text-ink/60">{children}</p>;
 }
 
 /** The sum, shown rather than asserted — the reason anybody trusts the number
@@ -341,13 +341,13 @@ function Line({
 function Required({ volume }: { volume: number }) {
   return (
     <p className="mt-3 flex flex-wrap items-baseline gap-3">
-      <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+      <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
         Storage required
       </span>
       <span className="font-display text-[30px] font-semibold leading-none text-seal">
         {fmt(volume)} m³
       </span>
-      <span className="text-[13px] text-ink/55">{Math.round(volume * 1000)} litres</span>
+      <span className="text-[13px] text-ink/60">{Math.round(volume * 1000)} litres</span>
     </p>
   );
 }
@@ -400,7 +400,7 @@ function Options({
                 <li key={sizeKey(o.size) + o.count}
                   className="flex items-baseline justify-between gap-3 px-3.5 py-2">
                   <span className="text-[13px]">{o.label}</span>
-                  <span className="font-mono text-[12.5px] text-ink/55">{fmt(o.total)} m³</span>
+                  <span className="font-mono text-[12.5px] text-ink/60">{fmt(o.total)} m³</span>
                 </li>
               ))}
             </ul>

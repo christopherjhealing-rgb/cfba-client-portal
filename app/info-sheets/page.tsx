@@ -126,7 +126,7 @@ export default async function InfoSheets() {
         </section>
       ))}
 
-      <p className="mt-2 text-[12px] text-ink/55">
+      <p className="mt-2 text-[12px] text-ink/60">
         All {published} notes are available now. If a topic would help that isn&apos;t
         covered here, ask and we&apos;ll write it.
       </p>
@@ -146,7 +146,7 @@ function SheetCard({ sheet, icon }: { sheet: Sheet; icon: IconName }) {
           <p className="font-display text-[14px] font-semibold leading-snug text-ink">
             {sheet.title}
           </p>
-          <p className="mt-1 text-[13px] leading-snug text-ink/55">{sheet.blurb}</p>
+          <p className="mt-1 text-[13px] leading-snug text-ink/60">{sheet.blurb}</p>
         </div>
         <span className="mt-0.5 shrink-0 text-seal"><Icon name="download" size={16} /></span>
       </div>

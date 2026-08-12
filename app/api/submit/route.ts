@@ -12,6 +12,7 @@ import { notifyTeams } from "@/lib/teams";
 import { lodgeAmendment, AMENDMENT_OPEN } from "@/lib/amendments";
 import { BAL_LABELS } from "@/lib/bushfire.mjs";
 import { combineUploads } from "@/lib/combine-uploads";
+import { uniqueName } from "@/lib/uploads.mjs";
 
 const OFFLINE = {
   error: "This section is temporarily offline while we make updates — please try again shortly.",
@@ -290,6 +291,7 @@ async function handle(req: Request) {
   // opens these is a member of staff, not a browser.
   const rejected = uploads.filter((f) => !PDF_ONLY(f.name, f.type)).map((f) => f.name);
   if (rejected.length) {
+    await repo.logAudit("upload.reject", "not-pdf", rejected.slice(0, 4).join(", "), session.username || "client").catch(() => {});
     return NextResponse.json(
       { error: `We can only accept PDFs — please convert or remove: ${rejected.slice(0, 4).join(", ")}` },
       { status: 415 }
@@ -316,6 +318,7 @@ async function handle(req: Request) {
   const total = uploads.reduce((n, f) => n + f.size, 0)
     + libDocs.reduce((n, d) => n + d.bytes.length, 0);
   if (total > MAX_TOTAL) {
+    await repo.logAudit("upload.reject", "over-40mb", `${Math.round(total / 1048576)} MB`, session.username || "client").catch(() => {});
     return NextResponse.json(
       { error: "Those files come to more than 40 MB all up — email the biggest ones to admin@cfba.com.au and we'll add them to the job for you." },
       { status: 413 }
@@ -324,9 +327,14 @@ async function handle(req: Request) {
 
   const id = "sub_" + Math.random().toString(36).slice(2, 10);
   const stored: { name: string; category?: string }[] = [];
+  // Collision guard: the same file name in two buckets must never overwrite —
+  // the second write used to win silently and the combine then merged the
+  // wrong bytes (drawings carrying the engineering file). Suffix instead,
+  // exactly as the signing route always has.
+  const usedNames = new Set<string>();
   for (let i = 0; i < uploads.length; i++) {
     const f = uploads[i];
-    const safe = f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120);
+    const safe = uniqueName(f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120), usedNames);
     const bytes = Buffer.from(await f.arrayBuffer());
     await repo.writeFile(`submissions/${id}/${safe}`, bytes, f.type || "application/octet-stream");
     stored.push({ name: safe, category: categories[i] || undefined });
@@ -358,6 +366,7 @@ async function handle(req: Request) {
   // catches up), so the client isn't held at the button while a Monday card is
   // created and its files are shuttled across. A failure here leaves it in the
   // review queue — exactly what a failed inline accept always did.
+  await repo.logAudit("lodge.success", session.companyName, id, session.username || "client").catch(() => {});
   after(() => finishLodgement(id, session.companyName, !!amendmentOf));
   return NextResponse.json({ ok: true, id, amendment: !!amendmentOf });
 }
@@ -485,6 +494,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
   // catches up), so the client isn't held at the button while a Monday card is
   // created and its files are shuttled across. A failure here leaves it in the
   // review queue — exactly what a failed inline accept always did.
+  await repo.logAudit("lodge.success", session.companyName, id, session.username || "client").catch(() => {});
   after(() => finishLodgement(id, session.companyName, !!amendmentOf));
   return NextResponse.json({ ok: true, id, amendment: !!amendmentOf });
 }

@@ -3,14 +3,16 @@ import { useState } from "react";
 import { suggestUsername } from "@/lib/core.mjs";
 
 export function LoginManager({
-  companyId, companyName, existing,
-}: { companyId: string; companyName: string; existing: string[] }) {
+  companyId, companyName, existing, defaultEmail,
+}: { companyId: string; companyName: string; existing: string[]; defaultEmail?: string }) {
   const [open, setOpen] = useState(false);
   // Suggested from the client name, and editable — nobody should have to
   // type "kaciespatiosandsheds" by hand.
   const [username, setUsername] = useState(() => suggestUsername(companyName));
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
+  // Prefilled with the company's login email — that's where a login lands
+  // ninety-nine times in a hundred, and editable for the exception.
+  const [email, setEmail] = useState(defaultEmail || "");
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<
     { username: string; setupCode: string; emailed?: boolean; emailError?: string } | null
@@ -69,7 +71,7 @@ export function LoginManager({
 
       {existing.length > 0 && (
         <div className="mt-3 border-t border-rule pt-3">
-          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/55">
+          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/60">
             Existing Logins
           </p>
           {/* Resetting keeps the username — it's the same person, they've just
@@ -80,7 +82,7 @@ export function LoginManager({
               <button className="btn-ghost" disabled={busy} onClick={() => call("reset", u)}>
                 {busy ? "…" : "Reset Password"}
               </button>
-              <span className="text-[12px] text-ink/50">
+              <span className="text-[12px] text-ink/60">
                 keeps this username · issues a new one-time code
               </span>
             </div>
@@ -90,7 +92,7 @@ export function LoginManager({
 
       {issued && (
         <div className="mt-3 rounded-sm border-l-[3px] border-seal bg-[#EDF3EE] px-3 py-2.5 text-[13px]">
-          <div className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/55">
+          <div className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/60">
             {issued.emailed ? "Sent to the client — the code works once" : "Give these to the client — the code works once"}
           </div>
           <div className="mt-1.5">
@@ -99,7 +101,7 @@ export function LoginManager({
           <div>
             Setup code: <span className="font-mono font-semibold">{issued.setupCode}</span>
           </div>
-          <div className="mt-1.5 text-ink/55">
+          <div className="mt-1.5 text-ink/60">
             They enter these under &ldquo;First time&rdquo; on the sign-in page and choose their own password.
           </div>
           {/* Said plainly either way. "Emailed" when it wasn't is how a client

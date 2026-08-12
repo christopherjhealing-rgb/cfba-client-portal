@@ -71,7 +71,7 @@ export function WindClassCheck() {
 
       {/* The region is the one input nobody can work out by looking around
           them, so the official source sits right beside it. */}
-      <p className="-mt-3 mb-4 text-[12.5px] text-ink/50">
+      <p className="-mt-3 mb-4 text-[12.5px] text-ink/60">
         Not sure which region?{" "}
         {REGION_MAP_LINKS.map((l, i) => (
           <span key={l.url}>
@@ -96,7 +96,7 @@ export function WindClassCheck() {
       {/* Topography: pick it, or work it out. */}
       <div className="mb-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+          <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
             Topographic classification
           </span>
           <button type="button" onClick={() => setHelper((h) => !h)}
@@ -104,7 +104,7 @@ export function WindClassCheck() {
             {helper ? "Hide" : "Not sure? Work it out"}
           </button>
         </div>
-        <p className="mt-1 text-[12.5px] text-ink/50">
+        <p className="mt-1 text-[12.5px] text-ink/60">
           T0 for flat ground, which is most suburban blocks.
         </p>
         <Pills options={TOPOGRAPHY} value={topography} onChange={setTopography} />
@@ -153,11 +153,11 @@ export function WindClassCheck() {
                   we&apos;ll sort it out.
                 </p>
               ) : (
-                <p className="text-[13px] text-ink/50">
+                <p className="text-[13px] text-ink/60">
                   Answer the three above and the classification appears here.
                 </p>
               )}
-              <p className="mt-2 text-[12px] text-ink/45">
+              <p className="mt-2 text-[12px] text-ink/60">
                 Covers hills and escarpments up to {MAX_LANDFORM_HEIGHT_M} m high.
                 Taller than that needs AS 4055 itself.
               </p>
@@ -169,13 +169,13 @@ export function WindClassCheck() {
       {/* The answer */}
       <div className="mt-5 border-t border-rule pt-4">
         {!answered ? (
-          <p className="text-[13px] text-ink/50">
+          <p className="text-[13px] text-ink/60">
             Answer all four and the wind classification appears here.
           </p>
         ) : result.ok ? (
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                 Wind classification
               </p>
               <p className="mt-1 flex items-baseline gap-3">
@@ -186,7 +186,7 @@ export function WindClassCheck() {
                   {result.gust} &middot; {result.speed} m/s gust
                 </span>
               </p>
-              <p className="mt-1.5 text-[13px] text-ink/55">
+              <p className="mt-1.5 text-[13px] text-ink/60">
                 {result.cyclonic
                   ? "Cyclonic region — the classification carries cyclonic detailing requirements."
                   : "Non-cyclonic."}
@@ -209,7 +209,7 @@ export function WindClassCheck() {
         )}
       </div>
 
-      <p className="mt-4 border-t border-rule pt-3 text-[12px] leading-relaxed text-ink/45">
+      <p className="mt-4 border-t border-rule pt-3 text-[12px] leading-relaxed text-ink/60">
         {WIND_SOURCE} {WIND_CAVEAT} {WIND_REGULATOR_NOTE}
       </p>
     </div>
@@ -230,7 +230,7 @@ function Choice({
   return (
     <div className="mb-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+        <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
           {label}
         </span>
         {details && (
@@ -240,7 +240,7 @@ function Choice({
           </button>
         )}
       </div>
-      {hint && <p className={`mt-1 text-[12.5px] ${warn ? "text-brass" : "text-ink/50"}`}>{hint}</p>}
+      {hint && <p className={`mt-1 text-[12.5px] ${warn ? "text-brass" : "text-ink/60"}`}>{hint}</p>}
       <Pills options={options} value={value} onChange={onChange} />
       {chosen?.detail && !open && (
         <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/60">{chosen.detail}</p>
@@ -278,8 +278,8 @@ function Pills({
                 ? "border-seal bg-[#EDF3EE] text-seal"
                 : "border-rule bg-white text-ink/70 hover:border-seal/50"}`}>
             <span className="font-medium">{o.label}</span>
-            {o.short && <span className="block text-[12px] text-ink/50">{o.short}</span>}
-            {!o.short && o.note && <span className="block text-[12px] text-ink/50">{o.note}</span>}
+            {o.short && <span className="block text-[12px] text-ink/60">{o.short}</span>}
+            {!o.short && o.note && <span className="block text-[12px] text-ink/60">{o.note}</span>}
           </button>
         );
       })}

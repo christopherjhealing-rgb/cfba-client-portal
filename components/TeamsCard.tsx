@@ -73,7 +73,7 @@ export function TeamsCard({
       </div>
 
       <label className="mt-4 block">
-        <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+        <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
           Webhook URL
         </span>
         <input
@@ -104,7 +104,7 @@ export function TeamsCard({
             <em>from people in an org</em> — those only accept posts from a
             person, and this comes from the portal.
           </li>
-          <li className="text-ink/50">
+          <li className="text-ink/60">
             Microsoft renames these templates from time to time. If the name
             above has moved on, you want any Workflows template whose trigger
             is an incoming webhook posting to a <em>channel</em>. An old
@@ -114,7 +114,7 @@ export function TeamsCard({
       )}
 
       <div className="mt-4">
-        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
           What gets posted
         </p>
         <div className="mt-2 space-y-1.5">
@@ -128,9 +128,9 @@ export function TeamsCard({
                 <span aria-hidden className={`mt-px shrink-0 font-semibold ${on ? "text-seal" : "text-ink/25"}`}>
                   {on ? "✓" : "○"}
                 </span>
-                <span className={`text-[13px] ${on ? "text-ink/80" : "text-ink/40"}`}>
+                <span className={`text-[13px] ${on ? "text-ink/80" : "text-ink/60"}`}>
                   {e.label}
-                  <span className="block text-[12px] text-ink/45">{e.detail}</span>
+                  <span className="block text-[12px] text-ink/60">{e.detail}</span>
                 </span>
               </button>
             );
@@ -156,7 +156,7 @@ export function TeamsCard({
             Unsaved changes — press Save, then you can test.
           </span>
         ) : !cfg.enabled ? (
-          <span className="text-[12px] text-ink/50">
+          <span className="text-[12px] text-ink/60">
             Paste a webhook, switch it <strong>ON</strong>, then Save — the test
             sends through whatever is saved.
           </span>
@@ -167,7 +167,7 @@ export function TeamsCard({
         <p className={`mt-2 text-[13px] ${msg.good ? "text-seal" : "text-flag"}`}>{msg.text}</p>
       )}
 
-      <p className="mt-2 text-[12px] text-ink/50">
+      <p className="mt-2 text-[12px] text-ink/60">
         {last?.at
           ? <>Last notification {new Date(last.at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}{" "}
               ({last.event}) — {last.ok ? "delivered." : <span className="text-flag">failed: {last.error}</span>}</>

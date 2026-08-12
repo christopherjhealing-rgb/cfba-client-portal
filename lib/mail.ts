@@ -440,7 +440,7 @@ export function loginEmail(opts: {
   <p style="margin:0 0 12px">Hello${displayName ? " " + esc(displayName) : ""},</p>
   <p style="margin:0 0 14px">Your login for the CF Building Approvals client portal is ready. It's where
     you lodge jobs, see where each one is up to, answer anything we ask for, and download your
-    CDC Package when it's issued — no phone call, no chasing.</p>
+    CDC Package when it's issued.</p>
 
   <div style="border:1px solid #D3D8D1;border-radius:8px;padding:16px 18px;margin:0 0 16px;background:#F5F7F3">
     <p style="margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#5B6660">Signing in the first time</p>
@@ -466,7 +466,7 @@ export function loginEmail(opts: {
     : ""}
 
   <p style="margin:0 0 4px;font-size:14px">Anything at all, ring us on 1300 029 074 — we'd rather sort it in two minutes than have you stuck.</p>
-  <p style="margin:0;color:#5B6660;font-size:13px">CF Building Approvals · ${esc(companyName)}</p>
+  <p style="margin:0;color:#5B6660;font-size:13px">CF Building Approvals · Perth WA</p>
 </div>`.trim();
   return { subject, html };
 }
@@ -541,20 +541,20 @@ export function officeCancelEmail(opts: {
   companyName: string; ref: string; address: string; reason: string;
 }): { subject: string; html: string } {
   const { companyName, ref, address, reason } = opts;
-  const subject = `Portal Cancellation — ${companyName}, Job ${ref}`;
+  const subject = `Cancellation Requested — ${companyName}, Job ${ref}`;
   const html = `
 <div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1B2420;max-width:640px">
-  <p style="margin:0 0 12px"><strong>${esc(companyName)}</strong> cancelled job <strong>${esc(ref)}</strong>${address ? ` (${esc(address)})` : ""} through the portal.</p>
+  <p style="margin:0 0 12px"><strong>${esc(companyName)}</strong> has asked to cancel job <strong>${esc(ref)}</strong>${address ? ` (${esc(address)})` : ""} through the portal.</p>
   <p style="margin:0 0 8px;font-size:14px;color:#5B6660">Their reason:</p>
   <div style="border-left:3px solid #C9A227;background:#FBF4E6;padding:14px 18px;margin:0 0 14px;white-space:pre-line">${esc(reason)}</div>
-  <p style="margin:0 0 14px;font-size:14px">The card is already at <strong>Cancelled</strong> and the reason is posted on it. Nothing further is needed in the portal — this is so somebody knows to stop work.</p>
+  <p style="margin:0 0 14px;font-size:14px"><strong>To confirm it:</strong> pause work and cancel the card on the board — the portal picks that up on the next sync and shows the job as cancelled. The request is also posted on the card. Until the card moves, the client sees "cancellation requested".</p>
   <p style="margin:0 0 18px">
     <a href="${env.appUrl}/messages?ref=${encodeURIComponent(ref)}"
        style="background:#1E5B3C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;display:inline-block;font-weight:600">
       Open the job
     </a>
   </p>
-  <p style="margin:0;color:#5B6660;font-size:13px">If this looks like a mistake, ring the client — they were told the portal can't undo it.</p>
+  <p style="margin:0;color:#5B6660;font-size:13px">Not sure it's right? Ring the client before cancelling — nothing is final until the card moves.</p>
 </div>`.trim();
   return { subject, html };
 }

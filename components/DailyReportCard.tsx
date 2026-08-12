@@ -50,7 +50,7 @@ export function DailyReportCard({
         <p className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
           {title} ({(rows?.length || 0) + olderN})
           {olderN > 0 && (
-            <span className="ml-1 font-sans normal-case tracking-normal text-ink/45">
+            <span className="ml-1 font-sans normal-case tracking-normal text-ink/60">
               — {olderN} over three weeks old, not listed
             </span>
           )}
@@ -58,9 +58,9 @@ export function DailyReportCard({
         <ul className="mt-1.5 space-y-1">
           {(rows || []).map((x) => (
             <li key={`${title}-${x.ref}`} className="text-[13px] text-ink/75">
-              <span className="font-mono text-[12px] text-ink/55">{x.ref}</span>{" "}
+              <span className="font-mono text-[12px] text-ink/60">{x.ref}</span>{" "}
               {x.address || "—"}
-              <span className="text-ink/50">
+              <span className="text-ink/60">
                 {" "}· {x.detail}{x.days > 0 ? ` · ${x.days} day${x.days === 1 ? "" : "s"}` : ""}
               </span>
             </li>
@@ -111,7 +111,7 @@ export function DailyReportCard({
         {last?.at
           ? <>Last run <strong>{new Date(last.at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</strong>{" "}
               — {last.ok ? "sent." : <span className="text-flag">didn&apos;t send: {last.error}</span>}</>
-          : <span className="text-ink/50">No report has ever run. Press <em>Send It Now</em> to prove the path before waiting for 5pm.</span>}
+          : <span className="text-ink/60">No report has ever run. Press <em>Send It Now</em> to prove the path before waiting for 5pm.</span>}
       </p>
 
       {msg && <p className="mt-3 text-[13px] text-ink/70">{msg}</p>}
@@ -142,7 +142,7 @@ export function DailyReportCard({
               on an answer.
             </p>
           )}
-          <p className="mt-3 text-[12px] text-ink/50">
+          <p className="mt-3 text-[12px] text-ink/60">
             Today: {report.issuedToday} issued · {report.readyToday} reached the
             portal · {report.downloadedToday} downloaded.
           </p>

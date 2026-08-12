@@ -5,7 +5,7 @@ import * as repo from "@/lib/repo";
 import {
   isClientVisible, needsClientInfo, clientStatusLabel, jobBucket,
   elapsedBusinessDays, PAUSED_STATUSES, canCancel, CANCELLED_STATUS,
-  AMENDMENT_OPEN, AMENDMENT_DONE, REVISED,
+  AMENDMENT_OPEN, AMENDMENT_DONE, REVISED, firAnswered,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
@@ -45,6 +45,20 @@ export default async function JobDetail({
     repo.clientPauses([ref]),
   ]);
   await repo.markThreadRead(session.companyId, ref);
+
+  // Ball-in-court: has this ask already been answered? (Set by the messages
+  // route on an FIR-state reply; a changed ask text re-arms the amber state.)
+  const firMarker = needsClientInfo(job)
+    ? await repo.getSetting<{ at: string; ask: string | null }>(`firanswered:${ref}`).catch(() => null)
+    : null;
+  const answered = firAnswered(firMarker, (job.firRequest as string | null) ?? null);
+
+  // A cancellation the client has asked for and the office hasn't confirmed
+  // yet. Once the card is cancelled on the board, the Cancelled state wins
+  // and this marker is simply ignored.
+  const cancelReq = job.mondayStatus !== CANCELLED_STATUS && canCancel(job)
+    ? await repo.getSetting<{ at: string }>(`cancelreq:${ref}`).catch(() => null)
+    : null;
 
   const thread = allMsgs.filter((m) => m.ref === ref);
   // The lodgements behind this job: the original (matched via the Monday card
@@ -87,13 +101,13 @@ export default async function JobDetail({
         // weight as Download; as a text link it reads as the way back.
         action={
           <Link href="/jobs"
-            className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink/60 underline-offset-4 transition hover:text-seal hover:underline">
+            className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink/60 underline-offset-4 transition hover:text-seal hover:underline max-lg:min-h-10">
             <span aria-hidden="true">←</span> All Jobs
           </Link>
         }
       />
 
-      {needsClientInfo(job) && (
+      {needsClientInfo(job) && !answered && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-[13.5px] text-brass-deep">
           <p className="min-w-0">
             <strong>We need something from you</strong>{" "}
@@ -102,18 +116,30 @@ export default async function JobDetail({
           </p>
           {!messagesOff && (
             <a href="#reply"
-              className="shrink-0 font-medium underline underline-offset-2 hover:text-ink">
+              className="shrink-0 font-medium underline underline-offset-2 hover:text-ink max-lg:-my-2 max-lg:inline-flex max-lg:min-h-10 max-lg:items-center">
               Reply now →
             </a>
           )}
+        </div>
+      )}
+      {needsClientInfo(job) && answered && (
+        // The ball-in-court flip: they've sent it, so the page must stop
+        // asking. The board catches up on its own sync; a NEW request
+        // (different ask text) re-arms the amber banner above.
+        <div className="mb-5 rounded-lg border border-seal/30 bg-[#EDF3EE] px-4 py-3 text-[13.5px] text-seal-deep">
+          <strong>Answer sent — it&apos;s with us.</strong>{" "}
+          We&apos;re reviewing what you sent; nothing more is needed from you
+          right now.
         </div>
       )}
 
       <div className="card mb-6 p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className={`chip ${needsClientInfo(job) ? "chip-brass" : bucket === "ready" ? "chip-seal" : ""}`}>
-              {clientStatusLabel(job.mondayStatus as string, job.fileCount as number)}
+            <span className={`chip ${needsClientInfo(job) && !answered ? "chip-brass" : needsClientInfo(job) || bucket === "ready" ? "chip-seal" : ""}`}>
+              {needsClientInfo(job) && answered
+                ? "Answer sent — with us"
+                : clientStatusLabel(job.mondayStatus as string, job.fileCount as number)}
             </span>
             {/* The day count is half of what a client opens this page to see,
                 and at desktop width it was reading as stray text beside the
@@ -170,7 +196,7 @@ export default async function JobDetail({
             no surveyor is known the clause is simply left out: an absent line
             reads as nothing to say, a wrong one reads as a fault. */}
         {(job.surveyor || job.issuedAt) && (
-          <p className="mt-4 text-[12.5px] text-ink/50">
+          <p className="mt-4 text-[12.5px] text-ink/60">
             {job.surveyor ? (
               <>
                 Your surveyor:{" "}
@@ -191,7 +217,7 @@ export default async function JobDetail({
           <div className="divide-y divide-rule">
             {lodgements.map((s) => (
               <div key={s.id} className="py-2.5 first:pt-0 last:pb-0">
-                <p className="mb-1 text-[12.5px] text-ink/55">
+                <p className="mb-1 text-[12.5px] text-ink/60">
                   <span className="font-medium text-ink/75">
                     {s.amendmentOf ? "Amendment" : "Original lodgement"}
                   </span>
@@ -220,7 +246,7 @@ export default async function JobDetail({
                           <span className="truncate">{f.name}</span>
                         )}
                         {f.category && (
-                          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/50">
+                          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/60">
                             {f.category}
                           </span>
                         )}
@@ -231,7 +257,7 @@ export default async function JobDetail({
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[12px] text-ink/55">
+          <p className="mt-2 text-[12px] text-ink/60">
             Files sent with messages appear in the thread below.
           </p>
         </div>
@@ -250,7 +276,7 @@ export default async function JobDetail({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[12px] text-ink/55">Download the CDC Package above to save all of these.</p>
+          <p className="mt-2 text-[12px] text-ink/60">Download the CDC Package above to save all of these.</p>
         </div>
       )}
 
@@ -261,7 +287,7 @@ export default async function JobDetail({
         </div>
         <div className="divide-y divide-rule">
           {thread.length === 0 ? (
-            <p className="px-4 py-6 text-center text-[13px] text-ink/45">
+            <p className="px-4 py-6 text-center text-[13px] text-ink/60">
               No messages on this job yet.
             </p>
           ) : thread.map((m) => (
@@ -274,7 +300,7 @@ export default async function JobDetail({
                 <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                   {m.from === "cfba" ? "CF Building Approvals" : session.companyName}
                 </span>
-                <span className="text-[11px] text-ink/50">{fmtWhen(m.createdAt)}</span>
+                <span className="text-[11px] text-ink/60">{fmtWhen(m.createdAt)}</span>
               </div>
               {m.body && (
                 <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">{m.body}</p>
@@ -295,7 +321,7 @@ export default async function JobDetail({
               {/* The Monday update id is set the moment a reply posts to the
                   card — its presence IS the delivery receipt. No polling. */}
               {m.from === "client" && m.mondayUpdateId && (
-                <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/45">
+                <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/60">
                   <Icon name="check" size={12} /> Delivered to your surveyor
                 </p>
               )}
@@ -319,7 +345,14 @@ export default async function JobDetail({
       {/* Deliberately last and deliberately quiet — a way out, not an action
           competing with Download. Gone entirely once a job is issued: a
           certificate isn't something a client can withdraw. */}
-      {canCancel(job) && <CancelJob refNo={ref} />}
+      {canCancel(job) && !cancelReq?.at && <CancelJob refNo={ref} />}
+      {canCancel(job) && cancelReq?.at && (
+        <p className="mt-6 rounded-lg border border-brass/40 bg-[#FBF4E6] px-4 py-3 text-center text-[13px] leading-relaxed text-brass-deep">
+          <strong>Cancellation requested</strong> — it&apos;s with us to
+          confirm, and work is paused. We&apos;ll be in touch; anything urgent,
+          ring <a href="tel:1300029074" className="font-semibold underline underline-offset-2">1300 029 074</a>.
+        </p>
+      )}
     </AppShell>
   );
 }

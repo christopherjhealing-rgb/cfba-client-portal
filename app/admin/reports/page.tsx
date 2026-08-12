@@ -35,7 +35,10 @@ export default async function Reports() {
   const now = new Date();
   const daysAgo = (n: number) => new Date(now.getTime() - n * 86400000);
 
-  // Turnaround: received -> issued, in business days, for jobs issued recently.
+  // Turnaround needs BOTH ends of the clock; the plain issued counts need
+  // only issuedAt — requiring receivedAt there undercounted any job whose
+  // received date never synced (and zeroed the demo seed).
+  const issuedOnly = jobs.filter((j) => j.issuedAt);
   const issued = jobs.filter((j) => j.issuedAt && j.receivedAt);
   const recentIssued = issued.filter((j) => new Date(j.issuedAt as string) >= daysAgo(90));
   const turnarounds = recentIssued
@@ -46,7 +49,7 @@ export default async function Reports() {
     ? Math.round((turnarounds.reduce((a, b) => a + b, 0) / turnarounds.length) * 10) / 10
     : null;
 
-  const issuedIn = (n: number) => issued.filter((j) => new Date(j.issuedAt as string) >= daysAgo(n)).length;
+  const issuedIn = (n: number) => issuedOnly.filter((j) => new Date(j.issuedAt as string) >= daysAgo(n)).length;
 
   // Active jobs by client.
   const visible = jobs.map(repo.toPortalJob).filter(isClientVisible);
@@ -65,8 +68,7 @@ export default async function Reports() {
   return (
     <StaffShell title="Reports" sub="Throughput and turnaround." active="/admin">
       <Link href="/admin" className="text-[13px] text-seal underline">← Back to Admin</Link>
-      <h1 className="mb-1 mt-4 font-display text-[26px] font-semibold">Reports</h1>
-      <p className="mb-6 max-w-2xl text-[14px] leading-relaxed text-ink/65">
+      <p className="mb-6 mt-4 max-w-2xl text-[14px] leading-relaxed text-ink/65">
         From the jobs mirrored off the board. Turnaround is business days from the
         card being created to the certificate being issued.
       </p>

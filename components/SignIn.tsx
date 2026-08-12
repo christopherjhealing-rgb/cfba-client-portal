@@ -67,12 +67,12 @@ export function SignIn({
       <div className="mb-5 flex gap-1 rounded-sm bg-wash p-1">
         <button type="button" onClick={() => { setMode("signin"); setMsg(null); }}
           className={`flex-1 rounded-sm px-3 py-2 font-display text-[11px] font-semibold uppercase tracking-[0.08em] transition ${
-            mode === "signin" ? "bg-white text-ink shadow-sm" : "text-ink/55"}`}>
+            mode === "signin" ? "bg-white text-ink shadow-sm" : "text-ink/60"}`}>
           Sign In
         </button>
         <button type="button" onClick={() => { setMode("setup"); setMsg(null); }}
           className={`flex-1 rounded-sm px-3 py-2 font-display text-[11px] font-semibold uppercase tracking-[0.08em] transition ${
-            mode === "setup" ? "bg-white text-ink shadow-sm" : "text-ink/55"}`}>
+            mode === "setup" ? "bg-white text-ink shadow-sm" : "text-ink/60"}`}>
           First Time
         </button>
       </div>
@@ -80,17 +80,17 @@ export function SignIn({
       {mode === "signin" ? (
         <form onSubmit={signIn}>
           <label className="label" htmlFor="username">Username</label>
-          <input id="username" required autoFocus autoCapitalize="none" autoCorrect="off"
+          <input id="username" name="username" autoComplete="username" required autoFocus autoCapitalize="none" autoCorrect="off"
             value={username} onChange={(e) => setUsername(e.target.value)}
             className="field" placeholder="yourcompany" />
           <label className="label mt-4" htmlFor="password">Password</label>
           <div className="relative">
-            <input id="password" type={show ? "text" : "password"} required value={password}
+            <input id="password" name="password" autoComplete="current-password" type={show ? "text" : "password"} required value={password}
               onChange={(e) => setPassword(e.target.value)} className="field pr-11"
               placeholder="••••••••••" />
             <button type="button" onClick={() => setShow((v) => !v)}
               aria-label={show ? "Hide password" : "Show password"}
-              className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-ink/40 transition hover:bg-wash hover:text-ink/70">
+              className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-ink/60 transition hover:bg-wash hover:text-ink/70">
               <Icon name={show ? "eyeOff" : "eye"} size={17} />
             </button>
           </div>
@@ -121,7 +121,7 @@ export function SignIn({
           <button className="btn mt-4 w-full" disabled={busy}>
             {busy ? "Signing in…" : "Sign In"}
           </button>
-          <p className="mt-3 text-center text-[13px] text-ink/55">
+          <p className="mt-3 text-center text-[13px] text-ink/60">
             Forgotten your password? Contact the CFBA office and we&apos;ll issue a new setup code.
           </p>
         </form>
@@ -132,21 +132,21 @@ export function SignIn({
             Enter them here and choose your own password.
           </p>
           <label className="label" htmlFor="su">Username</label>
-          <input id="su" required autoFocus={!presetUsername} autoCapitalize="none" autoCorrect="off"
+          <input id="su" name="username" autoComplete="username" required autoFocus={!presetUsername} autoCapitalize="none" autoCorrect="off"
             value={username} onChange={(e) => setUsername(e.target.value)}
             className="field" placeholder="yourcompany" />
           <label className="label mt-4" htmlFor="sc">Setup Code</label>
           {/* When the link carried the username, the cursor belongs on the one
               field the client still has to type. */}
-          <input id="sc" required autoFocus={!!presetUsername} value={setupCode}
+          <input id="sc" name="setup-code" autoComplete="one-time-code" required autoFocus={!!presetUsername} value={setupCode}
             onChange={(e) => setSetupCode(e.target.value.toUpperCase())}
             className="field font-mono tracking-[0.12em]" placeholder="XXX-XXX-XXX" />
           <label className="label mt-4" htmlFor="np">Choose a Password</label>
-          <input id="np" type="password" required value={password}
+          <input id="np" name="new-password" autoComplete="new-password" type="password" required value={password}
             onChange={(e) => setPassword(e.target.value)} className="field"
             placeholder="at least 10 characters" />
           <label className="label mt-4" htmlFor="cp">Confirm Password</label>
-          <input id="cp" type="password" required value={confirm}
+          <input id="cp" name="confirm-password" autoComplete="new-password" type="password" required value={confirm}
             onChange={(e) => setConfirm(e.target.value)} className="field" />
           <button className="btn mt-5 w-full" disabled={busy}>
             {busy ? "Setting up…" : "Set Password and Sign In"}
@@ -162,7 +162,7 @@ export function SignIn({
 
       {demo && (
         <div className="mt-5 rounded-sm border-l-[3px] border-brass bg-[#FBF6EA] px-3 py-2.5 text-[13px] leading-relaxed">
-          <div className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/55">
+          <div className="font-display text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/60">
             Test Client
           </div>
           <div className="mt-1">

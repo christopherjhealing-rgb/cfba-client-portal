@@ -50,11 +50,11 @@ export function CancelJob({ refNo }: { refNo: string }) {
 
   if (!open) {
     return (
-      <p className="mt-6 text-center text-[13px] text-ink/50">
+      <p className="mt-6 text-center text-[13px] text-ink/60">
         Need to stop this job?{" "}
         <button type="button" onClick={() => setOpen(true)}
-          className="font-medium text-ink/65 underline underline-offset-2 transition hover:text-flag">
-          Cancel it
+          className="font-medium text-ink/65 underline underline-offset-2 transition hover:text-flag max-lg:-my-2 max-lg:inline-flex max-lg:min-h-10 max-lg:items-center">
+          Request to cancel it
         </button>
       </p>
     );
@@ -68,12 +68,12 @@ export function CancelJob({ refNo }: { refNo: string }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-display text-[15px] font-semibold text-ink">
-            Cancel this job?
+            Request to cancel this job?
           </p>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink/70">
-            Tell us what&apos;s changed and we&apos;ll stop work on it. Your
-            surveyor sees this straight away, and we&apos;ll mark the job
-            cancelled on our board.
+            Tell us what&apos;s changed. Your surveyor sees the request straight
+            away and pauses work — then we confirm the cancellation with you
+            before anything is final.
           </p>
 
           <label className="label mt-4" htmlFor="cancel-reason">
@@ -84,28 +84,27 @@ export function CancelJob({ refNo }: { refNo: string }) {
             className="field resize-y"
             placeholder="For example: the owner has put it on hold, or the design has changed and we'll lodge it again." />
           <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12px] text-ink/50">
+            <span className="text-[12px] text-ink/60">
               A line is plenty — it goes straight onto the job.
             </span>
             {left <= 100 && (
-              <span className={`text-[12px] ${left <= 0 ? "font-medium text-flag" : "text-ink/50"}`}>
+              <span className={`text-[12px] ${left <= 0 ? "font-medium text-flag" : "text-ink/60"}`}>
                 {left} left
               </span>
             )}
           </div>
 
           <p className="mt-3.5 rounded-lg border border-brass/40 bg-[#FBF4E6] px-3.5 py-2.5 text-[13px] leading-relaxed text-brass-deep">
-            You can&apos;t undo this from the portal. Changed your mind, or not
-            quite sure? Ring us on{" "}
+            Nothing is final until we confirm it with you. Not quite sure, or
+            just want to talk it through? Ring us on{" "}
             <a href="tel:1300029074" className="font-semibold underline underline-offset-2">1300 029 074</a>{" "}
-            — we&apos;d much rather talk it through than have you cancel
-            something you needed.
+            — we&apos;d much rather that than cancel something you needed.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2.5">
             <button type="submit" disabled={busy || !text}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-flag px-4 py-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.08em] text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45">
-              {busy ? "Cancelling…" : "Yes, cancel this job"}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-brass-deep px-4 py-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.08em] text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45">
+              {busy ? "Sending…" : "Request Cancellation"}
             </button>
             <button type="button" onClick={() => { setOpen(false); setError(null); }}
               disabled={busy} className="btn-ghost">
