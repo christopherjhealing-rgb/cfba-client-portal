@@ -25,8 +25,9 @@ export function BushfireCheck() {
       </div>
       <p className="mb-3 max-w-2xl text-[13.5px] leading-relaxed text-ink/65">
         If a lot is in a designated bushfire prone area, a BAL (Bushfire Attack
-        Level) assessment is required for habitable buildings — and it&apos;s
-        something CFBA can prepare for you. Check the official DFES map:
+        Level) assessment is required for habitable buildings. We don&apos;t
+        prepare BAL reports — they come from an accredited bushfire assessor —
+        but checking the map now tells you whether one is on the table:
       </p>
       <div className="flex flex-wrap gap-2">
         <input

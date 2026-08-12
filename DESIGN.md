@@ -446,8 +446,11 @@ cascade); the Session 5 batch plan approved as written.
   blocks (house precedent: h1.fit/.long). OPEN QUESTION for the owner:
   the suite contradicts itself on whether CFBA prepares BAL reports
   (services/tools/lodging-card say yes; the lodgement verdict copy says
-  "We don't prepare BAL reports", test-pinned) — new copy stays neutral
-  until decided.
+  "We don't prepare BAL reports", test-pinned) — SETTLED by the owner,
+  12 Aug 2026: CFBA does NOT prepare BAL reports. All five contrary
+  claims aligned (Tools bushfire checker, FIR-library BAL shortcut
+  default, client guide, lodging card, services one-pager — heading now
+  Bushfire-prone lots, hero sub no longer lists bushfire as a service).
 - **2026-08-12 (owner rule fix):** the pre-2016 exemption now covers
   sheds too — the shed path asks "Was the house built before 2016?";
   before 2016 = exempt (exemption code stamped), 2016 or later = the
