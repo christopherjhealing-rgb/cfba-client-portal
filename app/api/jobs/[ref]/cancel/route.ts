@@ -13,22 +13,17 @@ export const dynamic = "force-dynamic";
 // short enough that it can't be used to post an essay onto the board.
 const MAX_REASON = 600;
 
-const BOARD_DOWN =
-  "We couldn't put that through just now — the job has NOT been cancelled. " +
-  "Please try again in a minute, or ring us on 1300 029 074 and we'll do it " +
-  "at our end.";
-
 /**
- * A client cancelling their own job.
+ * A client asking to cancel their job — a REQUEST the office confirms, not an
+ * immediate portal-side cancellation (owner's call, Aug 2026: "we authorise
+ * and confirm").
  *
- * Monday is the gate, deliberately. The alternative — record it here and flag
- * it somewhere for staff — means a portal that says "cancelled" over a board
- * that still says the job is live, and the office finding out only if somebody
- * reads a banner. That is the one failure this feature must not have: the
- * whole point of cancelling is that work stops. So if the board won't take the
- * write, the client is told plainly that nothing happened and given the phone
- * number, which is a worse experience and a correct one. It also keeps Monday
- * as the system of record, which is the rule the rest of the portal follows.
+ * What happens on request: the reason lands on the Monday card as an update,
+ * the office is emailed, and the portal remembers the request so the job says
+ * "cancellation requested" and can't be asked twice. What does NOT happen:
+ * no status write — the office cancels the card on the board when they've
+ * confirmed, and the next sync flips the portal. Work-stopping stays a human
+ * decision; the request just gets it in front of one fast.
  */
 export async function POST(
   req: Request,
@@ -68,6 +63,15 @@ export async function POST(
     );
   }
 
+  // One request per job. Asking again changes nothing — we already have it.
+  const existing = await repo.getSetting<{ at: string }>(`cancelreq:${ref}`).catch(() => null);
+  if (existing?.at) {
+    return NextResponse.json(
+      { error: "You've already asked us to cancel this one — it's with us to confirm. Anything urgent, ring 1300 029 074." },
+      { status: 409 }
+    );
+  }
+
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const reason = String(body.reason || "").trim().slice(0, MAX_REASON);
   if (!reason) {
@@ -81,45 +85,26 @@ export async function POST(
     ? `${session.displayName}, ${session.companyName}`
     : session.companyName;
 
-  // The reason goes on first. If the status write below then fails, the office
-  // is left with a visible request on a live card rather than nothing at all —
-  // which is the right way round for this to break.
+  // The request onto the card first — the surveyor working the job must see
+  // it where they work. Best-effort: the office email below is the second
+  // channel, and the portal marker is the client's receipt either way.
   if (job.mondayItemId) {
     try {
       await monday.postUpdate(
         job.mondayItemId,
-        `Cancelled by ${who} through the client portal.\n\nTheir reason:\n${reason}`
+        `CANCELLATION REQUESTED by ${who} through the client portal — please confirm and cancel the card.\n\nTheir reason:\n${reason}`
       );
     } catch (e) {
-      console.warn(`cancel ${ref}: could not post the reason:`, (e as Error).message);
+      console.warn(`cancel-request ${ref}: could not post to the card:`, (e as Error).message);
     }
-
-    // The gate. A card that won't move stops the whole thing here.
-    let wrote: monday.StatusWrite;
-    try {
-      wrote = await monday.setStatus(job.mondayItemId, CANCELLED_STATUS);
-    } catch (e) {
-      console.error(`cancel ${ref}: Monday write threw:`, (e as Error).message);
-      return NextResponse.json({ error: BOARD_DOWN }, { status: 502 });
-    }
-    if (!wrote.ok && wrote.reason === "no-such-label") {
-      console.error(
-        `cancel ${ref}: the board's status column has no "${CANCELLED_STATUS}" label. ` +
-        `Labels on the column: ${wrote.labels.join(", ")}.`
-      );
-      return NextResponse.json({ error: BOARD_DOWN }, { status: 502 });
-    }
-    if (!wrote.ok && wrote.reason === "moved-on") {
-      console.error(`cancel ${ref}: Monday refused — card is at "${wrote.status}".`);
-      return NextResponse.json({ error: BOARD_DOWN }, { status: 502 });
-    }
-    // reason "off" is demo mode or no token: nothing was written anywhere, and
-    // nothing was meant to be. The dry run carries on.
   }
 
-  // The board has it. Now the portal, so the job reads as cancelled straight
-  // away rather than after the next sync.
-  await repo.markCancelled(ref);
+  // The portal's memory of the request: shows "cancellation requested" on the
+  // job, blocks a duplicate ask, and clears naturally once the office cancels
+  // the card (the job then reads Cancelled from the board, which wins).
+  await repo.setSetting(`cancelreq:${ref}`, {
+    at: new Date().toISOString(), by: who, reason,
+  });
 
   if (env.officeEmail) {
     try {
@@ -128,12 +113,12 @@ export async function POST(
       });
       await sendMail([env.officeEmail], mail.subject, mail.html);
     } catch (e) {
-      console.warn(`cancel ${ref}: office notify failed:`, (e as Error).message);
+      console.warn(`cancel-request ${ref}: office notify failed:`, (e as Error).message);
     }
   }
 
   await repo.logAudit(
-    "job.cancel", ref, `${who}: ${reason}`, session.username || "client"
+    "job.cancelrequest", ref, `${who}: ${reason}`, session.username || "client"
   );
 
   // Hard-whitelisted, like every other client response.

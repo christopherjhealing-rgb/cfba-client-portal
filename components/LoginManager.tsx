@@ -3,14 +3,16 @@ import { useState } from "react";
 import { suggestUsername } from "@/lib/core.mjs";
 
 export function LoginManager({
-  companyId, companyName, existing,
-}: { companyId: string; companyName: string; existing: string[] }) {
+  companyId, companyName, existing, defaultEmail,
+}: { companyId: string; companyName: string; existing: string[]; defaultEmail?: string }) {
   const [open, setOpen] = useState(false);
   // Suggested from the client name, and editable — nobody should have to
   // type "kaciespatiosandsheds" by hand.
   const [username, setUsername] = useState(() => suggestUsername(companyName));
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
+  // Prefilled with the company's login email — that's where a login lands
+  // ninety-nine times in a hundred, and editable for the exception.
+  const [email, setEmail] = useState(defaultEmail || "");
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<
     { username: string; setupCode: string; emailed?: boolean; emailError?: string } | null

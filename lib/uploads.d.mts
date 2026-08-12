@@ -22,3 +22,6 @@ export function nameStem(category: string, address: string): string | null;
 export function supersededBy(
   existingNames: string[], stem: string | null, newName: string
 ): string[];
+/** A name that doesn't collide with anything in `used` (suffixes -2, -3…);
+ *  adds the result to `used` before returning it. */
+export function uniqueName(name: string, used: Set<string>): string;

@@ -4,7 +4,7 @@ import { getClientSession } from "@/lib/session";
 import { env } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import {
-  groupJobs, clientStatusLabel, retention, isClientVisible, splitInProgress,
+  groupJobs, clientStatusLabel, retention, isClientVisible, splitInProgress, firAnswered,
   businessDaysSince, awaitingBoardRows, sortJobs,
 } from "@/lib/core.mjs";
 import { unreadCount } from "@/lib/unread";
@@ -55,12 +55,32 @@ export default async function Dashboard() {
   const jobs = allJobs.map(repo.toPortalJob).filter(isClientVisible);
   const g = groupJobs(jobs, new Date(), env.retentionMonths);
   const split = splitInProgress(g.in_progress);
+  // Ball-in-court: an FIR job the client has already answered leaves Action
+  // Required (nothing is needed from them) and runs with the others under an
+  // "Answer sent — with us" chip until the board catches up or asks again.
+  const answeredRefs = new Set<string>();
+  await Promise.all(split.awaiting.map(async (j) => {
+    const m = await repo
+      .getSetting<{ at: string; ask: string | null }>(`firanswered:${j.ref}`)
+      .catch(() => null);
+    if (firAnswered(m, (j.firRequest as string | null) ?? null)) answeredRefs.add(String(j.ref));
+  }));
   // Action Required leads with the job that's been waiting longest — the one
   // most at risk of being forgotten. In Progress and Ready run newest first,
   // so the job the client most likely lodged last is at the top.
-  const awaiting = sortJobs(split.awaiting, "oldest");
-  const running = sortJobs(split.running, "recent");
+  const awaiting = sortJobs(split.awaiting.filter((j) => !answeredRefs.has(String(j.ref))), "oldest");
+  const running = sortJobs(
+    [...split.running, ...split.awaiting.filter((j) => answeredRefs.has(String(j.ref)))],
+    "recent"
+  );
   const ready = sortJobs(g.ready, "recent");
+
+  // Lodgements we couldn't take, still recent enough to matter: the client
+  // must never be left believing a dead job is live. Quiet row + the reason.
+  const returned = subs.filter((s) =>
+    s.status === "rejected" && !s.amendmentOf &&
+    Date.parse(s.reviewedAt || s.createdAt) > Date.now() - 30 * 86400000
+  );
 
   // Plain business days since we received it — not the paused-adjusted "day N"
   // counter that My Jobs shows beside the status. Two different questions:
@@ -125,9 +145,9 @@ export default async function Dashboard() {
             <Stat href="/jobs?show=progress" icon="clock" n={running.length}
               label="In Progress" note="Jobs currently being assessed."
               cta="View Jobs" />
-            <Stat href="/jobs?show=action" icon="mail" n={awaiting.length}
+            <Stat href="/jobs?show=action" icon="mail" n={awaiting.length + returned.length}
               label="Action Required" note="Information requested from you."
-              cta="View Jobs" tone={awaiting.length ? "amber" : "plain"} />
+              cta="View Jobs" tone={awaiting.length + returned.length ? "amber" : "plain"} />
             <Stat href="/downloads" icon="folder" n={g.downloaded.length}
               label="Past Jobs" note="Previously issued and completed."
               cta="View All" />
@@ -158,10 +178,36 @@ export default async function Dashboard() {
             </section>
           )}
 
-          {awaiting.length > 0 && (
+          {(awaiting.length > 0 || returned.length > 0) && (
             <section className="mb-8">
-              <SectionHead title="Action Required" count={awaiting.length} tone="amber" />
+              <SectionHead title="Action Required" count={awaiting.length + returned.length} tone="amber" />
               <div className="panel-amber overflow-hidden">
+                {returned.map((s) => (
+                  // A lodgement we couldn't take. The email says so too, but
+                  // the portal must never let a dead job read as live.
+                  <div key={s.id} className="border-b border-[#E9D7AC] px-4 py-4 last:border-b-0">
+                    <div className="flex flex-wrap items-start gap-4">
+                      <JobArt description={s.description} tone="amber" />
+                      <div className="min-w-[170px] max-w-full flex-1">
+                        <p className="font-display text-[15.5px] font-semibold text-ink">
+                          {s.address}
+                        </p>
+                        <JobDesc description={s.description} clientRef={s.clientRef as string} />
+                        <p className="mt-1.5 text-[13px] font-medium text-brass-deep">
+                          We couldn&apos;t take this lodgement — it&apos;s back with you.
+                        </p>
+                        {s.reviewNote && (
+                          <div className="mt-3 rounded-lg border border-[#E9D7AC] bg-white px-4 py-3 text-[13px] leading-relaxed text-ink/75">
+                            <p className="whitespace-pre-line">{s.reviewNote}</p>
+                          </div>
+                        )}
+                      </div>
+                      <Link href="/submit" className="btn shrink-0">
+                        Lodge It Again
+                      </Link>
+                    </div>
+                  </div>
+                ))}
                 {awaiting.map((j) => (
                   <div key={j.ref} className="border-b border-[#E9D7AC] px-4 py-4 last:border-b-0">
                     <div className="flex flex-wrap items-start gap-4">
@@ -218,8 +264,10 @@ export default async function Dashboard() {
                         <JobDesc description={j.description as string} clientRef={j.clientRef as string} />
                         <LodgedLine className="mt-1" receivedAt={j.receivedAt as string}
                           days={lodgedDays(j)} />
-                        <span className="chip mt-1.5 inline-block">
-                          {clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
+                        <span className={`chip mt-1.5 inline-block ${answeredRefs.has(String(j.ref)) ? "chip-seal" : ""}`}>
+                          {answeredRefs.has(String(j.ref))
+                            ? "Answer sent — with us"
+                            : clientStatusLabel(j.mondayStatus as string, j.fileCount as number)}
                         </span>
                       </div>
                     </div>

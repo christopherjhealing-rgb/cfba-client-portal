@@ -631,6 +631,33 @@ logins note → CTA strip.
 > workflows in demo mode; **no Supabase schema/RLS changes ever applied by
 > the agent** (§9); report changed files, tests run, remaining issues.
 
+> **BATCH 1: DONE — 12 Aug 2026** (browser-verified in demo, 486 tests
+> green, build green). P1-1 flip (job page + dashboard "Answer sent — with
+> us", text-only and file replies both flip, new ask re-arms), P1-2 suffix
+> (two same-named files → distinct blobs, combine bytes correct), P1-3
+> delivered as visible-refusal + named-missing lines — **and the em-dash
+> "bug" is corrected on the record: F3 instrumentation showed Playwright
+> itself never delivered the file (`input.files.length = 0`); the app's
+> filters pass such names fine. QA-3's silent-drop finding was a harness
+> artifact.** P1-4 returned-row with reason + "Lodge It Again" verified.
+>
+> **Owner additions delivered in the same batch (12 Aug requests):**
+> cancel becomes **request + office confirmation** (no status write; card
+> note + office email + "Cancellation requested" state; duplicate ask →
+> 409); login-email copy fixes ("no phone call, no chasing" removed;
+> client name out of the footer; guide attachment confirmed already
+> wired); admin "Email It To" prefilled from the company's email; **My
+> Documents** page + nav entry (library moved out of My Details, pointer
+> left behind); "From Your Documents" and the save-engineering prompt
+> restyled to be unmissable in the Engineering bucket; lodging
+> progress panel ("Lodging your job… leave this page open"); **BAL
+> compulsory upload** when the verdict demands it (shed near = its own new
+> report; post-2016 patio/carport = evidence; exempt/far/unsure = never
+> forced) with verdict tones pinned by unit test; **strata self-declared**
+> checkbox making the Strata Plan a required upload (Landgate
+> auto-detection recorded as post-pilot P2 — public SLIP layers don't
+> reliably expose strata tenure and cadastre remains licence-gated).
+
 **BATCH 1 — Pilot gate: functional + data-integrity blockers**
 - Goal: the two GO conditions that are code, plus the silent dead-ends.
 - Items: P1-1, P1-2, P1-3, P1-4.

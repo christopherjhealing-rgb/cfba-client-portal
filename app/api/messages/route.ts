@@ -9,9 +9,9 @@ import {
 } from "@/lib/mail";
 import { env } from "@/lib/env";
 import { notifyTeams } from "@/lib/teams";
-import { isGeneralRef, GENERAL_REF } from "@/lib/core.mjs";
+import { isGeneralRef, GENERAL_REF, needsClientInfo } from "@/lib/core.mjs";
 import { combineUploads } from "@/lib/combine-uploads";
-import { combinable } from "@/lib/uploads.mjs";
+import { combinable, uniqueName } from "@/lib/uploads.mjs";
 import { fileNewInfo } from "@/lib/new-info";
 
 /**
@@ -266,9 +266,12 @@ async function handle(req: Request) {
   const folder = general ? `enquiries/${session.companyId}` : jobRef;
   const dir = `messages/${folder}/${msgId}`;
   const raw: { name: string; category?: string }[] = [];
+  // Same collision guard as lodgement: two same-named files must suffix, not
+  // silently overwrite (the second write used to win).
+  const usedNames = new Set<string>();
   for (let i = 0; i < uploads.length; i++) {
     const f = uploads[i];
-    const safe = f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120);
+    const safe = uniqueName(f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120), usedNames);
     const bytes = Buffer.from(await f.arrayBuffer());
     await repo.writeFile(`${dir}/${safe}`, bytes, f.type || "application/octet-stream");
     raw.push({ name: safe, category: categories[i] || undefined });
@@ -318,6 +321,7 @@ async function handle(req: Request) {
     // The client has answered. Move the card before telling the office, so the
     // board is already right by the time somebody opens the email.
     await moveOffFir(job);
+    await markFirAnswered(job);
     await notifyOffice(who, jobRef, job?.address || "", text, stored);
     // File the returned drawings/engineering into the job's SharePoint folder,
     // superseding the versions they replace. After the response — locating a
@@ -333,6 +337,26 @@ async function handle(req: Request) {
   }
   await repo.markThreadRead(session.companyId, general ? GENERAL_REF : jobRef);
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * The portal-side half of the ball-in-court flip. The board keeps the card at
+ * FIR until the office moves it — a sync cycle after the client has actually
+ * answered — and a banner still saying "we need something from you" after
+ * they've sent it is how a client double-sends or rings. Record that THIS ask
+ * has been answered; the pages render "Answer sent — with us" until the board
+ * either moves on or asks something new (a different request text re-arms the
+ * amber state — see firAnswered in lib/core.mjs). Never fatal: the message is
+ * already saved and on its way.
+ */
+async function markFirAnswered(job: repo.Job | undefined) {
+  if (!job || !needsClientInfo(repo.toPortalJob(job))) return;
+  await repo
+    .setSetting(`firanswered:${job.ref}`, {
+      at: new Date().toISOString(),
+      ask: job.firRequest ?? null,
+    })
+    .catch(() => {});
 }
 
 /** An enquiry is saved before this runs, and /admin/enquiries lists it whether
@@ -481,6 +505,7 @@ async function handleDirect(session: Session, body: Record<string, unknown>) {
     // The client has answered. Move the card before telling the office, so the
     // board is already right by the time somebody opens the email.
     await moveOffFir(job);
+    await markFirAnswered(job);
     await notifyOffice(who, jobRef, job?.address || "", text, stored);
     // File the returned drawings/engineering into the job's SharePoint folder,
     // superseding the versions they replace. After the response — locating a

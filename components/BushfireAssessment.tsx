@@ -76,7 +76,11 @@ export function BushfireAssessment({
   /** Which BAL-relevant structures the job's rows contain (balKinds). */
   patio: boolean;
   shed: boolean;
-  onResult?: (r: { summary: string; bal: string | null } | null) => void;
+  /** `needs` is what the verdict obliges the client to ATTACH before lodging:
+   *  a shed within 6 m needs its own new BAL report; a post-2016 patio or
+   *  carport needs evidence of the house's rating. Null = nothing required
+   *  (far, exempt, or age-unknown — the office confirms those). */
+  onResult?: (r: { summary: string; bal: string | null; needs: "shed-report" | "evidence" | null } | null) => void;
 }) {
   const [distance, setDistance] = useState<Distance>(null);
   const [age, setAge] = useState<Age>(null);
@@ -104,11 +108,17 @@ export function BushfireAssessment({
   const parts = farV ? [farV] : [shedV, patioV].filter((v): v is BalVerdict => !!v);
   const summary = done ? parts.map((p) => p.summary).join(" ") : null;
   const bal = done ? (patioV?.mondayBal ?? null) : null;
+  // What must be attached before this can lodge (owner's rule, Aug 2026):
+  // a shed's own new report outranks patio evidence when both are present.
+  const needs: "shed-report" | "evidence" | null = !done ? null
+    : shedV?.tone === "action" ? "shed-report"
+    : patioV?.tone === "action" ? "evidence"
+    : null;
 
   useEffect(() => {
-    onResult?.(summary ? { summary, bal } : null);
+    onResult?.(summary ? { summary, bal, needs } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [summary, bal]);
+  }, [summary, bal, needs]);
 
   const things = [patio && "patio or carport", shed && "shed"].filter(Boolean).join(" and ");
 

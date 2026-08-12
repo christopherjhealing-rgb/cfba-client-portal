@@ -5,7 +5,6 @@ import { unreadCount } from "@/lib/unread";
 import { AppShell, PageHead } from "@/components/AppShell";
 import { disabledPages, hiddenHrefs } from "@/lib/pages";
 import { Icon } from "@/components/Icon";
-import { LibraryManager } from "@/components/LibraryManager";
 import { TeamLogins, type TeamLogin } from "@/components/TeamLogins";
 import { listLibrary } from "@/lib/library";
 
@@ -55,7 +54,13 @@ export default async function Details() {
         <Field label="Jobs on Your Account" value={String(jobCount)} />
       </div>
 
-      <LibraryManager initial={docs} />
+      {/* The document library moved to its own page (/documents) so it can be
+          found — this pointer stays for anyone who knew it lived here. */}
+      <div className="card mb-6 px-4 py-3.5 text-[13.5px] text-ink/70">
+        Your saved engineering now lives under{" "}
+        <a href="/documents" className="font-medium text-seal underline underline-offset-2">My Documents</a>{" "}
+        in the sidebar — everything that was here is there.
+      </div>
 
       {team.length > 0 && <TeamLogins logins={team} readonly={session.impersonated} />}
 

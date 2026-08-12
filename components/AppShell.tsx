@@ -66,6 +66,9 @@ const NAV: NavItem[] = [
   { href: "/submit", label: "Lodge a Job", icon: "plus" },
   { href: "/amend", label: "Amend a Job", icon: "edit" },
   { href: "/downloads", label: "Downloads", icon: "download" },
+  // The saved-engineering library, surfaced (owner: under My Details nobody
+  // found it). Same store the Lodge form's "From Your Documents" reads.
+  { href: "/documents", label: "My Documents", icon: "folder" },
   { href: "/info-sheets", label: "Info Sheets", icon: "book" },
   // One entry, not three. The site plan tool and the engineering checker are
   // still their own screens — they're reached from Tools, and `also` keeps

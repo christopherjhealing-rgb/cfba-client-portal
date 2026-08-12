@@ -98,7 +98,8 @@ export default async function ClientsPage() {
                     </form>
                   </div>
                 </div>
-                <LoginManager companyId={c.id} companyName={c.name} existing={ls.map((l) => l.username)} />
+                <LoginManager companyId={c.id} companyName={c.name} existing={ls.map((l) => l.username)}
+                  defaultEmail={c.emails[0] || ""} />
                 <DeleteClient companyId={c.id} companyName={c.name} />
               </div>
             );

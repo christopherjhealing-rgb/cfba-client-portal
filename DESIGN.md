@@ -82,8 +82,10 @@ My Details · Help & Support. "Amend a Job" leaves the nav: amending is an
 action *on a job* (entry points on job pages + a lodge-page cross-link),
 not a place. Sidebar search stays. Unread badge on My Messages stays.
 
-**CURRENT:** 12-item dark seal sidebar (regroup is post-pilot, validated
-against pilot usage); staff = 8-item uppercase top nav (Queue, Clients,
+**CURRENT:** 13-item dark seal sidebar — My Documents added 12 Aug 2026 at
+the owner's direction (the saved-engineering library, surfaced out of My
+Details); regroup to 8 stays post-pilot, validated against pilot usage,
+and absorbs this too; staff = 8-item uppercase top nav (Queue, Clients,
 Enquiries, Amendments, FIR Library, Records, Content, Settings) with
 Reports/Audit/Email Log hanging off Queue as ghost buttons — staff nav is
 fine as-is.
@@ -136,9 +138,12 @@ job-detail banner):
   on them. Unread replies badge on Messages, not here.
 - **Answered flip (ball-in-court):** the moment the client sends, the item
   leaves the strip and the job shows "Answer sent — with us" without
-  waiting for the board sync; sync re-asserts if the office re-raises.
-  (QA-1: current implementation keeps demanding action after the answer —
-  fix specified, pre-pilot.)
+  waiting for the board sync; a NEW ask (changed request text) re-arms the
+  amber state. **SHIPPED 12 Aug 2026** (Batch 1): marker
+  `firanswered:<ref>` written by the messages route on any reply to an
+  FIR-state job; `firAnswered()` in core.mjs is the guard; job page and
+  dashboard both honour it. Rejected lodgements render in the strip with
+  their reason and a "Lodge It Again" CTA (also shipped).
 
 ## 7. Job list / table pattern — SPEC
 
@@ -164,7 +169,12 @@ chips) → Documents (current versions only; superseding is office-side) →
 **one thread** = messages *and* system events (lodged, FIR raised,
 answered, issued, downloaded) so communication history and job history
 are a single surface (system events are the target; messages CURRENT) →
-reply box → quiet cancel affordance on cancellable jobs only.
+reply box → quiet **request-to-cancel** affordance on cancellable jobs
+only. Cancelling is a REQUEST the office confirms (owner, 12 Aug 2026):
+the ask lands on the card + office email, the job shows "Cancellation
+requested — with us to confirm", the affordance disappears, a duplicate
+ask 409s, and the job only reads Cancelled when the office cancels the
+card (sync wins). No portal-side status write.
 
 Timeline stages (CURRENT, keep): Received → Under assessment → Further
 information → Certificate being prepared → Issued; "Issued" ticks only
@@ -225,6 +235,15 @@ supersede filing behind `RECORD_TO_FOLDER` (CURRENT, live-smoke pending).
   OPEN, design when built) and a **single smart drop-zone** that
   auto-categorises by filename heuristics with client-confirmable chips
   (post-pilot, validate against usage).
+- **Conditional required documents** (pattern, shipped 12 Aug 2026):
+  when circumstances demand a document, it appears as its own required
+  bucket with the reason in its label, and the named-missing line under
+  the disabled button says exactly what unlocks it. Shipped instances:
+  BAL (verdict-driven — a shed within 6 m requires its OWN new report; a
+  post-2016 patio/carport requires rating evidence; exempt/far/unsure
+  never force an upload) and Strata (self-declared checkbox → Strata Plan
+  required; Landgate auto-detection is post-pilot, licence-gated). These
+  ride as "other"-category files — never combined, their own record.
 - Success card: "Job Lodged" + their-ref echo + View My Jobs / Lodge
   Another (CURRENT — fix the "My Jobsnow" spacing). Draft autosave:
   post-pilot (localStorage).
@@ -415,6 +434,14 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (Batch 1 shipped):** FIR answered-flip (§6) live on job
+  page + dashboard; collision suffix everywhere names are written;
+  visible-refusal + named-missing lines (§18) live; rejected lodgements
+  render in Action Required with the reason; cancel became
+  request-and-confirm (§8); My Documents nav entry + page; From Your
+  Documents / save-engineering restyled prominent; lodging progress
+  panel; BAL + strata conditional required documents (§11). QA-3's
+  em-dash finding corrected: harness artifact, not an app bug.
 - **2026-08-12 (owner decisions, Session 5 follow-up):** certificate
   retention confirmed at 3 months (§2.4, §10 rewritten — Option A
   rejected; CFBA's server archive + on-request supply is the path);

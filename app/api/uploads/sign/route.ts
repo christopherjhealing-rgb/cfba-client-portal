@@ -3,6 +3,7 @@ import { getClientSession, isStaff } from "@/lib/session";
 import { DEMO_MODE } from "@/lib/env";
 import * as repo from "@/lib/repo";
 import { disabledPages } from "@/lib/pages";
+import { uniqueName } from "@/lib/uploads.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -112,10 +113,7 @@ export async function POST(req: Request) {
     const used = new Set<string>();
     const files: { name: string; url: string }[] = [];
     for (const f of wanted) {
-      let name = sanitize(f.name);
-      let n = 2;
-      while (used.has(name)) name = name.replace(/(\.[a-z0-9]+)$/i, `-${n++}$1`);
-      used.add(name);
+      const name = uniqueName(sanitize(f.name), used);
       files.push({ name, url: await repo.signUploadUrl(`${prefix}/${name}`) });
     }
 

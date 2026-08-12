@@ -12,6 +12,7 @@ import { notifyTeams } from "@/lib/teams";
 import { lodgeAmendment, AMENDMENT_OPEN } from "@/lib/amendments";
 import { BAL_LABELS } from "@/lib/bushfire.mjs";
 import { combineUploads } from "@/lib/combine-uploads";
+import { uniqueName } from "@/lib/uploads.mjs";
 
 const OFFLINE = {
   error: "This section is temporarily offline while we make updates — please try again shortly.",
@@ -324,9 +325,14 @@ async function handle(req: Request) {
 
   const id = "sub_" + Math.random().toString(36).slice(2, 10);
   const stored: { name: string; category?: string }[] = [];
+  // Collision guard: the same file name in two buckets must never overwrite —
+  // the second write used to win silently and the combine then merged the
+  // wrong bytes (drawings carrying the engineering file). Suffix instead,
+  // exactly as the signing route always has.
+  const usedNames = new Set<string>();
   for (let i = 0; i < uploads.length; i++) {
     const f = uploads[i];
-    const safe = f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120);
+    const safe = uniqueName(f.name.replace(/[^A-Za-z0-9 ._-]/g, "_").slice(0, 120), usedNames);
     const bytes = Buffer.from(await f.arrayBuffer());
     await repo.writeFile(`submissions/${id}/${safe}`, bytes, f.type || "application/octet-stream");
     stored.push({ name: safe, category: categories[i] || undefined });
