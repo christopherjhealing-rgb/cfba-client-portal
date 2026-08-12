@@ -435,6 +435,12 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (owner tweaks, post-merge):** strata is now a compulsory
+  Yes/No asked BEFORE Supporting Documents (null until answered; the lodge
+  button names the hold); a Yes adds the required Strata Plan slot directly
+  after Engineering. From Your Documents merged INTO the Engineering card
+  (one box, divided sections — FileBucket gained `children` + `satisfied`),
+  so ticked saved engineering also clears the card's "missing" styling.
 - **2026-08-12 (Batch 6 shipped):** the regression net. `npm run
   test:e2e` — ten real-browser specs (smoke, auth incl. lockout and
   session-expiry copy, lodgement incl. the Batch-1 tolerant-intake and
