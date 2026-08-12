@@ -50,10 +50,10 @@ export function CancelJob({ refNo }: { refNo: string }) {
 
   if (!open) {
     return (
-      <p className="mt-6 text-center text-[13px] text-ink/50">
+      <p className="mt-6 text-center text-[13px] text-ink/60">
         Need to stop this job?{" "}
         <button type="button" onClick={() => setOpen(true)}
-          className="font-medium text-ink/65 underline underline-offset-2 transition hover:text-flag">
+          className="font-medium text-ink/65 underline underline-offset-2 transition hover:text-flag max-lg:-my-2 max-lg:inline-flex max-lg:min-h-10 max-lg:items-center">
           Request to cancel it
         </button>
       </p>
@@ -84,11 +84,11 @@ export function CancelJob({ refNo }: { refNo: string }) {
             className="field resize-y"
             placeholder="For example: the owner has put it on hold, or the design has changed and we'll lodge it again." />
           <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12px] text-ink/50">
+            <span className="text-[12px] text-ink/60">
               A line is plenty — it goes straight onto the job.
             </span>
             {left <= 100 && (
-              <span className={`text-[12px] ${left <= 0 ? "font-medium text-flag" : "text-ink/50"}`}>
+              <span className={`text-[12px] ${left <= 0 ? "font-medium text-flag" : "text-ink/60"}`}>
                 {left} left
               </span>
             )}

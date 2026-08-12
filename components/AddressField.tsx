@@ -224,14 +224,14 @@ export function AddressField({
                 {label}
               </li>
             ))}
-            <li role="presentation" className="border-t border-rule/70 px-3 py-1.5 text-right text-[10px] text-ink/40">
+            <li role="presentation" className="border-t border-rule/70 px-3 py-1.5 text-right text-[10px] text-ink/60">
               Powered by Google
             </li>
           </ul>
         )}
       </div>
       {KEY && (
-        <p className="mt-1.5 text-[12px] text-ink/50">
+        <p className="mt-1.5 text-[12px] text-ink/60">
           Start typing and pick your address — or just type it in full if it&apos;s a
           new lot that isn&apos;t on the maps yet.
         </p>

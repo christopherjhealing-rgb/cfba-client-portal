@@ -71,10 +71,10 @@ export default async function Downloads() {
                     <div key={j.ref} className="flex flex-wrap items-center gap-4 px-4 py-3.5">
                       <div className="min-w-[170px] max-w-full flex-1">
                         <div className="flex flex-wrap items-baseline gap-2">
-                          <span className="font-mono text-[12px] text-ink/55">{j.ref}</span>
+                          <span className="font-mono text-[12px] text-ink/60">{j.ref}</span>
                           <span className="truncate font-medium text-ink/80">{j.address}</span>
                         </div>
-                        <div className="mt-0.5 text-[13px] text-ink/55">
+                        <div className="mt-0.5 text-[13px] text-ink/60">
                           {j.description}
                           {j.issuedAt ? <> · issued {fmtDate(j.issuedAt)}</> : null}
                         </div>
@@ -82,7 +82,7 @@ export default async function Downloads() {
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <DownloadButton href={`/api/jobs/${encodeURIComponent(j.ref)}/download`}
                           label="Download Again" />
-                        <span className={`text-[11px] ${soon ? "font-medium text-brass-deep" : "text-ink/55"}`}>
+                        <span className={`text-[11px] ${soon ? "font-medium text-brass-deep" : "text-ink/60"}`}>
                           available {r.daysLeft} more day{r.daysLeft === 1 ? "" : "s"}
                         </span>
                       </div>

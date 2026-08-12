@@ -2518,7 +2518,7 @@ export function SitePlanBuilder(
         <div className="mx-auto grid w-[132px] grid-cols-3 gap-1">
           <span />{cell(0)}<span />
           {cell(3)}
-          <span className="flex items-center justify-center text-[9px] uppercase tracking-wide text-ink/35">plan</span>
+          <span className="flex items-center justify-center text-[9px] uppercase tracking-wide text-ink/60">plan</span>
           {cell(1)}
           <span />{cell(2)}<span />
         </div>
@@ -2588,7 +2588,7 @@ export function SitePlanBuilder(
         <div>
           <div className="flex items-baseline justify-between">
             <span className="label !mb-0">Roof pitch</span>
-            <span className="font-mono text-[11.5px] text-ink/55">{fmtM(p.pitch)}°</span>
+            <span className="font-mono text-[11.5px] text-ink/60">{fmtM(p.pitch)}°</span>
           </div>
           <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
             min={0} max={PATIO_MAX_PITCH} step={0.5} value={p.pitch}
@@ -2616,7 +2616,7 @@ export function SitePlanBuilder(
               const wall = p.mount === "attached" && p.attach === local;
               return (
                 <div key={sd}>
-                  <span className="block text-center text-[10px] uppercase tracking-wide text-ink/45">
+                  <span className="block text-center text-[10px] uppercase tracking-wide text-ink/60">
                     {SCREEN_LABELS[sd]}
                   </span>
                   <input type="number" inputMode="numeric" min={0} max={PATIO_MAX_COLS}
@@ -2627,7 +2627,7 @@ export function SitePlanBuilder(
               );
             })}
           </div>
-          <p className="mt-1 text-[12px] leading-snug text-ink/50">
+          <p className="mt-1 text-[12px] leading-snug text-ink/60">
             Corners count as a post, and are shared between two sides. The side
             against the dwelling carries a wall, not posts.
           </p>
@@ -2657,7 +2657,7 @@ export function SitePlanBuilder(
           <input id="patio-floor" type="number" inputMode="decimal" min={0} max={2} step={0.05}
             className="field" value={p.floorAbove}
             onChange={(e) => patchPatio(s.id, { floorAbove: Number(e.target.value) })} />
-          <p className="mt-1 text-[12px] leading-snug text-ink/50">
+          <p className="mt-1 text-[12px] leading-snug text-ink/60">
             0 for a floor level with the ground. The elevations show natural
             ground (NGL) and the patio floor (FL) above it.
           </p>
@@ -2677,7 +2677,7 @@ export function SitePlanBuilder(
               Set {need}
             </button>
           </div>
-          <p className={`mt-1.5 text-[12px] leading-snug ${p.downpipes < need ? "text-brass-deep" : "text-ink/55"}`}>
+          <p className={`mt-1.5 text-[12px] leading-snug ${p.downpipes < need ? "text-brass-deep" : "text-ink/60"}`}>
             {gutter.length > 0
               ? `Gutter runs about ${fmtM(gutter.length)} m — that's around ${need} downpipe${need === 1 ? "" : "s"} at one per ${GUTTER_M_PER_DOWNPIPE} m. A rule of thumb, not a ruling.`
               : "No gutter on this roof yet — set the fall direction above."}
@@ -2735,11 +2735,11 @@ export function SitePlanBuilder(
               )}
             </>
           ) : (
-            <p className="text-[12.5px] leading-snug text-ink/55">
+            <p className="text-[12.5px] leading-snug text-ink/60">
               Give the patio a size and a roof and we&apos;ll size the soakwells for it.
             </p>
           )}
-          <p className="mt-1.5 text-[11.5px] leading-snug text-ink/45">{SOAKWELL_CAVEAT}</p>
+          <p className="mt-1.5 text-[11.5px] leading-snug text-ink/60">{SOAKWELL_CAVEAT}</p>
         </div>
 
         {/* Live elevation — the front and side views, updating as the roof,
@@ -2755,7 +2755,7 @@ export function SitePlanBuilder(
               {elevationView(s, "d", "Side", true)}
             </div>
           </div>
-          <p className="mt-1 text-[12px] leading-snug text-ink/50">
+          <p className="mt-1 text-[12px] leading-snug text-ink/60">
             Updates as you change the roof. The full-size sheet prints after the plan.
           </p>
         </div>
@@ -3435,7 +3435,7 @@ export function SitePlanBuilder(
                 Trace the lot on the photo
               </button>
             )}
-            <p className={`min-w-[200px] flex-1 text-[12.5px] leading-snug ${lotNote || aerialNote ? "text-brass-deep" : "text-ink/55"}`}>
+            <p className={`min-w-[200px] flex-1 text-[12.5px] leading-snug ${lotNote || aerialNote ? "text-brass-deep" : "text-ink/60"}`}>
               {lotNote || aerialNote || (isPoly
                 ? origin === "cadastre" ? LOT_INDICATIVE : lotOriginNote(boundary)
                 : cadastre && !sited
@@ -3446,7 +3446,7 @@ export function SitePlanBuilder(
             </p>
           </div>
         )}
-        <p className="mt-2.5 text-[12.5px] text-ink/50">
+        <p className="mt-2.5 text-[12.5px] text-ink/60">
           {origin === "cadastre"
             ? "This is the lot as the State records it. Tap any boundary on the plan to make it the street frontage, or hit Adjust the boundary and drag a corner if it doesn't match what's on the ground."
             : isPoly
@@ -3510,21 +3510,21 @@ export function SitePlanBuilder(
             <dl className="space-y-1 font-mono text-[12.5px] text-ink/75">
               {boundary.lotId && (
                 <div className="flex justify-between gap-2">
-                  <dt className="text-ink/50">Lot</dt>
+                  <dt className="text-ink/60">Lot</dt>
                   <dd className="text-right">{boundary.lotId}</dd>
                 </div>
               )}
               <div className="flex justify-between gap-2">
-                <dt className="text-ink/50">Area</dt>
+                <dt className="text-ink/60">Area</dt>
                 <dd>{fmtM(lotArea)} m²</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-ink/50">Corners</dt>
+                <dt className="text-ink/60">Corners</dt>
                 <dd>{lotOutline.length}</dd>
               </div>
               {isPoly && (
                 <div className="flex justify-between gap-2">
-                  <dt className="text-ink/50">North</dt>
+                  <dt className="text-ink/60">North</dt>
                   <dd>{Math.round(north)}° on this sheet</dd>
                 </div>
               )}
@@ -3623,7 +3623,7 @@ export function SitePlanBuilder(
             )}
             {/* Where this boundary came from, in the same words the printed
                 sheet uses. Never a claim the boundary can't keep. */}
-            <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+            <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/60">
               {lotOriginNote(boundary)}
             </p>
           </div>
@@ -3675,7 +3675,7 @@ export function SitePlanBuilder(
                   <div>
                     <div className="flex items-baseline justify-between">
                       <span className="label !mb-0">Turn the photo</span>
-                      <span className="font-mono text-[11.5px] text-ink/55">{under.rot.toFixed(1)}°</span>
+                      <span className="font-mono text-[11.5px] text-ink/60">{under.rot.toFixed(1)}°</span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-2">
                       <button type="button" aria-label="Turn the photo anticlockwise"
@@ -3695,7 +3695,7 @@ export function SitePlanBuilder(
                   <div>
                     <div className="flex items-baseline justify-between">
                       <span className="label !mb-0">How strong</span>
-                      <span className="font-mono text-[11.5px] text-ink/55">{Math.round(under.opacity * 100)}%</span>
+                      <span className="font-mono text-[11.5px] text-ink/60">{Math.round(under.opacity * 100)}%</span>
                     </div>
                     <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
                       min={UNDERLAY_MIN_OPACITY} max={1} step={0.05}
@@ -3711,7 +3711,7 @@ export function SitePlanBuilder(
                 className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
                 Take the Photo Off
               </button>
-              <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+              <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/60">
                 {aligning
                   ? "Drag the photo to line it up — two fingers to turn it, arrow keys to nudge (Shift for a metre). Lock it when it sits right."
                   : "A tracing guide only. It won't appear on the printed plan, it may be a year or two old, and it isn't a survey — your own measurements win."}
@@ -3732,7 +3732,7 @@ export function SitePlanBuilder(
                     <input type="file" accept="application/pdf,image/*" className="hidden" disabled={planBusy}
                       onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void addPlan(f); }} />
                   </label>
-                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/60">
                     Upload a PDF or a photo of your house plans and trace over it.
                     It stays on this device — it&apos;s never uploaded, and it
                     never appears on the printed plan.
@@ -3810,7 +3810,7 @@ export function SitePlanBuilder(
                       <div>
                         <div className="flex items-baseline justify-between">
                           <span className="label !mb-0">Turn the plan</span>
-                          <span className="font-mono text-[11.5px] text-ink/55">{Math.round(plan0.rot)}°</span>
+                          <span className="font-mono text-[11.5px] text-ink/60">{Math.round(plan0.rot)}°</span>
                         </div>
                         <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
                           min={0} max={360} step={1} value={plan0.rot}
@@ -3821,7 +3821,7 @@ export function SitePlanBuilder(
                       <div>
                         <div className="flex items-baseline justify-between">
                           <span className="label !mb-0">How strong</span>
-                          <span className="font-mono text-[11.5px] text-ink/55">{Math.round(plan0.opacity * 100)}%</span>
+                          <span className="font-mono text-[11.5px] text-ink/60">{Math.round(plan0.opacity * 100)}%</span>
                         </div>
                         <input type="range" className="mt-1.5 h-10 w-full accent-[#1E5B3C]"
                           min={UNDERLAY_MIN_OPACITY} max={1} step={0.05} value={plan0.opacity}
@@ -3835,7 +3835,7 @@ export function SitePlanBuilder(
                     className="btn-ghost mt-3 min-h-[40px] w-full !py-2">
                     Take the House Plan Off
                   </button>
-                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/55">
+                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/60">
                     {planAligning
                       ? "Drag the plan to line it up with your drawing, then lock it. Set the scale off a length you know, and it'll sit true to the metre."
                       : "A tracing guide only — it stays on this device, isn't uploaded, and never appears on the printed plan."}
@@ -3856,7 +3856,7 @@ export function SitePlanBuilder(
               <button type="button" onClick={startDraw}
                 className={`col-span-2 rounded-md border px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash ${draw ? "border-seal bg-wash" : "border-rule bg-white"}`}>
                 <span className="block text-[13.5px] font-medium">Free Draw</span>
-                <span className="block font-mono text-[11px] text-ink/45">
+                <span className="block font-mono text-[11px] text-ink/60">
                   tap its corners, then name it
                 </span>
               </button>
@@ -3864,7 +3864,7 @@ export function SitePlanBuilder(
                 <button key={p.kind} type="button" onClick={() => addStructure(p)}
                   className="rounded-md border border-rule bg-white px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash">
                   <span className="block text-[13.5px] font-medium">{p.label}</span>
-                  <span className="block font-mono text-[11px] text-ink/45">
+                  <span className="block font-mono text-[11px] text-ink/60">
                     {fmtM(p.w)} × {fmtM(p.d)} m
                     {structureState(p) === "existing" ? " · existing" : ""}
                   </span>
@@ -3873,7 +3873,7 @@ export function SitePlanBuilder(
               <button type="button" onClick={addLShape}
                 className="rounded-md border border-rule bg-white px-3 py-2 text-left transition hover:border-seal/50 hover:bg-wash">
                 <span className="block text-[13.5px] font-medium">L-shape</span>
-                <span className="block font-mono text-[11px] text-ink/45">6 × 4 m, notched</span>
+                <span className="block font-mono text-[11px] text-ink/60">6 × 4 m, notched</span>
               </button>
             </div>
           </div>
@@ -3921,7 +3921,7 @@ export function SitePlanBuilder(
                       );
                     })}
                   </div>
-                  <p className="mt-1.5 text-[12.5px] leading-snug text-ink/55">
+                  <p className="mt-1.5 text-[12.5px] leading-snug text-ink/60">
                     {structureState(sel) === "existing"
                       ? "Already on the block. Drawn washed back, hatched and dashed, and labelled “existing” on the sheet."
                       : "What you're applying for. Drawn solid and bold, and labelled “proposed” on the sheet."}
@@ -3929,7 +3929,7 @@ export function SitePlanBuilder(
                   </p>
                 </div>
                 {sel.shape === "poly" ? (
-                  <p className="text-[12.5px] leading-relaxed text-ink/55">
+                  <p className="text-[12.5px] leading-relaxed text-ink/60">
                     Drawn outline, {sel.pts?.length ?? 0} corners — drag the
                     corner handles on the plan to reshape it.
                   </p>
@@ -3950,7 +3950,7 @@ export function SitePlanBuilder(
                 {/* The parametric patio — studio only. */}
                 {patioTools && sel.kind === "patio" && sel.shape === "rect" && patioControls(sel)}
                 <div className="flex justify-between font-mono text-[12.5px] text-ink/75">
-                  <span className="text-ink/50">Footprint Area</span>
+                  <span className="text-ink/60">Footprint Area</span>
                   <span>{fmtM(structureArea(sel))} m²</span>
                 </div>
                 <div>
@@ -3959,7 +3959,7 @@ export function SitePlanBuilder(
                     {isPoly
                       ? lotSetbacks(sel, lotOutline, frontage).map((r) => (
                           <div key={r.i} className="flex justify-between gap-2">
-                            <dt className="text-ink/50">
+                            <dt className="text-ink/60">
                               {r.label === "Front" ? "front (street)" : r.label.toLowerCase()}
                             </dt>
                             <dd>{fmtM2(r.v)} m</dd>
@@ -3967,7 +3967,7 @@ export function SitePlanBuilder(
                         ))
                       : Object.entries(setbacks(sel, lotW, lotD)).map(([side, v]) => (
                           <div key={side} className="flex justify-between gap-2">
-                            <dt className="capitalize text-ink/50">{side === "front" ? "front (street)" : side}</dt>
+                            <dt className="capitalize text-ink/60">{side === "front" ? "front (street)" : side}</dt>
                             <dd>{fmtM2(v)} m</dd>
                           </div>
                         ))}
@@ -3989,7 +3989,7 @@ export function SitePlanBuilder(
                 <div>
                   <span className="label">Distance to Nearby Structures</span>
                   {nearSel.length === 0 ? (
-                    <p className="text-[12.5px] leading-snug text-ink/55">
+                    <p className="text-[12.5px] leading-snug text-ink/60">
                       Nothing else on the plan to measure to yet.
                     </p>
                   ) : (
@@ -4020,7 +4020,7 @@ export function SitePlanBuilder(
                       })}
                     </div>
                   )}
-                  <p className="mt-1.5 text-[12.5px] leading-snug text-ink/55">
+                  <p className="mt-1.5 text-[12.5px] leading-snug text-ink/60">
                     Measured outline to outline, at the closest point. Pin one —
                     here or by tapping the figure on the plan — and it stays on
                     the drawing and goes on the printed sheet.
@@ -4035,7 +4035,7 @@ export function SitePlanBuilder(
                 </button>
               </div>
             ) : (
-              <p className="text-[13px] leading-relaxed text-ink/55">
+              <p className="text-[13px] leading-relaxed text-ink/60">
                 Tap a structure on the plan to select it — drag to move (edges
                 pull in line with neighbours; hold Alt to drag free), drag the
                 square handles to resize, R to rotate, E to swap existing and
@@ -4089,7 +4089,7 @@ export function SitePlanBuilder(
                 Start again
               </button>
             </div>
-            <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/50">
+            <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/60">
               {fits
                 ? <>Prints on A4 at <span className="font-mono">1:{denom}</span>. In the print dialog choose &ldquo;Save as PDF&rdquo; and keep the size at 100%.</>
                 : <>This lot is larger than A4 fits at 1:500 — the print is reduced to fit and says so. The scale bar stays true.</>}
@@ -4193,7 +4193,7 @@ export function SitePlanBuilder(
           {/* Zoom, for working up close. Scroll the wheel over the plan to zoom
               toward the cursor, drag empty space to move around — like a map.
               Screen only; the print is always the true-scale drawing. */}
-          <div className="mb-2 flex items-center justify-end gap-1.5 text-ink/55">
+          <div className="mb-2 flex items-center justify-end gap-1.5 text-ink/60">
             <span className="text-[11px] uppercase tracking-[0.12em]">Zoom</span>
             <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.5)}
               disabled={zoom <= 1}
@@ -4311,11 +4311,11 @@ export function SitePlanBuilder(
               turning and scaling the photo pushes Google's own out of the
               clip — it adds to Google's attribution, it never replaces it. */}
           {tracing && (
-            <p className="mt-1.5 text-right text-[10.5px] leading-none text-ink/45">
+            <p className="mt-1.5 text-right text-[10.5px] leading-none text-ink/60">
               Imagery © Google
             </p>
           )}
-          <p className="mt-2 text-center text-[12px] text-ink/50">
+          <p className="mt-2 text-center text-[12px] text-ink/60">
             {aligning
               ? "Drag the photo until it sits under your lot, then lock it — the plan is on hold until you do."
               : editing
@@ -4340,7 +4340,7 @@ export function SitePlanBuilder(
             <div className="space-y-6 overflow-x-auto">
               {patios.map((s) => patioElevationSheet(s))}
             </div>
-            <p className="mt-3 text-[12.5px] leading-relaxed text-ink/50">
+            <p className="mt-3 text-[12.5px] leading-relaxed text-ink/60">
               This is exactly what prints after the site plan — one sheet per
               patio. Nothing here is on the site plan itself.
             </p>

@@ -62,7 +62,7 @@ export default async function Engineering() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[14px] font-semibold leading-snug text-ink">{s.name}</p>
-                  {s.note && <p className="mt-1 text-[13px] leading-snug text-ink/55">{s.note}</p>}
+                  {s.note && <p className="mt-1 text-[13px] leading-snug text-ink/60">{s.note}</p>}
                 </div>
                 <span className="mt-0.5 shrink-0 text-seal"><Icon name="arrowRight" size={16} /></span>
               </div>

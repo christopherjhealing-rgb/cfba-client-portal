@@ -38,7 +38,7 @@ export function BushfireCheck() {
         />
         <button className="btn" onClick={open}>Check the Official Map</button>
       </div>
-      <p className="mt-2 text-[12px] text-ink/45">
+      <p className="mt-2 text-[12px] text-ink/60">
         Opens the Map of Bush Fire Prone Areas (DFES) — the authoritative source.
         © Government of Western Australia (DFES), via Landgate SLIP.
       </p>

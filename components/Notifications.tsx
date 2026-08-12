@@ -223,7 +223,7 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
           <div className="font-display text-[13px] font-semibold text-ink">{toast.title}</div>
           <p className="mt-1 text-[13px] leading-relaxed text-ink/65">
             {toast.ref && (
-              <span className="mr-1.5 font-mono text-[12px] text-ink/50">{toast.ref}</span>
+              <span className="mr-1.5 font-mono text-[12px] text-ink/60">{toast.ref}</span>
             )}
             {toast.detail}
           </p>
@@ -240,7 +240,7 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="-mr-1 -mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-md text-ink/35 transition hover:bg-wash hover:text-ink/70"
+          className="-mr-1 -mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-md text-ink/60 transition hover:bg-wash hover:text-ink/70"
         >
           <Icon name="close" size={14} />
         </button>

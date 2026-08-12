@@ -94,7 +94,7 @@ export function AmendmentList({ rows }: { rows: AmendmentRow[] }) {
                 <div className="mt-0.5 text-[13px] text-ink/60">{a.company}</div>
 
                 <div className="mt-2 rounded-sm border-l-[3px] border-brass bg-[#FBF4E6] px-3 py-1.5 text-[13px] text-ink/80">
-                  <span className="font-display text-[10px] font-semibold uppercase tracking-[0.1em] text-ink/45">
+                  <span className="font-display text-[10px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                     Why
                   </span>
                   <div className="mt-0.5 whitespace-pre-wrap">{a.reason || "(none given)"}</div>
@@ -114,7 +114,7 @@ export function AmendmentList({ rows }: { rows: AmendmentRow[] }) {
                   </ul>
                 )}
 
-                <div className="mt-2 text-[12px] text-ink/50">
+                <div className="mt-2 text-[12px] text-ink/60">
                   {a.routedTo || "Not routed"}
                   {" · lodged "}
                   {new Date(a.createdAt).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}

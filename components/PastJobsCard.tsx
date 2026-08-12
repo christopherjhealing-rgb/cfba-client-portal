@@ -43,7 +43,7 @@ export function PastJobsCard({
           {busy ? "Reading the board…" : "Rebuild Now"}
         </button>
       </div>
-      <p className="mt-3 border-t border-rule pt-3 text-[12px] text-ink/50">
+      <p className="mt-3 border-t border-rule pt-3 text-[12px] text-ink/60">
         {last?.at
           ? <>Last built {new Date(last.at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
               {last.ok

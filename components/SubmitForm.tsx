@@ -319,7 +319,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                   First run, before anything is saved, one line sells the
                   save-for-next-time tick rather than rendering nothing. */}
               {b.key === "engineering" && library.length === 0 && (
-                <p className="mt-1.5 px-1 text-[12px] leading-snug text-ink/55">
+                <p className="mt-1.5 px-1 text-[12px] leading-snug text-ink/60">
                   Lodge the same engineering often? Tick{" "}
                   <span className="font-medium text-ink/70">Save this engineering to My documents</span>{" "}
                   below once it&apos;s attached, and next time it&apos;s one tick here
@@ -334,7 +334,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                   <p className="font-display text-[13px] font-semibold text-seal-deep">
                     From Your Documents — attach saved engineering
                   </p>
-                  <p className="mt-0.5 text-[12px] leading-snug text-ink/55">
+                  <p className="mt-0.5 text-[12px] leading-snug text-ink/60">
                     Engineering you&apos;ve saved with us. Tick any that apply — they
                     attach to this job without another upload. Manage them under{" "}
                     <a href="/documents" className="font-medium underline underline-offset-2 hover:text-seal">My Documents</a>.
@@ -347,7 +347,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
                             onChange={() => toggleDoc(d.id)}
                             className="h-4 w-4 rounded border-rule accent-[#1E5B3C]" />
                           <span className="min-w-0 flex-1 truncate">{d.label}</span>
-                          <span className="shrink-0 font-mono text-[11px] text-ink/40">
+                          <span className="shrink-0 font-mono text-[11px] text-ink/60">
                             {(d.size / 1048576).toFixed(1)} MB
                           </span>
                         </label>
@@ -383,7 +383,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[12px] text-ink/50">
+        <p className="mt-2 text-[12px] text-ink/60">
           {totalMb > 0
             ? `${count} file${count === 1 ? "" : "s"}, ${totalMb.toFixed(1)} MB of 40 MB.`
             : "Up to 40 MB in total. Email anything larger to the office."}
@@ -420,7 +420,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <textarea id="notes" rows={3} value={notes}
         onChange={(e) => setNotes(e.target.value)} className="field"
         placeholder="Anything we should know about this job." />
-      <p className="mt-1.5 text-[12px] text-ink/50">
+      <p className="mt-1.5 text-[12px] text-ink/60">
         Added to the job&apos;s conversation for our team — not shown as a public field.
       </p>
 
@@ -431,7 +431,7 @@ export function SubmitForm({ seedItems }: { seedItems?: Item[] } = {}) {
       <input id="contact" value={contact} maxLength={80}
         onChange={(e) => setContact(e.target.value)} className="field"
         placeholder="Who should we speak to about this one?" />
-      <p className="mt-1.5 text-[12px] text-ink/50">
+      <p className="mt-1.5 text-[12px] text-ink/60">
         A name is enough — we&apos;ll reply to your account either way.
       </p>
 

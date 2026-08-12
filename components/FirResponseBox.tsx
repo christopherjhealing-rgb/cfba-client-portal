@@ -84,7 +84,7 @@ export function FirResponseBox({ refNo, address }: { refNo: string; address: str
   return (
     <form onSubmit={send} className="border-t border-rule bg-wash p-4">
       <label className="label" htmlFor="fir-reply">Send What We Asked For</label>
-      <p className="mb-3 text-[12px] leading-snug text-ink/55">
+      <p className="mb-3 text-[12px] leading-snug text-ink/60">
         Attach the updated documents below, or just reply — whatever we asked for.
         Drawings and engineering are combined into one tidy PDF each, named for
         the site and dated.

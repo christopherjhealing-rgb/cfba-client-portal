@@ -700,6 +700,21 @@ logins note → CTA strip.
   first download · we keep a copy — ring us after that"). DoD: DESIGN.md
   §4/§7 spec matched, evidenced; **retention behaviour untouched**.
 
+> **BATCH 3: DONE — 12 Aug 2026** (browser-verified; 486 tests green;
+> build green). Fonts self-hosted via @fontsource (zero requests to
+> fonts.googleapis.com, Archivo confirmed loading — the 12.7s worst-case
+> external stall is gone); contrast swept to the DESIGN.md floor across
+> 48 files including the dark sidebar rail — **axe color-contrast now
+> reports 0 serious nodes on dashboard AND submit at desktop AND 390px**;
+> 8px micro-labels raised to the 10px floor; file inputs carry aria
+> labels; skip-link is the first tab stop on both shells; login inputs
+> carry name + autocomplete (username / current-password / one-time-code /
+> new-password); entrance cascade now runs on the FIRST landing of a
+> session only (route changes render instantly — animationName none
+> confirmed; one-script revert); the hero full-bleed overflow is clipped
+> (scrollWidth = viewport at 390px); filter chips and quiet link-buttons
+> hit ≥40px touch height on phones (chips measured 40px, Reply-now 40px).
+
 **BATCH 3 — Performance, accessibility, motion floor**
 - Goal: P1-7 + P1-11 (+P2-10 pulled in — same files).
 - Areas: `globals.css`/layout (next/font), tokens/classes for contrast

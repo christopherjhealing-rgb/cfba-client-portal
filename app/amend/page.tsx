@@ -84,7 +84,7 @@ export default async function Amend({
         <AmendForm jobs={[...jobs, ...older]} preselect={sp.ref} />
 
         <div className="card p-5">
-          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/60">
             How This Works
           </p>
           <ol className="mt-3 space-y-3 text-[13px] leading-relaxed text-ink/70">

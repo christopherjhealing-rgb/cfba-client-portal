@@ -120,7 +120,7 @@ export function JobArt({
           {ART[key]}
         </svg>
       </div>
-      <span className="w-full truncate text-center font-display text-[8px] font-semibold uppercase tracking-[0.1em] text-ink/45">
+      <span className="w-full truncate text-center font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-ink/60">
         {label}
       </span>
     </div>

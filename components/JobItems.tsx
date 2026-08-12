@@ -61,7 +61,7 @@ export function JobItems({
             <div key={i} className="rounded-lg border border-rule bg-white p-3">
               <div className="flex flex-wrap items-start gap-2.5 sm:flex-nowrap">
                 <div className="min-w-[150px] flex-1">
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-ink/50"
+                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-ink/60"
                     htmlFor={`class-${i}`}>Class</label>
                   <select id={`class-${i}`} value={it.classKey}
                     onChange={(e) => set(i, {
@@ -77,7 +77,7 @@ export function JobItems({
                 </div>
 
                 <div className="min-w-[150px] flex-1">
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-ink/50"
+                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-ink/60"
                     htmlFor={`type-${i}`}>What Is It?</label>
                   {hasTypes(it.classKey) ? (
                     <select id={`type-${i}`} value={it.type}
@@ -97,7 +97,7 @@ export function JobItems({
                 </div>
 
                 <div className="w-[86px] shrink-0">
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-ink/50"
+                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-ink/60"
                     htmlFor={`qty-${i}`}>How Many</label>
                   <input id={`qty-${i}`} type="number" min={1} max={MAX_QTY}
                     value={it.qty}
@@ -110,7 +110,7 @@ export function JobItems({
                 {items.length > 1 && (
                   <button type="button" onClick={() => remove(i)}
                     aria-label={`Remove row ${i + 1}`}
-                    className="mt-[22px] grid h-9 w-9 shrink-0 place-items-center rounded-md border border-rule text-ink/45 transition hover:border-flag/40 hover:bg-wash hover:text-flag">
+                    className="mt-[22px] grid h-9 w-9 shrink-0 place-items-center rounded-md border border-rule text-ink/60 transition hover:border-flag/40 hover:bg-wash hover:text-flag">
                     <Icon name="close" size={15} />
                   </button>
                 )}
@@ -133,7 +133,7 @@ export function JobItems({
           <Icon name="plus" size={14} /> Add Another
         </button>
       ) : (
-        <p className="mt-2 text-[12px] text-ink/50">
+        <p className="mt-2 text-[12px] text-ink/60">
           That&apos;s {MAX_ITEMS} — put anything else in the notes and we&apos;ll
           add it to the job.
         </p>
@@ -141,16 +141,16 @@ export function JobItems({
 
       {/* Exactly what lands on the board. */}
       <div className="mt-3 rounded-lg border border-rule bg-wash px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink/50">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink/60">
           We&apos;ll Record This As
         </p>
         {said.ok ? (
           <>
             <p className="mt-1 text-[14px] font-medium leading-snug text-ink">{said.description}</p>
-            <p className="mt-0.5 text-[12.5px] text-ink/55">Class: {said.jobClass}</p>
+            <p className="mt-0.5 text-[12.5px] text-ink/60">Class: {said.jobClass}</p>
           </>
         ) : (
-          <p className="mt-1 text-[13.5px] text-ink/50">
+          <p className="mt-1 text-[13.5px] text-ink/60">
             Fill in a row and it appears here.
           </p>
         )}

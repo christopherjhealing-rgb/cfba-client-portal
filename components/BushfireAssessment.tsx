@@ -156,7 +156,7 @@ export function BushfireAssessment({
       {distance === "near" && patio && age === "post2016" && (
         <div className="mt-3">
           <p className="mb-1.5 text-[13px] font-medium text-ink/80">
-            What&apos;s the house&apos;s BAL rating? <span className="font-normal text-ink/50">(from its BAL report or CDC, if you have it)</span>
+            What&apos;s the house&apos;s BAL rating? <span className="font-normal text-ink/60">(from its BAL report or CDC, if you have it)</span>
           </p>
           <select
             value={rating}

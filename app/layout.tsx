@@ -1,4 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/archivo/500.css";
+import "@fontsource/archivo/600.css";
+import "@fontsource/archivo/700.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,6 +26,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-AU">
+      <head>
+        {/* First-landing-only entrance cascade (DESIGN.md §17). Runs before
+            paint; delete this script to revert to always-animate. */}
+        <script dangerouslySetInnerHTML={{ __html:
+          "try{if(sessionStorage.cfbaSeen)document.documentElement.classList.add('no-cascade');sessionStorage.cfbaSeen='1'}catch(e){}",
+        }} />
+      </head>
       <body className="min-h-screen font-body antialiased">{children}</body>
     </html>
   );

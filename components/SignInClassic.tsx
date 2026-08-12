@@ -62,12 +62,12 @@ export function SignInClassic(entry: { start?: "signin" | "setup"; presetUsernam
 
           <SignIn demo={DEMO_MODE} {...entry} />
 
-          <p className="mt-5 text-center text-[13px] text-ink/55">
+          <p className="mt-5 text-center text-[13px] text-ink/60">
             Need a new account?{" "}
             <a className="font-medium text-seal underline underline-offset-2"
               href="mailto:admin@cfba.com.au">Contact the CFBA office</a>
           </p>
-          <p className="mt-8 text-center text-[11px] text-ink/35">
+          <p className="mt-8 text-center text-[11px] text-ink/60">
             CF Building Approvals · Perth, Western Australia
           </p>
         </div>

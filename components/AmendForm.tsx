@@ -159,7 +159,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
                 <button type="button" onMouseDown={(e) => e.preventDefault()}
                   onClick={() => choose(j)}
                   className="flex w-full items-baseline gap-2 px-3 py-2.5 text-left transition hover:bg-wash">
-                  <span className="font-mono text-[12px] text-ink/55">{j.ref}</span>
+                  <span className="font-mono text-[12px] text-ink/60">{j.ref}</span>
                   <span className="min-w-0 flex-1 truncate text-[14px]">{j.address}</span>
                   {j.past && j.issued
                     ? <span className="chip shrink-0">Completed</span>
@@ -172,7 +172,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
           </ul>
         )}
       </div>
-      <p className="mt-1.5 text-[12px] text-ink/50">
+      <p className="mt-1.5 text-[12px] text-ink/60">
         {ref
           ? `Linked to job ${ref}.`
           : "Every job you've had with us, completed ones included. Type the address or our reference."}
@@ -194,7 +194,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
               Matches the job above. This is the reference we&apos;ll amend.
             </span>
           ) : looking ? (
-            <span className="text-ink/45">Checking…</span>
+            <span className="text-ink/60">Checking…</span>
           ) : found ? (
             <span className="text-seal">
               Found — <strong>{found.ref}</strong>
@@ -207,7 +207,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
               your certificate — or message us and we&apos;ll track it down.
             </span>
           ) : (
-            <span className="text-ink/45">
+            <span className="text-ink/60">
               Filled in when you pick a job above. Type it yourself for a job too
               old to be listed — it&apos;s on your certificate, and spaces and
               dashes don&apos;t matter.
@@ -245,7 +245,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         onChange={(e) => setFiles(Array.from(e.target.files || []))}
         className="field file:mr-3 file:rounded file:border-0 file:bg-wash file:px-3 file:py-1.5 file:text-[13px]" />
       </div>
-      <p className="mt-1.5 text-[12px] text-ink/50">
+      <p className="mt-1.5 text-[12px] text-ink/60">
         Send the amended plans, and the engineering if it changed too. Up to 40 MB.
       </p>
 
@@ -256,7 +256,7 @@ export function AmendForm({ jobs, preselect }: { jobs: AmendableJob[]; preselect
         {busy ? "Sending…" : "Request the Amendment"}
       </button>
       {!target && (query.trim() || oldRef.trim()) && !looking && (
-        <p className="mt-2 text-center text-[12.5px] text-ink/50">
+        <p className="mt-2 text-center text-[12.5px] text-ink/60">
           Pick a job from the list, or enter a reference we can find.
         </p>
       )}

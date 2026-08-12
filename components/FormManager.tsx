@@ -76,7 +76,7 @@ export function FormManager({
               <div className="min-w-0">
                 <span className="font-mono text-[12px] text-seal">{f.code}</span>
                 <span className="ml-2 text-[13px] font-medium">{f.title}</span>
-                <span className={`ml-2 chip ${has ? "text-seal" : "text-ink/45"}`}>
+                <span className={`ml-2 chip ${has ? "text-seal" : "text-ink/60"}`}>
                   {hosted ? `Hosted · ${FORM_LABEL[hosted.ext]}` : "Link Only"}
                 </span>
               </div>

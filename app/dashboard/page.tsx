@@ -346,7 +346,7 @@ function JobLink({ refNo, address, tone = "plain", muted = false }: {
     // the client never opened. The same guard is on /messages and /help.
     <Link href={`/jobs/${encodeURIComponent(refNo)}`} prefetch={false}
       className="group flex min-w-0 flex-wrap items-baseline gap-2">
-      <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/55"}`}>
+      <span className={`font-mono text-[12px] ${tone === "amber" ? "text-brass-deep" : "text-ink/60"}`}>
         {refNo}
       </span>
       <span className={`truncate underline-offset-2 group-hover:text-seal group-hover:underline ${

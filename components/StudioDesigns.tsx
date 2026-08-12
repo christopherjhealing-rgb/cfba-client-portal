@@ -80,7 +80,7 @@ export function StudioDesigns(
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[24px] font-semibold text-ink">Your plans</h1>
-          <p className="mt-1 text-[13.5px] text-ink/55">
+          <p className="mt-1 text-[13.5px] text-ink/60">
             Signed in as <span className="font-medium text-ink/75">{name}</span> ·{" "}
             <button onClick={signOut} className="underline hover:text-seal">sign out</button>
           </p>
@@ -116,10 +116,10 @@ export function StudioDesigns(
                 <div className="truncate font-display text-[16.5px] font-semibold text-ink group-hover:text-seal">
                   {d.name}
                 </div>
-                <div className="mt-1 truncate text-[13px] text-ink/55">
+                <div className="mt-1 truncate text-[13px] text-ink/60">
                   {d.address || "No address yet"}
                 </div>
-                <div className="mt-0.5 text-[12px] text-ink/40">
+                <div className="mt-0.5 text-[12px] text-ink/60">
                   Updated {fmt(d.updatedAt)}
                 </div>
               </a>

@@ -102,7 +102,7 @@ export function EngineeringControl({
                   rel="noopener noreferrer" className="text-[13.5px] font-medium text-seal hover:underline">
                   {s.name}
                 </a>
-                <span className="ml-2 text-[12px] text-ink/45">
+                <span className="ml-2 text-[12px] text-ink/60">
                   {s.clients?.length
                     ? `only: ${s.clients.join(", ")}`
                     : "all clients"}
@@ -131,7 +131,7 @@ export function EngineeringControl({
         </div>
       </div>
 
-      {msg && <p className="mt-2 text-[13px] text-ink/50">{msg}</p>}
+      {msg && <p className="mt-2 text-[13px] text-ink/60">{msg}</p>}
     </div>
   );
 }

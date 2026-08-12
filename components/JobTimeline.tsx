@@ -7,7 +7,7 @@ const DOT: Record<State, string> = {
   done: "bg-seal border-seal text-white",
   current: "bg-seal border-seal text-white ring-4 ring-seal/15",
   waiting: "bg-brass border-brass text-white ring-4 ring-brass/15",
-  paused: "bg-white border-ink/30 text-ink/40",
+  paused: "bg-white border-ink/30 text-ink/60",
   skipped: "bg-white border-rule text-ink/25",
   pending: "bg-white border-rule text-ink/25",
 };
@@ -22,8 +22,8 @@ const LABEL: Record<State, string> = {
   current: "text-ink font-semibold",
   waiting: "text-brass-deep font-semibold",
   paused: "text-ink/60 font-semibold",
-  skipped: "text-ink/45",
-  pending: "text-ink/50",
+  skipped: "text-ink/60",
+  pending: "text-ink/60",
 };
 
 /** Progress across the five client-facing stages. No dates by design: the

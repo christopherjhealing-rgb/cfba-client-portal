@@ -435,6 +435,14 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (Batch 3 shipped):** typography §14 delivered (self-hosted
+  @fontsource, Google runtime link removed); contrast floor §19 verified
+  by axe at 0 serious nodes on the gate pages, both viewports (sweep
+  included the dark rail; 8px labels → 10px floor); file-input aria
+  labels + skip-link + login autocomplete shipped; motion §17 delivered
+  (first-landing-only cascade, inline-script gate, one-line revert);
+  §13/§21 touch targets ≥40px on chips and quiet links; horizontal
+  overflow clipped.
 - **2026-08-12 (Batch 2 shipped):** dashboard hierarchy now matches §4
   (dynamic stats, needs-you first, cancelled→Past bucket portal-wide, row
   compression at volume, 2×2 phone stats, quick-action trim); Reports

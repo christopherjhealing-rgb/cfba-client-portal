@@ -101,7 +101,7 @@ export default async function JobDetail({
         // weight as Download; as a text link it reads as the way back.
         action={
           <Link href="/jobs"
-            className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink/60 underline-offset-4 transition hover:text-seal hover:underline">
+            className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink/60 underline-offset-4 transition hover:text-seal hover:underline max-lg:min-h-10">
             <span aria-hidden="true">←</span> All Jobs
           </Link>
         }
@@ -116,7 +116,7 @@ export default async function JobDetail({
           </p>
           {!messagesOff && (
             <a href="#reply"
-              className="shrink-0 font-medium underline underline-offset-2 hover:text-ink">
+              className="shrink-0 font-medium underline underline-offset-2 hover:text-ink max-lg:-my-2 max-lg:inline-flex max-lg:min-h-10 max-lg:items-center">
               Reply now →
             </a>
           )}
@@ -196,7 +196,7 @@ export default async function JobDetail({
             no surveyor is known the clause is simply left out: an absent line
             reads as nothing to say, a wrong one reads as a fault. */}
         {(job.surveyor || job.issuedAt) && (
-          <p className="mt-4 text-[12.5px] text-ink/50">
+          <p className="mt-4 text-[12.5px] text-ink/60">
             {job.surveyor ? (
               <>
                 Your surveyor:{" "}
@@ -217,7 +217,7 @@ export default async function JobDetail({
           <div className="divide-y divide-rule">
             {lodgements.map((s) => (
               <div key={s.id} className="py-2.5 first:pt-0 last:pb-0">
-                <p className="mb-1 text-[12.5px] text-ink/55">
+                <p className="mb-1 text-[12.5px] text-ink/60">
                   <span className="font-medium text-ink/75">
                     {s.amendmentOf ? "Amendment" : "Original lodgement"}
                   </span>
@@ -246,7 +246,7 @@ export default async function JobDetail({
                           <span className="truncate">{f.name}</span>
                         )}
                         {f.category && (
-                          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/50">
+                          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-ink/60">
                             {f.category}
                           </span>
                         )}
@@ -257,7 +257,7 @@ export default async function JobDetail({
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[12px] text-ink/55">
+          <p className="mt-2 text-[12px] text-ink/60">
             Files sent with messages appear in the thread below.
           </p>
         </div>
@@ -276,7 +276,7 @@ export default async function JobDetail({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[12px] text-ink/55">Download the CDC Package above to save all of these.</p>
+          <p className="mt-2 text-[12px] text-ink/60">Download the CDC Package above to save all of these.</p>
         </div>
       )}
 
@@ -287,7 +287,7 @@ export default async function JobDetail({
         </div>
         <div className="divide-y divide-rule">
           {thread.length === 0 ? (
-            <p className="px-4 py-6 text-center text-[13px] text-ink/45">
+            <p className="px-4 py-6 text-center text-[13px] text-ink/60">
               No messages on this job yet.
             </p>
           ) : thread.map((m) => (
@@ -300,7 +300,7 @@ export default async function JobDetail({
                 <span className="font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/60">
                   {m.from === "cfba" ? "CF Building Approvals" : session.companyName}
                 </span>
-                <span className="text-[11px] text-ink/50">{fmtWhen(m.createdAt)}</span>
+                <span className="text-[11px] text-ink/60">{fmtWhen(m.createdAt)}</span>
               </div>
               {m.body && (
                 <p className="whitespace-pre-line pl-8 text-[14px] leading-relaxed text-ink/80">{m.body}</p>
@@ -321,7 +321,7 @@ export default async function JobDetail({
               {/* The Monday update id is set the moment a reply posts to the
                   card — its presence IS the delivery receipt. No polling. */}
               {m.from === "client" && m.mondayUpdateId && (
-                <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/45">
+                <p className="mt-2 flex items-center gap-1.5 pl-8 text-[12px] text-ink/60">
                   <Icon name="check" size={12} /> Delivered to your surveyor
                 </p>
               )}

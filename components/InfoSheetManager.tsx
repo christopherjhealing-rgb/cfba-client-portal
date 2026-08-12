@@ -73,7 +73,7 @@ export function InfoSheetManager({
             <li key={s.file} className="flex flex-wrap items-center justify-between gap-2 py-2">
               <div className="min-w-0">
                 <span className="text-[13px] font-medium">{s.title}</span>
-                <span className={`ml-2 chip ${isUpdated ? "text-seal" : "text-ink/45"}`}>
+                <span className={`ml-2 chip ${isUpdated ? "text-seal" : "text-ink/60"}`}>
                   {isUpdated ? "Updated" : "Original"}
                 </span>
               </div>

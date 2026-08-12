@@ -24,7 +24,7 @@ export function SortControl({
   }
 
   return (
-    <label className="flex shrink-0 items-center gap-2 text-[13px] text-ink/55">
+    <label className="flex shrink-0 items-center gap-2 text-[13px] text-ink/60">
       <span className="hidden sm:inline">Sort</span>
       <select
         value={value}

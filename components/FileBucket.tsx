@@ -52,7 +52,7 @@ export function FileBucket({
             {bucket.label}
             {bucket.required && <span className="ml-1.5 text-flag">*</span>}
           </p>
-          <p className="mt-0.5 text-[12px] leading-snug text-ink/55">{bucket.hint} PDF only — or drag them onto this box.</p>
+          <p className="mt-0.5 text-[12px] leading-snug text-ink/60">{bucket.hint} PDF only — or drag them onto this box.</p>
         </div>
         <button type="button" onClick={() => input.current?.click()} className="btn-ghost shrink-0">
           {files.length ? "Change" : "Choose Files"}
@@ -60,6 +60,7 @@ export function FileBucket({
       </div>
 
       <input ref={input} type="file" multiple accept="application/pdf,.pdf" className="hidden"
+        aria-label={`${bucket.label} — choose PDF files`}
         onChange={(e) => {
           onChange(takePdfs(Array.from(e.target.files || [])));
         }} />
@@ -80,7 +81,7 @@ export function FileBucket({
             <li key={f.name} className="flex items-center gap-2 text-[13px] text-ink/70">
               <span className="text-seal"><Icon name="check" size={13} /></span>
               <span className="min-w-0 flex-1 truncate">{f.name}</span>
-              <span className="shrink-0 font-mono text-[11px] text-ink/40">
+              <span className="shrink-0 font-mono text-[11px] text-ink/60">
                 {(f.size / 1048576).toFixed(1)} MB
               </span>
             </li>

@@ -77,7 +77,7 @@ export function StudioAuth() {
         value={email} onChange={(e) => setEmail(e.target.value)} />
       {mode === "signup" && (
         <>
-          <label className="label mt-3" htmlFor="st-name">Name or company <span className="text-ink/40">(optional)</span></label>
+          <label className="label mt-3" htmlFor="st-name">Name or company <span className="text-ink/60">(optional)</span></label>
           <input id="st-name" className="field" autoComplete="organization"
             value={name} onChange={(e) => setName(e.target.value)} />
         </>
@@ -112,7 +112,7 @@ export function StudioAuth() {
       </button>
 
       {mode === "signup" && (
-        <p className="mt-3 text-[12px] leading-relaxed text-ink/50">
+        <p className="mt-3 text-[12px] leading-relaxed text-ink/60">
           Free, no card, no lock-in. Your email is your login and is never
           passed to anyone else.
         </p>

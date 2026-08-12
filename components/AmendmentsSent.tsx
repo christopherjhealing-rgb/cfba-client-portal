@@ -58,10 +58,10 @@ export function AmendmentsSent({
                   ? <span className="chip chip-seal">Ready</span>
                   : <span className="chip chip-brass">With your surveyor</span>}
               </div>
-              <div className="mt-0.5 text-[12.5px] text-ink/55">{a.description}</div>
+              <div className="mt-0.5 text-[12.5px] text-ink/60">{a.description}</div>
               {/* When it was sent — the same question the lodged date answers
                   on a job, and the one a client asks when it feels slow. */}
-              <div className="mt-0.5 text-[12px] text-ink/50">Sent {fmtDate(a.createdAt)}</div>
+              <div className="mt-0.5 text-[12px] text-ink/60">Sent {fmtDate(a.createdAt)}</div>
               {a.status === AMENDMENT_DONE && revised.length > 0 && (
                 <ul className="mt-1.5 flex flex-wrap gap-3">
                   {revised.map((f) => (

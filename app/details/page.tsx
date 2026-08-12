@@ -85,7 +85,7 @@ export default async function Details() {
       </div>
 
       <div className="mt-6">
-        <p className="text-[13px] text-ink/55">
+        <p className="text-[13px] text-ink/60">
           To change your password, sign out and use{" "}
           <span className="font-medium text-ink/75">Forgot Password?</span>{" "}
           on the sign-in screen — we&apos;ll issue a new setup code.
@@ -98,7 +98,7 @@ export default async function Details() {
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="grid gap-1 px-5 py-4 sm:grid-cols-[260px_1fr] sm:gap-4">
-      <div className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+      <div className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/60">
         {label}
       </div>
       <div className={`whitespace-pre-line text-[14px] text-ink ${mono ? "font-mono" : ""}`}>

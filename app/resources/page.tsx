@@ -77,7 +77,7 @@ export default async function Resources() {
                 <div className="min-w-0">
                   <span className="font-mono text-[12px] text-seal">{f.code}</span>
                   <span className="ml-2 text-[14px] font-medium">{f.title}</span>
-                  <div className="mt-0.5 text-[12.5px] text-ink/55">{f.note}</div>
+                  <div className="mt-0.5 text-[12.5px] text-ink/60">{f.note}</div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   {hosted && (
@@ -89,7 +89,7 @@ export default async function Resources() {
                     </a>
                   )}
                   <a href={FORMS_OFFICIAL_SOURCE} target="_blank" rel="noopener noreferrer"
-                    className="text-[12.5px] text-ink/50 hover:underline">Official Source</a>
+                    className="text-[12.5px] text-ink/60 hover:underline">Official Source</a>
                 </div>
               </div>
             );
@@ -112,9 +112,9 @@ export default async function Resources() {
                 className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-wash">
                 <div className="min-w-0">
                   <span className="text-[14px] font-medium">{it.name}</span>
-                  <div className="mt-0.5 text-[12.5px] text-ink/55">{it.note}</div>
+                  <div className="mt-0.5 text-[12.5px] text-ink/60">{it.note}</div>
                 </div>
-                <span className="shrink-0 text-ink/35"><Icon name="arrowRight" size={15} /></span>
+                <span className="shrink-0 text-ink/60"><Icon name="arrowRight" size={15} /></span>
               </a>
             ))}
           </div>
@@ -143,7 +143,7 @@ export default async function Resources() {
               <a href={c.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-between gap-2 transition hover:text-seal">
                 <span className="truncate font-medium">{c.name}</span>
-                <span className="shrink-0 text-ink/35"><Icon name="arrowRight" size={14} /></span>
+                <span className="shrink-0 text-ink/60"><Icon name="arrowRight" size={14} /></span>
               </a>
               {c.applyUrl && (
                 <a href={c.applyUrl} target="_blank" rel="noopener noreferrer"
