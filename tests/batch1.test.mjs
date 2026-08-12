@@ -45,10 +45,14 @@ test("firAnswered: no current ask text — any recorded answer counts", () => {
 });
 
 // The owner's compulsory-upload rule keys off verdict tones — pin them.
-test("BAL gate triggers: shed near = own report; post-2016 patio = evidence; exempt/far/unsure = nothing", () => {
-  assert.equal(balVerdict({ distance: "near", kind: "shed" }).tone, "action");
+// Pre-2016 exempts BOTH kinds; only a 2016-or-later house obliges an upload.
+test("BAL gate triggers: post-2016 shed = own report; post-2016 patio = evidence; exempt/far/unsure = nothing", () => {
+  assert.equal(balVerdict({ distance: "near", kind: "shed", age: "post2016" }).tone, "action");
+  assert.equal(balVerdict({ distance: "near", kind: "shed", age: "pre2016" }).tone, "clear");
+  assert.equal(balVerdict({ distance: "near", kind: "shed" }), null);
   assert.equal(balVerdict({ distance: "near", kind: "patio", age: "post2016", rating: null }).tone, "action");
   assert.equal(balVerdict({ distance: "near", kind: "patio", age: "pre2016" }).tone, "clear");
   assert.equal(balVerdict({ distance: "far" }).tone, "clear");
   assert.equal(balVerdict({ distance: "near", kind: "patio", age: "unsure" }).tone, "info");
+  assert.equal(balVerdict({ distance: "near", kind: "shed", age: "unsure" }).tone, "info");
 });

@@ -435,6 +435,11 @@ cascade); the Session 5 batch plan approved as written.
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (owner rule fix):** the pre-2016 exemption now covers
+  sheds too — the shed path asks "Was the house built before 2016?";
+  before 2016 = exempt (exemption code stamped), 2016 or later = the
+  shed's own new BAL report stays compulsory, unsure = office confirms
+  on assessment. Both structure kinds share the one age question.
 - **2026-08-12 (owner tweaks, post-merge):** strata is now a compulsory
   Yes/No asked BEFORE Supporting Documents (null until answered; the lodge
   button names the hold); a Yes adds the required Strata Plan slot directly
