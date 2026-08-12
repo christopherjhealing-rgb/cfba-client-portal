@@ -45,6 +45,20 @@ professional, useful, measurable — not theoretically perfect.
 - **Not downgraded:** every P0 below is a genuine access/reliability gate;
   none was moved to hit the date.
 
+**Owner decision log (12 Aug 2026):**
+- **P1-5 DECIDED — retention stays at 3 months.** Certificates remain
+  available in the portal for 3 months from first download, exactly as
+  built; CFBA always holds the archive copy on its own server, and a
+  client needing an older certificate rings/emails the office. Option A
+  is rejected; no portal behaviour change. Residual work is wording only:
+  portal copy and onboarding material must state the window and the
+  ring-us path plainly (the Downloads page already does). The
+  "email-wins" row in the S4 report §2 table stands as an accepted
+  business trade-off, not a gap to close.
+- **Everything else approved as planned** — including the Batch 1–6
+  structure, the P1-4 rejection-notice approach (final copy still shown
+  for a nod in the Batch 1 report), and the P1-11 motion change.
+
 ---
 
 ## 1. Authoritative backlog
@@ -135,16 +149,16 @@ schema change required.
 - Deps: owner approves copy. DB: NO (reason fits submissions row /
   settings k/v). Complexity: S. Risk: client believes a dead job is live.
 
-**P1-5 · Certificate permanence — decide + implement Option A**
-- Problem: the one place email still beats the portal: certificates hide
-  after 3 months. Files are never purged anyway.
-- Evidence: S4 #1 (top-ranked); Master Audit P1-2; DESIGN.md §10
-  (principle settled, mechanism open).
-- Solution: **recommend Option A** — drop the client-side hiding; Past
-  Jobs becomes the permanent archive ("available whenever you need it").
-  Option B (archive + request) only if the owner wants the touchpoint.
-- Deps: **owner decision**. DB: NO. Complexity: S. Risk: pilot comms must
-  promise less; the strongest adoption line is unusable.
+**P1-5 · Certificate retention — DECIDED (owner, 12 Aug 2026): keep 3 months**
+- Decision: retention stays exactly as built — 3 months from first
+  download, then the office (which always holds the archive copy) sends
+  it on request. Option A rejected. **No portal behaviour change.**
+- Evidence: S4 #1 raised it; owner resolved it as a deliberate business
+  trade-off (the office touchpoint is acceptable, the archive is theirs).
+- Residual work (wording only, folded into Batch 2/onboarding): portal
+  and guide copy state the window + ring-us path plainly; marketing never
+  promises "anytime".
+- Deps: none. DB: NO. Complexity: XS (copy). Risk: none — decided.
 
 **P1-6 · Dashboard re-rank + row compression**
 - Problem: static stat order ("0 Ready" leads while "1 Action Required"
@@ -382,9 +396,8 @@ Exact conditions (all P0 + two P1s):
 4. **P1-1** FIR answered-flip and **P1-2** collision suffix deployed
    (the two findings that touch trust and data integrity on mainline
    pilot paths).
-5. **P1-5 decision made** (certificate permanence) so pilot comms don't
-   over- or under-promise. Implementation may trail by days; the
-   *decision* may not.
+5. ~~P1-5 decision made~~ — **✔ satisfied 12 Aug 2026**: retention stays
+   at 3 months (owner decision, §0 log); pilot comms written to match.
 
 Everything else in P1 is strongly recommended inside the window but does
 not block first access.
@@ -418,7 +431,9 @@ not block first access.
   documents there, not by email — and it goes straight to your surveyor,
   with the board updated the moment you send.
 - **Collecting your certificate.** When it's issued we email you; the
-  whole package is one click in **Downloads**.
+  whole package is one click in **Downloads**, and stays there for three
+  months after you first download it. Need one later than that? Ring us —
+  we keep every certificate on file.
 - **Finding an old job.** Search by your PO number, our reference, or the
   address — top of the sidebar. Past jobs live under **My Jobs → Past**.
 - **Help.** Anything at all: **1300 029 074**, or Send Feedback in the
@@ -461,7 +476,8 @@ re-downloading, retention promise · 9. Amendments: when and how ·
 > - **Answer requests on the job** — if we need engineering, the job
 >   tells you exactly what and you attach it right there.
 > - **Certificates in one click** — the full package, named properly,
->   whenever you need it.
+>   the moment it's issued (and in Downloads for three months after —
+>   we keep a copy on file beyond that).
 >
 > Email isn't going anywhere — if the portal isn't genuinely easier,
 > we want to know that too. That's the point of the pilot.
@@ -529,7 +545,7 @@ re-downloading, retention promise · 9. Amendments: when and how ·
 
 **Core value proposition:**
 *Every job with CFBA in one place — see what needs you, watch progress
-without asking, and collect certificates the moment they're ready.*
+without asking, and collect your certificate the moment it's ready.*
 
 **Strongest headline:**
 **"Know where every job is — without sending a single 'just checking in'
@@ -544,9 +560,9 @@ email."**
 **Key benefits (feature-truthful):** every job in one place · amber tells
 you the moment something needs you · live five-stage progress · answer
 information requests right on the job (files filed properly,
-automatically) · certificates anytime in Downloads · find any past job by
-your PO, our ref, or the address · lodge repeat work with Lodge Similar ·
-your whole team, their own logins.
+automatically) · certificates one click the moment they're issued · find
+any past job by your PO, our ref, or the address · lodge repeat work with
+Lodge Similar · your whole team, their own logins.
 
 **Launch email (to existing clients):**
 
@@ -563,8 +579,8 @@ your whole team, their own logins.
 > - **No more wondering.** Every job shows exactly where it's up to.
 > - **No more chasing attachments.** If we need something, the job tells
 >   you and you attach it there.
-> - **No more digging through email** for a certificate — Downloads holds
->   them all.
+> - **No more digging through email** for a certificate — it's one click
+>   in Downloads the moment it's issued.
 >
 > Email still works. But the portal is faster for you and faster for us —
 > and faster is the whole point.
@@ -627,17 +643,19 @@ logins note → CTA strip.
   client-visible trace. Automated: extend logic tests for suffix + flip
   helpers. DoD: all four QA findings closed with screenshot evidence.
 
-**BATCH 2 — Certificate permanence + dashboard hierarchy**
-- Goal: the #1 product gap + the flagship surface at pilot volume.
-- Items: P1-5 (Option A unless owner chose B), P1-6, P1-8 copy fixes.
-- Deps: P1-5 decision recorded; DESIGN.md §4/§7/§10.
-- Areas: retention filter (`lib/core.mjs` grouping / jobs+downloads
-  pages), dashboard page + stat components, jobs rows, success card copy,
-  reports heading.
-- DB: none. Browser: past-job visible beyond retention window (seed T-1005
-  at 34 days); stat order with attention non-zero; cancelled absent from
-  In Progress; 25-row legibility (seed extra rows in demo store);
-  390px 2×2 stats. DoD: DESIGN.md §4/§7 spec matched, evidenced.
+**BATCH 2 — Dashboard hierarchy + copy (retention wording confirmed)**
+- Goal: the flagship surface at pilot volume; retention stays as built
+  (P1-5 decided — wording pass only).
+- Items: P1-6, P1-8 copy fixes, P1-5 residual wording check.
+- Deps: DESIGN.md §4/§7/§10 (updated for the retention decision).
+- Areas: dashboard page + stat components, jobs rows, success card copy,
+  reports heading; Downloads/job-page retention lines (verify, adjust
+  only if unclear).
+- DB: none. Browser: stat order with attention non-zero; cancelled absent
+  from In Progress; 25-row legibility (seed extra rows in demo store);
+  390px 2×2 stats; retention wording present and plain ("3 months from
+  first download · we keep a copy — ring us after that"). DoD: DESIGN.md
+  §4/§7 spec matched, evidenced; **retention behaviour untouched**.
 
 **BATCH 3 — Performance, accessibility, motion floor**
 - Goal: P1-7 + P1-11 (+P2-10 pulled in — same files).
@@ -787,43 +805,45 @@ STOP after completing this batch.
 
 ---
 
-### PROMPT — BATCH 2: Certificate permanence + dashboard hierarchy
+### PROMPT — BATCH 2: Dashboard hierarchy + copy
 
 ```
-BATCH 2 — CERTIFICATE PERMANENCE + DASHBOARD HIERARCHY
+BATCH 2 — DASHBOARD HIERARCHY + COPY
 Use FABLE for this entire session. Do NOT use Opus. Do NOT spawn Opus subagents.
 
 Read first: DESIGN.md §2, §4, §7, §10, §12 (the specs this batch
-implements), then backlog items P1-5, P1-6, P1-8 in "PILOT PLAN +
-IMPLEMENTATION PROMPTS.md" §1.
+implements), then backlog items P1-6, P1-8 (and the decided P1-5) in
+"PILOT PLAN + IMPLEMENTATION PROMPTS.md" §1.
 
-Owner decision gate: P1-5 assumes OPTION A (remove the client-side
-3-month hiding; Past Jobs is the permanent archive; files were never
-purged). If the repository or owner notes record Option B instead,
-implement that and say so.
+OWNER DECISION (12 Aug 2026), binding: certificate retention stays at
+3 months from first download. Do NOT change retention behaviour, the
+grouping logic, or file visibility windows in any way. The only P1-5 work
+is wording: confirm the Downloads/job-page retention lines state the
+window and the ring-us path plainly ("we keep a copy on file — ring
+1300 029 074 and we'll send it over"), adjusting copy only if unclear.
 
 Implement:
-1. P1-5: clients can always see and download past issued jobs; update the
-   Downloads/job-page retention wording accordingly (DESIGN.md §22 voice).
-2. P1-6 per DESIGN.md §4 + §7 exactly: dynamic stat order (attention
+1. P1-6 per DESIGN.md §4 + §7 exactly: dynamic stat order (attention
    first, zeros never lead), cancelled jobs out of In Progress counts and
    sections (they are Past), compressed job rows (ball-in-court chip +
    since-line; NO per-row 5-stage timeline — full timeline stays on job
    detail), 2×2 stat grid on phones, Quick Actions trimmed per §4.5.
-3. P1-8: fix "My Jobsnow" spacing; echo the client's own ref on pre-sync
+2. P1-8: fix "My Jobsnow" spacing; echo the client's own ref on pre-sync
    received-rows; remove the duplicate Reports heading; check the Reports
    Issued-30-days counter logic against seeded issued jobs and fix if it
    reads the wrong field.
+3. P1-5 residual: the retention wording check described above.
 
 Constraints: frontend-design skill for UI; DESIGN.md wins over any
 generic heuristic; no unrelated refactoring; NO schema changes.
 
 Verification: npm test / tsc / next build green; browser in demo —
-(a) T-1005 (issued 34 days ago, downloaded 30) visible and downloadable;
-(b) with 1 Action Required, that stat leads; (c) cancelled T-1006 absent
-from In Progress, counted in Past; (d) seed ~20 extra in-progress jobs in
+(a) with 1 Action Required, that stat leads; (b) cancelled T-1006 absent
+from In Progress, counted in Past; (c) seed ~20 extra in-progress jobs in
 the demo store and screenshot the compressed list at desktop + 390px;
-(e) reports heading single, counter correct. Screenshots for each.
+(d) reports heading single, counter correct; (e) retention wording
+present and plain, retention BEHAVIOUR unchanged (T-1005 still ages out
+on schedule). Screenshots for each.
 
 Report changed files, tests, screenshots taken, remaining issues. Commit
 and push. STOP after this batch.
@@ -999,8 +1019,9 @@ issues for the pilot log. Commit and push. STOP after this batch.
 ## 11. Final output
 
 ### TOP 10 NEXT ACTIONS
-1. Owner: decide **P1-5** certificate permanence (recommend Option A) and
-   nod **P1-4** rejection copy — both are one-line replies.
+1. ~~Owner: decide P1-5 + nod P1-4~~ — **✔ done 12 Aug 2026** (retention
+   stays 3 months; batches approved; P1-4 final copy still shown for a
+   nod in the Batch 1 report).
 2. Owner: execute **P0-1** config pre-flight (5 minutes, §9.2).
 3. Run **Batch 1** (pilot-gate fixes) — the two GO-condition code items.
 4. Run **Batch 2** (permanence + dashboard).
@@ -1015,7 +1036,8 @@ issues for the pilot log. Commit and push. STOP after this batch.
     question in week 4 (§6.5), then the GA decision.
 
 ### PILOT LAUNCH CHECKLIST
-- [ ] P1-5 decision + P1-4 copy approved (owner)
+- [x] P1-5 decided (retention stays 3 months) + batches approved — 12 Aug
+      (P1-4 final copy nod comes with the Batch 1 report)
 - [ ] P0-1 config pre-flight green
 - [ ] Batches 1–4 merged; Batch 6 suite green twice
 - [ ] P0-2 live smoke green (incl. FIR flip + collision + rejection paths)

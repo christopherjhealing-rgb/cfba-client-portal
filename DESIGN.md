@@ -66,8 +66,9 @@ landing:
 2. **What is happening with my jobs?** — live status, plain English.
 3. **How quickly can I lodge another job?** — the one accented CTA.
 4. **Where is the previous job/certificate I need?** — search, Past,
-   Downloads; *certificate access does not expire for the client* (see
-   §10 — mechanism is an open decision, the principle is settled).
+   Downloads within the 3-month retention window; beyond it, CFBA holds
+   the archive copy and the portal says so plainly with the ring-us path
+   (§10 — owner-decided, Aug 2026).
 
 Priority order matters under load: when attention items exist they
 outrank everything, including on phones (see §5, §14).
@@ -199,11 +200,14 @@ supersede filing behind `RECORD_TO_FOLDER` (CURRENT, live-smoke pending).
 - Limits (CURRENT): lodgement 40 MB, message 25 MB, server-enforced (413
   at signing). Certificate-of-title / BA1 uploads silently filtered
   (`UNNEEDED`) — keep.
-- **Certificate permanence — PRINCIPLE settled, mechanism OPEN:** clients
-  must be able to reach past certificates indefinitely (files are already
-  never purged). Option A (recommended): drop the client-side 3-month
-  hiding; Past Jobs becomes the permanent archive. Option B: archive state
-  + "request this certificate" one-clicker. **Owner decides pre-pilot.**
+- **Certificate retention — DECIDED (owner, 12 Aug 2026): 3 months
+  stands.** Certificates stay downloadable for 3 months from first
+  download, exactly as built; CFBA always holds the archive copy on its
+  own server, and older certificates are supplied on request (ring/email
+  the office). Design obligation: the window and the ring-us path are
+  stated plainly wherever retention bites (Downloads header does this;
+  keep it true in guides and emails), and marketing never promises
+  "anytime". Server-side files are never purged (unchanged).
 
 ## 11. Submission / forms pattern — SPEC (largely CURRENT)
 
@@ -377,24 +381,22 @@ phone/email literals when touched.
 
 ## 23. Unresolved design decisions — OPEN
 
-1. **Certificate-permanence mechanism** — Option A (no client-side hiding,
-   recommended) vs Option B (archive + request). Owner decides pre-pilot
-   (§10).
-2. **Motion change sign-off** — first-landing-only cascade (§17
-   recommendation; owner leaning keep-everything previously).
-3. **File-name comma** — `32 Elvira Street Palmyra` vs restoring the
+1. **File-name comma** — `32 Elvira Street Palmyra` vs restoring the
    comma; owner review pending.
-4. **Amendment uploads** — keep client filenames (current, deliberate) vs
+2. **Amendment uploads** — keep client filenames (current, deliberate) vs
    extend combine-and-rename; owner confirmation pending.
-5. **Template interaction detail** (§11) — design when built, post-pilot.
-6. **Trust footer** — parked on approved privacy wording (UX-REVIEW #17).
-7. **Inline tint hexes → tokens** — fold into the next visual-debt pass.
+3. **Template interaction detail** (§11) — design when built, post-pilot.
+4. **Trust footer** — parked on approved privacy wording (UX-REVIEW #17).
+5. **Inline tint hexes → tokens** — fold into the next visual-debt pass.
 
-Settled this session (were open): typeface identity (§14 — keep faces,
-self-host); nav direction (§3 — regroup to 8, post-pilot with usage
-data); long-term certificate access principle (§10 — access doesn't
-expire; mechanism open); dashboard hierarchy (§4); FIR answered-state
-(§6).
+Settled in Session 4: typeface identity (§14 — keep faces, self-host);
+nav direction (§3 — regroup to 8, post-pilot with usage data); dashboard
+hierarchy (§4); FIR answered-state (§6).
+
+Settled by the owner, 12 Aug 2026: **certificate retention stays at
+3 months** (§10 — Option A rejected; office archive + on-request supply
+is the path); **motion change approved** (§17 — first-landing-only
+cascade); the Session 5 batch plan approved as written.
 
 ## 24. Change log
 
@@ -413,3 +415,7 @@ expire; mechanism open); dashboard hierarchy (§4); FIR answered-state
   Sources: Session 3 QA evidence + S4 product report (external patterns:
   TaxDome, Cloudpermit, Procore ball-in-court, Zendesk views, NSW
   Planning Portal as anti-pole, Accela/OpenGov).
+- **2026-08-12 (owner decisions, Session 5 follow-up):** certificate
+  retention confirmed at 3 months (§2.4, §10 rewritten — Option A
+  rejected; CFBA's server archive + on-request supply is the path);
+  first-landing-only motion approved (§17); Session 5 batch plan approved.
