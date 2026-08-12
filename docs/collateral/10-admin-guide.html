@@ -10,7 +10,7 @@
 .content { padding-top: 6.5mm; padding-bottom: 6.5mm; }
 .sec { margin-top: 4.6mm; margin-bottom: 2mm; }
 td, th { padding-top: 1.2mm; padding-bottom: 1.2mm; }
-.check li { padding-top: 0.7mm; padding-bottom: 0.7mm; }
+.check li { padding-top: 0.44mm; padding-bottom: 0.44mm; }
 .steps li { padding-top: 1.4mm; padding-bottom: 1.4mm; }
 .callout { padding-top: 2.6mm; padding-bottom: 2.6mm; }
 p + p { margin-top: 1.7mm; }
@@ -50,7 +50,9 @@ p + p { margin-top: 1.7mm; }
     <ol class="steps">
       <li><span class="step-n">1</span><div style="flex:1">
         <h3>Sync health banner</h3>
-        <p><strong>Green</strong> = last sync ran inside the hour, all good.
+        <p>Above it sits the <strong>Go-live pre-flight</strong> card — one collapsed line,
+        presence checks only; work it green before launch and after any config change.
+        <strong>Green</strong> = last sync ran inside the hour, all good.
         <strong>Amber "stale"</strong> = no sync for over an hour — check the incident card.
         <strong>Red "failed"</strong> = the error is printed in the banner. Below it, any
         <strong>unmatched Monday clients</strong> are listed: those cards' jobs and messages reach
@@ -123,6 +125,10 @@ p + p { margin-top: 1.7mm; }
       <li><strong>Activity log</strong> — the append-only record: accepts, rejects, logins
         issued/reset, client matches, certificate downloads (with who). This is what a complaint,
         insurer or Building Services Board query asks for — it fills itself.</li>
+      <li><strong>Email log</strong> — every email the portal sent and any that failed; a
+        failure also banners the front page.</li>
+      <li><strong>Feedback</strong> — what clients said (page and job attached) plus the weekly
+        dials: lodgements started vs completed, refusals, downloads, sign-ins.</li>
     </ul>
 
     <div class="sec">Correspondence records — the 7-year file</div>
@@ -181,6 +187,7 @@ p + p { margin-top: 1.7mm; }
       <li>Amendments page: anything sitting in Waiting more than a couple of days?</li>
       <li>"Did you mean" notes on cards — someone reaching for a shortcut we don't have?
         Add it.</li>
+      <li>Feedback page: anything marked <em>Broken</em>?</li>
     </ul>
 
   </div>
@@ -246,9 +253,12 @@ p + p { margin-top: 1.7mm; }
     </div>
 
     <div class="callout warn" style="margin-top:3mm">
-      <strong>Coming soon:</strong> a send log (every email the portal sent, failures
-      surfaced), a client-side Team screen (clients disable their own departed logins), and an
-      automatic bushfire-prone flag at lodgement.
+      <strong>Cancellations are request-and-confirm.</strong> A client asking to cancel puts
+      <span class="mono">CANCELLATION REQUESTED</span> on the card and an email in the office
+      inbox. Pause work, then move the card to Cancelled to confirm — the portal never cancels
+      a job itself. And when you <strong>reject</strong> a queued lodgement, the reason you
+      type is shown to the client word for word with a <em>Lodge It Again</em> button — write
+      it for their eyes.
     </div>
   </div>
 
