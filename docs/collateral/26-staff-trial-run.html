@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title>Staff trial run — put the portal through its paces</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ---- fitted to A4 (rhythm only) ---- */
+.content { padding-top: 7mm; padding-bottom: 7mm; }
+.sec { margin-top: 5mm; margin-bottom: 2mm; }
+.check li { padding-top: 0.72mm; padding-bottom: 0.72mm; }
+td, th { padding-top: 1.4mm; padding-bottom: 1.4mm; }
+.callout { padding-top: 2.4mm; padding-bottom: 2.4mm; }
+p + p { margin-top: 1.8mm; }
+.mission { border: .35mm solid var(--rule); border-radius: 2.5mm; padding: 2.6mm 3.5mm; margin-top: 2.2mm; background: #fff; }
+.mission h3 { font-size: 10.5pt; margin-bottom: 1mm; }
+.mission h3 .who { float: right; font-family: Arial, sans-serif; font-size: 8pt; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--green); background: #E7F0EA; border-radius: 2mm; padding: .8mm 2.2mm; }
+.mission p, .mission li { font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 — setup -->
+<div class="page">
+  <div class="band">
+    <img class="band-logo" src="../../public/logo-white.png" alt="">
+    <h1>Trial run — break it before a client can</h1>
+    <div class="goldrule"></div>
+    <div class="sub">CF Building Approvals — internal. Staff missions for testing the client portal.</div>
+    <div class="meta">August 2026 · Live system — real cards, real emails · Allow 45–60 minutes each, spread over a week</div>
+  </div>
+
+  <div class="content">
+    <p class="lede">You each get a pretend building company and a set of missions. Work them as a
+    real client would — on your own machine, some of it on your phone — and report everything
+    that's confusing, wrong, slow or broken. Finding it now costs nothing; a client finding it
+    costs trust.</p>
+
+    <div class="callout warn">
+      <strong>This is the live system.</strong> Every lodgement creates a real card on the board
+      and sends real emails. Put <strong>TEST</strong> in <em>Your Reference</em> and in the
+      <em>Notes for CFBA</em> box on every job, so nothing gets assessed by accident — and the
+      office deletes the cards when we're done.
+    </div>
+
+    <div class="sec">Setup — the office does this first (ten minutes)</div>
+    <ul class="check">
+      <li><strong>One test client per tester</strong> — /admin → Clients → <em>Add a client</em>,
+        named <span class="mono">ZZZ Test — [First name]</span> (the ZZZ keeps them together and
+        makes the cleanup sweep obvious). Email It To fills with the login email automatically.</li>
+      <li><strong>Issue each tester a login</strong> to their own work email — they walk the same
+        first-sign-in a client does, guide attached to the email and all.</li>
+      <li><strong>Turn the review queue on for the trial</strong>: in Vercel set
+        <span class="mono">AUTO_ACCEPT_LODGEMENTS=0</span> and redeploy. Lodgements then wait in
+        /admin for a human Accept/Reject — which is the only way to test rejections. Flip it back
+        after the trial.</li>
+      <li><strong>Pick addresses before you start</strong>: each tester wants one address they
+        know is <strong>bushfire prone</strong> and one that isn't — use real lots from recent
+        jobs; the form checks the real DFES map as you type.</li>
+    </ul>
+
+    <div class="sec">How to report what you find</div>
+    <ul class="check">
+      <li><strong>Send feedback</strong> — bottom of the portal menu, on every page. Pick
+        <em>Confusing / Slow / Broken / Idea</em>, one blunt line is plenty. It captures which
+        page and job you were on, so report from the spot where it happened.</li>
+      <li>Everything lands on <strong>/admin → Feedback</strong> with the weekly counts — that
+        page is the trial's scoreboard.</li>
+      <li>Something stops you dead? Ring Chris. Don't work around it quietly — the workaround is
+        the finding.</li>
+    </ul>
+
+    <div class="sec">Everyone, first (ten minutes — before your missions)</div>
+    <ul class="check">
+      <li>First sign-in from the login email: setup code → choose a password. Does the email and
+        its attached guide make sense on their own?</li>
+      <li>Sign out. Get your password <strong>wrong four times on purpose</strong> — the message
+        should turn into a polite lockout with a wait and the office number, not a dead end.
+        Use <em>Forgot password?</em> to finish.</li>
+      <li>Open the portal on your <strong>phone</strong> and click through the menu. Half our
+        clients will only ever see it this way.</li>
+    </ul>
+  </div>
+
+  <div class="foot-light">
+    <span>Page 1 of 3 — setup and ground rules</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- PAGE 2 — the missions -->
+<div class="page">
+  <div class="content" style="padding-top:12mm">
+    <div class="sec" style="margin-top:0">The missions — one letter each, swap if you finish early</div>
+
+    <div class="mission">
+      <h3><span class="who">Tester A</span>Bushfire — the shed paths</h3>
+      <ul class="check">
+        <li>Lodge a <strong>steel shed</strong> at your bushfire-prone address. Within 6&nbsp;m of
+          the house + house <strong>2016 or later</strong> → it must demand the shed's own new BAL
+          report and refuse to lodge without it.</li>
+        <li>Flip the answer to <strong>before 2016</strong> → the demand should vanish: exempt,
+          lodge freely. Flip to <strong>Not sure</strong> → it lodges, noting we'll confirm.</li>
+        <li>Say the shed is <strong>6&nbsp;m or more away</strong> → no BAL anything.</li>
+        <li>Same shed at your <strong>non-prone address</strong> → no bushfire questions at all.</li>
+      </ul>
+    </div>
+
+    <div class="mission">
+      <h3><span class="who">Tester B</span>Bushfire (patio) + strata</h3>
+      <ul class="check">
+        <li>Patio at the prone address, within 6&nbsp;m, house 2016+ → it should ask the house's
+          rating (pick one) and require the <strong>evidence</strong> upload. Office: check the
+          card's BAL column got stamped with what was picked.</li>
+        <li>The strata question is <strong>compulsory</strong>: fill everything else in and leave
+          it unanswered — the Lodge button must stay locked and say why.</li>
+        <li>Answer <strong>Yes</strong> → a required Strata Plan box appears after Engineering;
+          try to lodge without it (locked, named), then attach and lodge.</li>
+      </ul>
+    </div>
+
+    <div class="mission">
+      <h3><span class="who">Tester C</span>Files — try to make a mess</h3>
+      <ul class="check">
+        <li>Attach a Word doc or photo → it must be <strong>named and refused out loud</strong>,
+          never silently dropped.</li>
+        <li>Two PDFs with the <strong>same filename</strong> → the second gets a
+          <span class="mono">-2</span>, nothing overwritten.</li>
+        <li>Something over <strong>40&nbsp;MB</strong> → refused with the email-the-office path.</li>
+        <li>Ugly filenames — dashes, brackets, percent signs, very long — all accepted.</li>
+        <li>Check the <em>"Filed as…"</em> line, then confirm the card carries exactly those tidy
+          site-named PDFs. <strong>Double-click</strong> Lodge — exactly one card.</li>
+        <li>Slip a certificate of title or BA1 into the pile — the portal leaves them out on
+          purpose (we never need them).</li>
+      </ul>
+    </div>
+
+    <div class="mission">
+      <h3><span class="who">Tester D</span>Documents, reuse, speed</h3>
+      <ul class="check">
+        <li>Lodging, tick <strong>Save this engineering to My Documents</strong> and name it.</li>
+        <li>Second job: tick it under <strong>From Your Documents</strong> instead of uploading —
+          the Engineering requirement should count as met.</li>
+        <li><strong>My Documents</strong> page: replace the file, then delete it.</li>
+        <li>Open a finished job → <strong>Lodge Similar</strong> — everything but the address
+          carries across.</li>
+        <li>My Details → <strong>Team</strong>: issue a second login for yourself, then disable
+          it — the disabled one must not get in.</li>
+      </ul>
+    </div>
+
+    <div class="sec">Tools — one pass each, any tester</div>
+    <ul class="check two">
+      <li>Wind classification — a real site in, sensible class out</li>
+      <li>Soakwell calculator — a real roof area</li>
+      <li>Bushfire map check under Tools — same verdict as the lodgement form gave you</li>
+      <li>Site plan tool — draw one simple lot</li>
+      <li>Info Sheets — open two notes; do they load and read cleanly on the phone?</li>
+      <li>Public status checker — a test ref + address, watching it move</li>
+    </ul>
+
+  </div>
+
+  <div class="foot-light">
+    <span>Page 2 of 3 — the missions and the tools</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+<!-- PAGE 3 — the eye, the scoreboard, the cleanup -->
+<div class="page">
+  <div class="content" style="padding-top:12mm">
+    <div class="sec" style="margin-top:0">Everyone, during the week — the round trips (office plays its half)</div>
+    <table class="small">
+      <tr><td style="width:34mm"><strong>Information request</strong></td>
+        <td>Office: set a test card to FIR with a <span class="mono">FIR:</span> note. Tester: the
+        email arrives with the ask written out; reply on the job with a PDF → the banner flips to
+        <em>Answer sent — it's with us</em> and the office gets the reply email. Office: reword
+        the ask on the card → the amber "with you" state comes back.</td></tr>
+      <tr><td><strong>Rejection</strong></td>
+        <td>Office: reject one queued lodgement <strong>with a written reason</strong>. Tester:
+        the dashboard shows that reason word for word, with <em>Lodge It Again</em>.</td></tr>
+      <tr><td><strong>Cancellation</strong></td>
+        <td>Tester: request a cancel from the job page. Office: the card gets
+        <span class="mono">CANCELLATION REQUESTED</span> + an email; move the card to Cancelled.
+        Tester: the job files under Past as Cancelled.</td></tr>
+      <tr><td><strong>Issue &amp; download</strong></td>
+        <td>Office: drive <strong>one</strong> test job all the way — ref, folder, assess, CDC,
+        Issued. Tester: the ready email arrives; download the package, open every file; the page
+        says certificates stay downloadable for <strong>3 months</strong> and we keep a copy.</td></tr>
+      <tr><td><strong>Amendment</strong></td>
+        <td>Tester: lodge an amendment against that issued job. Office: it emails whoever
+        certified it, shows WAITING under /admin → Amendments; upload a revised certificate.
+        Tester: both certificates sit side by side in Downloads.</td></tr>
+      <tr><td><strong>Enquiry</strong></td>
+        <td>Tester: My Messages → the general thread — subject + a question. Office: answer from
+        /admin → Enquiries. Tester: the reply lands in the portal and your inbox.</td></tr>
+    </table>
+
+    <div class="sec">While you're in there — the things worth noticing</div>
+    <ul class="check">
+      <li>At every step, is it obvious <strong>whose move it is</strong> — yours or ours? That's
+        the whole design; anywhere it isn't obvious is a finding.</li>
+      <li>Does the wording sound like us on the phone, or like a computer?</li>
+      <li>Anything you had to read twice, tap twice, or scroll sideways for — especially on the
+        phone.</li>
+      <li>After each lodgement, answer the little <strong>portal or email?</strong> question
+        honestly — it's the pilot's core measure and it only appears once a fortnight.</li>
+      <li>Send at least one piece of feedback with <strong>"Okay to ring me"</strong> ticked, so
+        we see that path too.</li>
+    </ul>
+
+
+    <div class="sec">The scoreboard, daily</div>
+    <p class="small">Whoever's running the trial keeps <strong>/admin → Feedback</strong> open:
+    the weekly counts (lodgements started vs completed, refused uploads, downloads, sign-ins,
+    feedback) should move as the missions run — if a number doesn't move when it should, that's
+    a finding too. The pre-flight card at the top of /admin stays green throughout.</p>
+
+    <div class="sec">Cleanup — before any real client is invited</div>
+    <ul class="check dots">
+      <li>Delete every test card from the board (search the TEST reference).</li>
+      <li>/admin → Clients: delete each <span class="mono">ZZZ Test</span> company — logins, jobs
+        and messages cascade with it.</li>
+      <li>Set <span class="mono">AUTO_ACCEPT_LODGEMENTS</span> back (remove the 0) and redeploy.</li>
+      <li>Run the data-hygiene sweep in the go-live runbook (Phase 7) so the store and the pilot
+        dials start clean.</li>
+      <li>One last look at /admin → Feedback: collect the findings into a list, fix or accept
+        each one out loud, and only then send the first invitation.</li>
+    </ul>
+
+    <div class="callout" style="margin-top:4mm">
+      <strong>The bar:</strong> a tester who hits a dead end, a silent failure, or a "what do I do
+      now?" moment has found something a paying client would have found next week. That's the
+      win — say it loudly, fix it quietly.
+    </div>
+  </div>
+
+  <div class="foot-light">
+    <span>Page 3 of 3 — round trips, noticing, cleanup</span><span>CF Building Approvals</span>
+  </div>
+</div>
+
+</body>
+</html>
