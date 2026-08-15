@@ -275,7 +275,15 @@ function noteDoc(file) {
 
 const files = readdirSync(SRC).filter((f) => f.endsWith(".html")).sort();
 for (const f of files) {
+  // Friendly names, matching the committed convention the office knows:
+  // "01 - What Your Site Plan Needs to Show.docx", from the note's own band.
+  const root = parse(readFileSync(path.join(SRC, f), "utf8"));
+  const eyebrow = decode((root.querySelector(".eyebrow")?.text || "")).trim();
+  const title = decode((root.querySelector("h1")?.text || "")).replace(/\s+/g, " ").trim();
+  const num = (eyebrow.match(/(\d+)/) || [])[1];
+  const safe = title.replace(/[\/:*?"<>|—]+/g, "-").replace(/\s*-\s*/g, " - ").replace(/\s+/g, " ").trim();
+  const name = num && safe ? num + " - " + safe + ".docx" : f.replace(/\.html$/, ".docx");
   const buf = await Packer.toBuffer(noteDoc(f));
-  writeFileSync(path.join(OUT, f.replace(/\.html$/, ".docx")), buf);
+  writeFileSync(path.join(OUT, name), buf);
 }
 console.log(`${files.length} Word documents written to ${OUT}`);
