@@ -12,6 +12,9 @@ export const viewport: Viewport = {
   themeColor: "#14532d",
   width: "device-width",
   initialScale: 1,
+  // Lets the bottom nav's env(safe-area-inset-bottom) padding take effect
+  // on phones with a home indicator.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
