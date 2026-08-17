@@ -35,6 +35,13 @@ export interface Session {
 
 export type MatchStatus = "setup" | "live" | "finished";
 
+/** A stretch of real time during which the game clock was running
+ *  (kick-off/resume through to pause/full-time). Open while live. */
+export interface ClockPeriod {
+  startMs: number;
+  endMs?: number;
+}
+
 export interface Match {
   id: string;
   date: string;
@@ -42,6 +49,11 @@ export interface Match {
   halfLengthMins: number;
   result?: string;
   status: MatchStatus;
+  /** Players at the game today; defaults to the active roster. */
+  squadIds?: string[];
+  /** Clock bookkeeping — game time is computed from event overlap with
+   *  these periods, so halftime never counts toward anyone's minutes. */
+  clockPeriods?: ClockPeriod[];
 }
 
 export type MatchEventType = "sub_on" | "sub_off" | "try" | "tackle";
