@@ -2,29 +2,8 @@ import { NextResponse } from "next/server";
 import { isStaff } from "@/lib/session";
 import * as repo from "@/lib/repo";
 import { hashSetupCode, newSetupCode, normUsername } from "@/lib/auth";
-import { sendMail, loginEmail, fitAttachments, type MailAttachment } from "@/lib/mail";
-import { env } from "@/lib/env";
-import { GUIDE_PATH, GUIDE_SHIPPED } from "@/lib/info-sheets";
-
-/** The getting-started guide, if there is one. Storage first so it can be
- *  swapped from /admin without a deploy; the copy shipped in public/ is the
- *  fallback. Missing is fine — the email says nothing about a guide then. */
-async function guideAttachment(): Promise<MailAttachment | null> {
-  try {
-    const bytes = await repo.readFile(GUIDE_PATH);
-    if (bytes.length) {
-      return { name: "CFBA Client Portal — Getting Started.pdf", contentType: "application/pdf", bytes };
-    }
-  } catch { /* not uploaded; fall through to the shipped copy */ }
-  try {
-    const r = await fetch(`${env.appUrl}${GUIDE_SHIPPED}`);
-    if (!r.ok) return null;
-    const bytes = Buffer.from(await r.arrayBuffer());
-    return bytes.length
-      ? { name: "CFBA Client Portal — Getting Started.pdf", contentType: "application/pdf", bytes }
-      : null;
-  } catch { return null; }
-}
+import { sendMail, loginEmail, fitAttachments } from "@/lib/mail";
+import { guideAttachment } from "@/lib/mail-guide";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
