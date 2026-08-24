@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { Drill, DrillTag } from "@/lib/types";
+import type { Board, Drill, DrillTag } from "@/lib/types";
 import { ALL_TAGS, TAG_LABELS } from "./tags";
 
 export default function DrillForm({
   initial,
+  boards,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
   initial?: Drill;
+  boards: Board[];
   submitLabel: string;
   onSubmit: (drill: Omit<Drill, "id">) => void;
   onCancel: () => void;
@@ -22,6 +24,7 @@ export default function DrillForm({
   );
   const [equipment, setEquipment] = useState(initial?.equipment ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const [boardId, setBoardId] = useState(initial?.boardId ?? "");
 
   const trimmedName = name.trim();
   const duration = Number(durationMins);
@@ -44,6 +47,7 @@ export default function DrillForm({
           durationMins: Math.round(duration),
           equipment: equipment.trim(),
           description: description.trim(),
+          boardId: boardId || undefined,
         });
       }}
       className="flex flex-col gap-3"
@@ -115,6 +119,23 @@ export default function DrillForm({
           rows={3}
           className="rounded-lg border border-stone-300 px-3 py-2 text-base outline-none focus:border-pitch focus:ring-1 focus:ring-pitch"
         />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Whiteboard diagram{" "}
+        <span className="font-normal text-stone-400">(optional)</span>
+        <select
+          value={boardId}
+          onChange={(e) => setBoardId(e.target.value)}
+          className="min-h-[48px] rounded-lg border border-stone-300 bg-white px-3 text-base outline-none focus:border-pitch focus:ring-1 focus:ring-pitch"
+        >
+          <option value="">None — draw one on the Board tab first</option>
+          {boards.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
       </label>
 
       <div className="flex gap-2">

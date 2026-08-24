@@ -51,7 +51,9 @@ Five bottom-nav tabs, components colocated by feature under `app/(tabs)/`:
 4. **Board** — whiteboard library for drawing drills, training games and set
    plays. Boards are tagged by kind and hold tokens (players, defenders,
    cones, hurdles, tackle bags, ball) plus movement arrows (run, pass, kick,
-   tackle, jump — each with a distinct style; tackles end in a T-bar).
+   tackle, jump — each with a distinct style; tackles end in a T-bar; a
+   curved drag draws a curved arrow). A drill can link one board via
+   `boardId` and shows its thumbnail on the drill card.
    Coordinates are pitch units (0–100 × 0–140), rendering is shared between
    the editor and list previews via `BoardCanvas.tsx`. Touch-first editor:
    tap-to-place, drag-to-move, drag-to-draw, erase, undo.

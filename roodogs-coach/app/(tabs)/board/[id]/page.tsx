@@ -60,7 +60,8 @@ export default function BoardEditorPage() {
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragTokenId = useRef<string | null>(null);
-  const drawStart = useRef<{ x: number; y: number } | null>(null);
+  // sampled finger path while drawing an arrow — empty means not drawing
+  const drawPoints = useRef<{ x: number; y: number }[]>([]);
   const [preview, setPreview] = useState<BoardMovement | null>(null);
 
   useEffect(() => {
@@ -122,7 +123,7 @@ export default function BoardEditorPage() {
         ],
       }));
     } else if (mode.kind === "draw") {
-      drawStart.current = p;
+      drawPoints.current = [p];
       svgRef.current?.setPointerCapture(e.pointerId);
     }
   }
@@ -138,11 +139,15 @@ export default function BoardEditorPage() {
           t.id === dragTokenId.current ? { ...t, x: p.x, y: p.y } : t
         ),
       });
-    } else if (drawStart.current && mode.kind === "draw") {
+    } else if (drawPoints.current.length > 0 && mode.kind === "draw") {
+      const pts = drawPoints.current;
+      const last = pts[pts.length - 1];
+      // sample the path so curved drags become curved arrows
+      if (Math.hypot(p.x - last.x, p.y - last.y) >= 3) pts.push(p);
       setPreview({
         id: "preview",
         type: mode.movement,
-        points: [drawStart.current, p],
+        points: [...pts, p],
       });
     }
   }
@@ -152,17 +157,23 @@ export default function BoardEditorPage() {
       dragTokenId.current = null;
       return;
     }
-    if (drawStart.current && mode.kind === "draw" && board) {
+    if (drawPoints.current.length > 0 && mode.kind === "draw" && board) {
       const p = toPitch(e);
-      const start = drawStart.current;
-      drawStart.current = null;
+      const pts = [...drawPoints.current];
+      drawPoints.current = [];
       setPreview(null);
-      const dist = Math.hypot(p.x - start.x, p.y - start.y);
-      if (dist >= 4) {
+      const last = pts[pts.length - 1];
+      if (Math.hypot(p.x - last.x, p.y - last.y) >= 1) pts.push(p);
+      const length = pts.reduce(
+        (sum, pt, i) =>
+          i === 0 ? 0 : sum + Math.hypot(pt.x - pts[i - 1].x, pt.y - pts[i - 1].y),
+        0
+      );
+      if (length >= 4) {
         commit((b) => ({
           movements: [
             ...b.movements,
-            { id: newId(), type: mode.movement, points: [start, p] },
+            { id: newId(), type: mode.movement, points: pts },
           ],
         }));
       }
@@ -298,7 +309,7 @@ export default function BoardEditorPage() {
       <p className="text-center text-xs text-stone-400">
         {mode.kind === "move" && "Drag anything to move it."}
         {mode.kind === "place" && `Tap the pitch to place a ${TOKEN_LABELS[mode.token].toLowerCase()}.`}
-        {mode.kind === "draw" && `Drag on the pitch to draw a ${MOVEMENT_STYLE[mode.movement].label.toLowerCase()} arrow.`}
+        {mode.kind === "draw" && `Drag on the pitch to draw a ${MOVEMENT_STYLE[mode.movement].label.toLowerCase()} arrow — curve it as you go.`}
         {mode.kind === "erase" && "Tap anything to rub it out."}
       </p>
 

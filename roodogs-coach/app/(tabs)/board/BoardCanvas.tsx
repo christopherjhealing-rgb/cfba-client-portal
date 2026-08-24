@@ -160,8 +160,18 @@ export function MovementGlyph({
 
   let d: string;
   let arrowFrom = start;
-  if (movement.type === "jump") {
-    // bow the line so a jump reads as an arc
+  if (pts.length > 2) {
+    // freehand: smooth curve through the sampled points
+    d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const midX = (pts[i].x + pts[i + 1].x) / 2;
+      const midY = (pts[i].y + pts[i + 1].y) / 2;
+      d += ` Q ${pts[i].x} ${pts[i].y} ${midX} ${midY}`;
+    }
+    d += ` L ${end.x} ${end.y}`;
+    arrowFrom = pts[pts.length - 2];
+  } else if (movement.type === "jump") {
+    // bow a straight jump so it reads as an arc
     const mx = (start.x + end.x) / 2;
     const my = (start.y + end.y) / 2;
     const dx = end.x - start.x;

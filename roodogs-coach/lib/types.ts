@@ -24,6 +24,8 @@ export interface Drill {
   durationMins: number;
   equipment: string;
   description: string;
+  /** Optional whiteboard diagram for this drill. */
+  boardId?: string;
 }
 
 export interface Session {

@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { newId, storage } from "@/lib/storage";
 import { SEED_DRILLS } from "@/lib/seedDrills";
-import type { Drill, DrillTag } from "@/lib/types";
+import type { Board, Drill, DrillTag } from "@/lib/types";
+import { BoardPreview } from "../board/BoardCanvas";
 import DrillForm from "./DrillForm";
 import { ALL_TAGS, TAG_BADGE_CLASSES, TAG_LABELS } from "./tags";
 
 export default function DrillsPage() {
   const [drills, setDrills] = useState<Drill[]>([]);
+  const [boards, setBoards] = useState<Board[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<DrillTag | "all">("all");
   const [adding, setAdding] = useState(false);
@@ -23,6 +25,7 @@ export default function DrillsPage() {
       storage.setDrills(stored);
     }
     setDrills(stored);
+    setBoards(storage.getBoards());
     setLoaded(true);
   }, []);
 
@@ -102,6 +105,7 @@ export default function DrillsPage() {
         <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
           <h2 className="mb-3 font-semibold">New drill</h2>
           <DrillForm
+            boards={boards}
             submitLabel="Add to library"
             onSubmit={addDrill}
             onCancel={() => setAdding(false)}
@@ -130,6 +134,7 @@ export default function DrillsPage() {
               <h2 className="mb-3 font-semibold">Edit drill</h2>
               <DrillForm
                 initial={drill}
+                boards={boards}
                 submitLabel="Save"
                 onSubmit={(data) => updateDrill(drill.id, data)}
                 onCancel={() => setEditingId(null)}
@@ -172,6 +177,17 @@ export default function DrillsPage() {
                     Gear: {drill.equipment}
                   </span>
                 )}
+                {(() => {
+                  const board = drill.boardId
+                    ? boards.find((b) => b.id === drill.boardId)
+                    : undefined;
+                  return board ? (
+                    <BoardPreview
+                      board={board}
+                      className="mt-1 w-28 rounded-lg"
+                    />
+                  ) : null;
+                })()}
               </button>
             </li>
           )
