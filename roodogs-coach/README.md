@@ -30,6 +30,6 @@ npm test       # game-time engine tests
 
 ## Deploying on Vercel
 
-This app lives in the `roodogs-coach/` subdirectory — set the project's
-**Root Directory** to `roodogs-coach` in Vercel, or move it to its own
-repository. No environment variables needed.
+Import the repository into Vercel (Add New → Project), accept the Next.js
+defaults, and deploy. No environment variables needed. Every push to `main`
+deploys automatically.
