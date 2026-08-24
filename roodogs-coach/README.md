@@ -8,6 +8,9 @@ run.
 - **Drills** — 25 seeded U9 drills, filterable by tag, fully editable
 - **Sessions** — build a ~60 minute plan from the library, duplicate past
   sessions
+- **Board** — digital whiteboard: drag-and-drop players, defenders, cones,
+  hurdles and tackle bags, draw runs, passes, kicks, tackles and jumps —
+  for drills, training games and set plays
 - **Match** — live mode: tap-to-swap subs, per-player game time, try and
   tackle buttons with undo, pause for halftime
 - **Season stats** — minutes, games, tries and tackles per player

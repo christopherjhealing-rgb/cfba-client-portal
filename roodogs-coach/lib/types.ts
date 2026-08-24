@@ -58,6 +58,45 @@ export interface Match {
 
 export type MatchEventType = "sub_on" | "sub_off" | "try" | "tackle";
 
+/** What a whiteboard diagram is for. */
+export type BoardKind = "drill" | "game" | "set_play";
+
+export type TokenType =
+  | "player"
+  | "opponent"
+  | "cone"
+  | "hurdle"
+  | "bag"
+  | "ball";
+
+export type MovementType = "run" | "pass" | "kick" | "tackle" | "jump";
+
+/** A thing placed on the whiteboard. Coordinates are in pitch units
+ *  (0–100 across, 0–140 down), not pixels. */
+export interface BoardToken {
+  id: string;
+  type: TokenType;
+  x: number;
+  y: number;
+  label?: string;
+}
+
+/** A movement arrow drawn on the whiteboard, start to finish. */
+export interface BoardMovement {
+  id: string;
+  type: MovementType;
+  points: { x: number; y: number }[];
+}
+
+export interface Board {
+  id: string;
+  name: string;
+  kind: BoardKind;
+  tokens: BoardToken[];
+  movements: BoardMovement[];
+  updatedMs: number;
+}
+
 export interface MatchEvent {
   id: string;
   matchId: string;

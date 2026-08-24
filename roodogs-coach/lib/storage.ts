@@ -2,7 +2,7 @@
 // components only ever talk to this interface, so swapping in Vercel KV or a
 // database later means changing this file and nothing else.
 
-import type { Drill, Match, MatchEvent, Player, Session } from "./types";
+import type { Board, Drill, Match, MatchEvent, Player, Session } from "./types";
 
 const KEYS = {
   players: "roodogs.players",
@@ -10,6 +10,7 @@ const KEYS = {
   sessions: "roodogs.sessions",
   matches: "roodogs.matches",
   matchEvents: "roodogs.matchEvents",
+  boards: "roodogs.boards",
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -67,6 +68,13 @@ export const storage = {
   },
   setMatches(matches: Match[]): void {
     write(KEYS.matches, matches);
+  },
+
+  getBoards(): Board[] {
+    return read<Board[]>(KEYS.boards, []);
+  },
+  setBoards(boards: Board[]): void {
+    write(KEYS.boards, boards);
   },
 
   getMatchEvents(matchId?: string): MatchEvent[] {

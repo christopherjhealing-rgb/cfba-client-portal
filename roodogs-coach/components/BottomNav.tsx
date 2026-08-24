@@ -7,6 +7,7 @@ const TABS = [
   { href: "/team", label: "Team", icon: "👥" },
   { href: "/drills", label: "Drills", icon: "🏉" },
   { href: "/sessions", label: "Sessions", icon: "📋" },
+  { href: "/board", label: "Board", icon: "✏️" },
   { href: "/match", label: "Match", icon: "⏱️" },
 ] as const;
 
@@ -15,7 +16,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto grid w-full max-w-md grid-cols-4">
+      <div className="mx-auto grid w-full max-w-md grid-cols-5">
         {TABS.map((tab) => {
           const current = pathname.startsWith(tab.href);
           return (

@@ -41,14 +41,21 @@ unit-tested in `lib/gameTime.test.ts`.
 
 ## App structure
 
-Four bottom-nav tabs, components colocated by feature under `app/(tabs)/`:
+Five bottom-nav tabs, components colocated by feature under `app/(tabs)/`:
 
 1. **Team** — roster list, add/edit/archive (soft delete via `active`)
 2. **Drills** — library seeded with 25 U9 drills on first open, tag filter,
    add/edit (`lib/seedDrills.ts`)
 3. **Sessions** — session builder picking drills to ~60 min with a running
    counter, reorder, duplicate past session
-4. **Match** — match list, squad + starting line-up setup, live match mode
+4. **Board** — whiteboard library for drawing drills, training games and set
+   plays. Boards are tagged by kind and hold tokens (players, defenders,
+   cones, hurdles, tackle bags, ball) plus movement arrows (run, pass, kick,
+   tackle, jump — each with a distinct style; tackles end in a T-bar).
+   Coordinates are pitch units (0–100 × 0–140), rendering is shared between
+   the editor and list previews via `BoardCanvas.tsx`. Touch-first editor:
+   tap-to-place, drag-to-move, drag-to-draw, erase, undo.
+5. **Match** — match list, squad + starting line-up setup, live match mode
    (two-column sub swapping, per-player try/tackle with undo toast, pause for
    halftime, needs-minutes highlight), full-time summary
 
